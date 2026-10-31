@@ -6,11 +6,12 @@ The organizer's workbook supplies synthetic operational limits.
 
 ## Public judge deployment
 
-The Render configuration in `render.yaml` runs the Python service with a persistent
-SQLite disk. Provider credentials are configured only in Render's environment.
+The Render configuration in `render.yaml` runs the Python service on the free demo
+plan. Provider credentials are configured only in Render's environment.
 Judges receive an anonymous browser session automatically: no API key or access
 code is required, and each visitor has separate scenario/resource copies.
 Human approval remains mandatory. Live-model failures still use the checked fallback.
+The free host sleeps after inactivity and resets SQLite sessions on restart.
 
 Public mode permits ten runs per visitor per UTC day, 100 runs across the service
 per UTC day, and two simultaneous negotiations. Saved examples remain available.

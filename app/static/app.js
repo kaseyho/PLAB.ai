@@ -133,6 +133,13 @@ function load() {
 async function loadRun() {
   if (LIVE && runParam) {
     const response = await fetch(`/api/runs/${encodeURIComponent(runParam)}`, { credentials: "same-origin" });
+    if (response.status === 404 && publicDemo) {
+      runParam = null;
+      lastSeq = 0;
+      run = null;
+      history.replaceState(null, "", location.pathname);
+      return loadRun();
+    }
     if (!response.ok) throw new Error(`Run request failed (${response.status})`);
     const fresh = await response.json();
     const events = await fetch(
@@ -321,7 +328,9 @@ function renderNegotiation() {
     if (previous) card.append(voteBlock(2, previous, run.previous_candidate_id, false));
     if (vote) card.append(voteBlock(run.round_count, vote, run.candidate?.candidate_id, vote.plan_hash !== run.plan_hash));
     if (!offer && !vote) {
-      card.append(el("p", run.run_id && run.processing_state !== "TERMINAL" ? "Waiting for a reply…" : "Not asked", "waiting"));
+      const requested = run.events.some((event) => event.event_type === "AGENT_REQUEST_STARTED" && event.payload?.role === role);
+      const waiting = run.run_id && run.processing_state !== "TERMINAL";
+      card.append(el("p", waiting ? "Waiting for a reply…" : requested ? "No valid reply received" : "Not asked", "waiting"));
     }
     box.append(card);
   }

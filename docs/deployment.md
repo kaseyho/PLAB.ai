@@ -1,8 +1,9 @@
 # Public judge deployment
 
 Use the team repository's main branch on a Render Python web service in Singapore.
-The checked-in `render.yaml` describes a Starter instance and 1 GB persistent disk;
-this incurs Render hosting charges and should be approved before provisioning.
+The checked-in `render.yaml` describes the free demo plan selected by the team.
+It has no persistent disk. Idle wake-up can take about a minute, and SQLite state
+is discarded when the service sleeps, restarts or redeploys.
 
 Build: `uv sync --locked --no-dev && uv run python -m app.download_data`
 
@@ -21,10 +22,10 @@ server to sign short-lived, HttpOnly judge cookies. `RENDER_EXTERNAL_URL` suppli
 the trusted browser origin automatically; do not copy a localhost origin into Render.
 
 Run one service instance and one Uvicorn worker. The coordinator's background tasks
-and SQLite transaction boundaries assume this deployment. Mount the disk at
-`/var/data` and set `PLAB_DB_PATH=/var/data/plab.sqlite3` to retain traces and decisions
-across deploys. A free instance without a disk loses sessions and traces on sleep,
-restart or redeployment, and has a cold-start delay; it is a disposable demo option.
+and SQLite transaction boundaries assume this deployment. The free deployment
+uses `PLAB_DB_PATH=/tmp/plab.sqlite3`. To retain traces across restarts later,
+upgrade to a paid instance with a persistent disk, mount it at `/var/data`, and
+set `PLAB_DB_PATH=/var/data/plab.sqlite3`. That upgrade requires hosting-budget approval.
 
 With `PLAB_PUBLIC_DEMO=true`, the browser opens a judge session automatically.
 Scenario and resource IDs belong to that session; read, cancel, review and export

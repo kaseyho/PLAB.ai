@@ -3,14 +3,10 @@ services:
     name: plab-ai
     runtime: python
     region: singapore
-    plan: starter
+    plan: free
     buildCommand: uv sync --locked --no-dev && uv run python -m app.download_data
     startCommand: uv run python -m app.serve
     healthCheckPath: /health
-    disk:
-      name: plab-state
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.13"
@@ -21,7 +17,7 @@ services:
       - key: PLAB_DAILY_RUN_LIMIT
         value: "100"
       - key: PLAB_DB_PATH
-        value: /var/data/plab.sqlite3
+        value: /tmp/plab.sqlite3
       - key: PLAB_EVALUATION_PATH
         value: evals/results/initial-live-holdout.json
       - key: SOCLAAS_API_KEY
