@@ -3,123 +3,153 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PLAB.ai Duty Desk</title>
+  <title>PLAB Arrival Desk</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <h1>PLAB.ai</h1>
-      <span class="subtitle">Disrupted arrival coordination</span>
-    </div>
-    <div class="badges">
-      <span class="badge badge-sim">Simulation only</span>
-      <span class="badge" id="mode-badge">Loading</span>
-    </div>
-  </header>
-
-  <main>
-    <p class="mode-note" id="mode-note" hidden></p>
-
-    <section class="panel" aria-labelledby="scenario-h">
-      <div class="panel-head">
-        <h2 id="scenario-h">Scenario</h2>
-        <label id="scenario-picker">Scenario <select id="scenario-select"></select></label>
-        <label class="fixture-picker" id="fixture-picker" hidden>
-          Sample
+    <div class="wrap topbar-inner">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">P</span>
+        <div>
+          <strong>PLAB</strong>
+          <span class="brand-sub">Arrival disruption desk</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="sim-tag" title="Nothing here affects real aircraft or airports">Simulation</span>
+        <label class="examples" id="fixture-picker">
+          <span>Examples</span>
           <select id="fixture-select">
-            <option value="">Live scenarios</option>
-            <option value="consensus">Consensus awaiting review</option>
-            <option value="third-turn">Third-turn agreement (fixture agents)</option>
-            <option value="fallback">Fallback awaiting review</option>
-            <option value="no-feasible">No feasible option</option>
-            <option value="insufficient-data">Insufficient data</option>
-            <option value="stale">Stale at approval</option>
+            <option value="">Live desk</option>
+            <option value="consensus">Desks agreed</option>
+            <option value="third-turn">Agreed on turn 3</option>
+            <option value="fallback">Desks did not agree</option>
+            <option value="no-feasible">No safe option</option>
+            <option value="insufficient-data">Missing information</option>
+            <option value="stale">Plan out of date</option>
             <option value="rejected">Rejected</option>
-            <option value="applied">Applied to simulation</option>
+            <option value="applied">Approved</option>
           </select>
         </label>
       </div>
-      <dl class="facts" id="scenario-facts"></dl>
-      <details><summary>Simulation assumptions and rule scope</summary><p id="operational-notes"></p></details>
-      <details><summary>Source and operational assumptions</summary><pre id="source-details"></pre></details>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Re-plan a disrupted arrival</h1>
+      <p>When a flight is delayed, three desks each look after their own part:
+        <b>air traffic control</b> (runway and spacing), the <b>pilot</b> (fuel and crew hours) and
+        <b>ground operations</b> (gate and handling crew). Here they negotiate a new landing time and gate.
+        Every option is checked against fixed safety rules first. Nothing changes until you approve it.</p>
+      <p class="note" id="mode-note" hidden></p>
     </section>
 
-    <section class="panel" aria-labelledby="run-h">
-      <div class="panel-head">
-        <h2 id="run-h">Run</h2>
-        <div class="actions">
-          <button type="button" id="start-btn" disabled>Start run</button>
-          <button type="button" id="cancel-btn" class="secondary" disabled>Cancel run</button>
+    <ol class="steps" id="steps" aria-label="Progress">
+      <li data-step="1"><span class="num">1</span><span>Choose a flight</span></li>
+      <li data-step="2"><span class="num">2</span><span>Desks negotiate</span></li>
+      <li data-step="3"><span class="num">3</span><span>You decide</span></li>
+    </ol>
+
+    <!-- Step 1 -->
+    <section class="card" id="step-1" aria-labelledby="step1-h">
+      <h2 id="step1-h"><span class="num">1</span> Choose a disrupted flight</h2>
+      <div class="flight" id="flight-summary"></div>
+      <p class="muted small" id="data-note">The flight and its delay are real (US DOT, 2015). Airport limits come from the
+        organisers' workbook. Traffic, fuel and crew numbers are simulated.</p>
+      <div class="form-row" id="start-row">
+        <label class="field" id="scenario-picker">
+          <span>Flight</span>
+          <select id="scenario-select"></select>
+        </label>
+        <label class="field" id="session-row">
+          <span>Access code</span>
+          <input id="session-token" type="password" autocomplete="off" spellcheck="false"
+            aria-describedby="session-hint" placeholder="From the team's .env file">
+        </label>
+        <div class="buttons">
+          <button type="button" id="start-btn" class="primary" disabled>Start negotiation</button>
+          <button type="button" id="cancel-btn" class="ghost" disabled>Stop</button>
         </div>
       </div>
-      <dl class="facts" id="run-facts"></dl>
-      <label id="session-row">Local operator session
-        <input id="session-token" type="password" autocomplete="off" spellcheck="false"
-          aria-describedby="session-hint" placeholder="Enter the configured operator token">
-      </label>
-      <p class="hint" id="session-hint">Held in this tab only. Required to start, cancel, or review a run.</p>
+      <p class="muted small" id="session-hint">Kept in this browser tab only. Needed to start, stop or decide.</p>
     </section>
 
-    <section class="panel review" id="review-card" aria-labelledby="review-h">
-      <h2 id="review-h">Review</h2>
-      <div class="state" id="review-state" role="status"></div>
-      <dl class="facts" id="plan-facts"></dl>
+    <!-- Step 2 -->
+    <section class="card" id="step-2" aria-labelledby="step2-h">
+      <h2 id="step2-h"><span class="num">2</span> The three desks negotiate</h2>
+      <p class="lead" id="negotiation-status"></p>
+      <div class="desks" id="agent-cards"></div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="card" id="review-card" aria-labelledby="review-h">
+      <h2 id="review-h"><span class="num">3</span> Your decision</h2>
+      <div class="banner" id="review-state" role="status"></div>
+      <div id="plan-summary"></div>
+      <div id="safety-summary"></div>
       <div id="review-controls">
-        <label class="ack" id="ack-row" hidden>
+        <label class="check-row" id="ack-row" hidden>
           <input type="checkbox" id="ack-box">
-          I understand the agents did not reach consensus; this plan comes from the deterministic fallback.
+          <span>I understand the desks did not agree. This plan was picked by the fixed rules (earliest safe option).</span>
         </label>
-        <label class="reason">
-          Reason (recorded with your decision)
-          <input type="text" id="reason-input" maxlength="500" autocomplete="off">
+        <label class="field wide">
+          <span>Reason for your decision</span>
+          <input type="text" id="reason-input" maxlength="500" autocomplete="off"
+            placeholder="e.g. Checked fuel margin and gate timing">
         </label>
-        <div class="actions">
-          <button type="button" id="approve-btn" disabled>Approve simulated plan</button>
-          <button type="button" id="reject-btn" class="secondary" disabled>Reject</button>
-          <button type="button" id="rerun-btn" class="secondary" disabled>Refresh and rerun</button>
+        <div class="buttons">
+          <button type="button" id="approve-btn" class="primary" disabled>Approve plan</button>
+          <button type="button" id="reject-btn" class="ghost" disabled>Reject</button>
+          <button type="button" id="rerun-btn" class="link" disabled>Start over with fresh data</button>
         </div>
-        <p class="hint" id="review-hint"></p>
+        <p class="muted small" id="review-hint"></p>
       </div>
       <p class="result" id="review-result" role="alert" hidden></p>
     </section>
 
-    <section class="panel" aria-labelledby="agents-h">
-      <h2 id="agents-h">Agents</h2>
-      <div class="agents" id="agent-cards"></div>
-    </section>
+    <!-- Technical details for judges and engineers -->
+    <details class="card tech" id="tech">
+      <summary><h2>Technical details</h2><span class="muted small">Run data, all options, rule results, audit log</span></summary>
 
-    <section class="panel" aria-labelledby="cands-h">
-      <h2 id="cands-h">Candidates</h2>
+      <h3>Run</h3>
+      <dl class="facts" id="run-facts"></dl>
+
+      <h3>Options the desks could choose from</h3>
       <div class="table-wrap">
         <table id="candidate-table">
           <thead><tr>
-            <th scope="col">Plan</th><th scope="col">Landing</th><th scope="col">Gate-in</th>
-            <th scope="col">Gate / route</th><th scope="col">Added hold</th>
-            <th scope="col">Fuel margin</th><th scope="col">Crew overtime</th>
-            <th scope="col">Cost ATC / Pilot / Ground</th><th scope="col">Checks</th>
+            <th scope="col">Option</th><th scope="col">Landing</th><th scope="col">At gate</th>
+            <th scope="col">Gate</th><th scope="col">Extra hold</th>
+            <th scope="col">Fuel spare</th><th scope="col">Crew overtime</th>
+            <th scope="col">Cost ATC / Pilot / Ground</th><th scope="col">Safety</th>
           </tr></thead>
           <tbody></tbody>
         </table>
       </div>
-      <p class="hint" id="cand-note"></p>
-    </section>
+      <p class="muted small" id="cand-note"></p>
 
-    <section class="panel" aria-labelledby="checks-h">
-      <h2 id="checks-h">Hard checks</h2>
+      <h3>Safety rule results</h3>
       <div id="check-list"></div>
-    </section>
 
-    <section class="panel" aria-labelledby="evidence-h">
-      <div class="panel-head">
-        <h2 id="evidence-h">Evidence</h2>
-        <a id="export-link" class="button secondary" download>Download trace</a>
-      </div>
+      <h3>Scenario and assumptions</h3>
+      <dl class="facts" id="scenario-facts"></dl>
+      <p class="small" id="operational-notes"></p>
+      <details class="raw"><summary>Raw source and facts</summary><pre id="source-details"></pre></details>
+
+      <h3>Audit log</h3>
+      <p><a id="export-link" class="link" download>Download trace</a></p>
       <ol class="events" id="event-list"></ol>
+
       <h3>Evaluation</h3>
       <p id="evaluation">Not yet evaluated</p>
-      <a href="/api/evaluations/latest">View evaluation report</a>
-    </section>
+      <p><a class="link" href="/api/evaluations/latest">View evaluation report</a></p>
+    </details>
+
+    <footer class="foot muted small">
+      PLAB prototype for the Airbus Challenge 2 hackathon. Simulation only, not for operational use.
+    </footer>
   </main>
 
   <script src="/static/app.js"></script>

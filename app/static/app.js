@@ -1,6 +1,6 @@
 "use strict";
 
-// Duty manager dashboard. Two data sources:
+// Arrival disruption desk. Two data sources:
 //   ?fixture=<name>  labelled sample payloads in fixtures/ (no backend needed)
 //   ?run=<run_id>    live run from Developer 2's API, polled once per second
 // All text from payloads (including model rationale) is set with textContent, never HTML.
@@ -56,15 +56,6 @@ function fact(list, label, value, tag) {
   row.append(dd);
   list.append(row);
 }
-
-function clock(seconds) {
-  if (seconds === null || seconds === undefined) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = String(seconds % 60).padStart(2, "0");
-  return `T+${m}:${s} (${seconds} s)`;
-}
-
-const num = (value, unit) => (value === null || value === undefined ? "—" : `${value} ${unit}`);
 
 function planView(plan, checks = [], hash = null) {
   if (!plan) return null;
@@ -153,7 +144,7 @@ async function loadRun() {
     run = view(sample, sample.events || []);
   } else {
     const snapshot = scenarioList.find((s) => s.scenario_id === $("scenario-select").value);
-    if (!snapshot) throw new Error("No scenarios are loaded. Check the dataset path in /health.");
+    if (!snapshot) throw new Error("No flights are loaded. The server could not read its flight data file; open /health for details.");
     run = emptyRun(snapshot);
   }
   render();
@@ -162,196 +153,340 @@ async function loadRun() {
   if (keepPolling) pollTimer = setTimeout(() => load().catch(showError), 1000);
 }
 
+// ---------- Plain-English presentation ----------
+
+const ROLE_NAMES = { ATC: "Air traffic control", PILOT: "Pilot", GROUND: "Ground operations" };
+const ROLE_NOTES = {
+  ATC: "Runway, spacing between aircraft, hourly capacity",
+  PILOT: "Fuel reserve, weather routing, crew duty hours",
+  GROUND: "Gate, handling crew, equipment, turnaround",
+};
+const RULE_NAMES = {
+  "SYSTEM-FRESH-01": "Plan matches the latest data",
+  "SYSTEM-OPS-01": "Uses the organisers' airport limits",
+  "ATC-RWY-01": "Runway is free",
+  "ATC-SEP-01": "Safe spacing from other aircraft",
+  "ATC-TAXI-01": "Taxi route is open",
+  "ATC-CAP-01": "Airport stays within hourly capacity",
+  "PILOT-FUEL-01": "Fuel stays above the reserve",
+  "PILOT-ROUTE-01": "Arrival route allowed in this weather",
+  "PILOT-DUTY-01": "Flight crew within duty hours",
+  "GROUND-GATE-01": "Gate fits this aircraft",
+  "GROUND-OCC-01": "Gate is free",
+  "GROUND-CREW-01": "Ground crew within shift limit",
+  "GROUND-EQUIP-01": "Handling equipment available",
+  "GROUND-NOTICE-01": "Enough notice for the gate change",
+  "GROUND-TURN-01": "Enough time to turn the aircraft around",
+};
+const FALLBACK_REASONS = {
+  PROVIDER_NOT_CONFIGURED: "the AI service is not connected",
+  PROVIDER_TIMEOUT: "a desk did not reply in time",
+  NO_COMMON_OFFER: "no option was acceptable to all three desks",
+  FINAL_DISSENT: "a desk rejected the final proposal",
+  PROTOCOL_ERROR: "a desk sent a reply that broke the rules",
+};
+const FACT_NAMES = {
+  "fuel.projected_fuel_at_earliest_kg": "fuel on board at the earliest landing time",
+  "fuel.hold_burn_kg_per_min": "fuel burn while holding",
+  "fuel.taxi_burn_kg_per_min": "fuel burn while taxiing",
+  "fuel.reserve_floor_kg": "minimum fuel reserve",
+  "fuel.uncertainty_allowance_kg": "fuel safety allowance",
+  "aircraft.aircraft_class": "aircraft size class",
+  "aircraft.wake_category": "aircraft wake category",
+  "runway.focal_occupancy_s": "time the aircraft occupies the runway",
+};
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 function render() {
   renderMode();
-  renderScenario();
-  renderRun();
+  renderSteps();
+  renderFlight();
+  renderNegotiation();
   renderReview();
-  renderAgents();
+  renderControls();
+  renderRunFacts();
   renderCandidates();
   renderChecks();
+  renderScenario();
   renderEvidence();
 }
 
+function simClock(seconds) {
+  if (seconds === null || seconds === undefined) return "—";
+  const epoch = Date.parse(run.snapshot.simulation_epoch);
+  const t = new Date(epoch + seconds * 1000);
+  return `${String(t.getUTCHours()).padStart(2, "0")}:${String(t.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+const minutes = (value) => Math.round(Number(value) * 10) / 10;
+
+function planById(id) {
+  for (const entry of run.catalog?.candidates || []) if (entry.plan.candidate_id === id) return entry.plan;
+  if (run.candidate?.candidate_id === id) return run.candidate;
+  return null;
+}
+
+function describe(id) {
+  if (!id) return "no option";
+  const plan = planById(id);
+  if (plan) return `land ${simClock(plan.landing_time_s)} at gate ${plan.gate_id}`;
+  const match = /^L(\d+)-/.exec(id);
+  return match ? `land ${simClock(Number(match[1]))} (option ${id})` : `option ${id}`;
+}
+
+function step() {
+  if (!run.run_id) return 1;
+  return run.processing_state !== "TERMINAL" ? 2 : 3;
+}
+
 function renderMode() {
-  const badge = $("mode-badge");
-  badge.textContent = !LIVE ? "Sample data" : !run.run_id ? "Ready" : `${run.provider.mode} provider · ${run.planning_mode} planner`;
-  $("mode-note").hidden = LIVE && run.provider?.mode !== "FIXTURE";
-  $("mode-note").textContent = run.mode_note || "Deterministic fixture agents; no live model calls.";
-  $("fixture-picker").hidden = false;
+  const fixture = run.provider?.mode === "FIXTURE";
+  $("mode-note").hidden = LIVE && !fixture;
+  $("mode-note").textContent = !LIVE
+    ? "You are looking at a saved example. The rules and checks are real; the desks' messages come from a test script, not a live AI. Choose “Live desk” at the top right to run your own."
+    : "Demo mode: the desks' messages come from a test script, not a live AI. The rules, checks and approval are real.";
   $("fixture-select").value = fixtureName || "";
-  $("scenario-picker").hidden = !LIVE;
-  $("scenario-select").disabled = busy;
-  $("session-row").hidden = !LIVE;
+  $("start-row").hidden = !LIVE;
   $("session-hint").hidden = !LIVE;
+  $("scenario-select").disabled = busy;
   if (LIVE) $("session-hint").textContent = sessionConfigured
-    ? "Held in this tab only. Required to start, cancel, or review a run."
-    : "Configure PLAB_SESSION_TOKEN locally and restart the service to enable actions.";
+    ? "Kept in this browser tab only. Needed to start, stop or decide."
+    : "No access code is set up on the server. Add PLAB_SESSION_TOKEN to .env and restart.";
 }
 
-function renderScenario() {
-  const list = $("scenario-facts");
-  list.replaceChildren();
-  const source = run.source || {};
-  const fields = source.fields || {};
-  fact(list, "Historical flight", source.natural_identity, "historical");
-  fact(list, "Qualifies by", source.qualifies_by, "historical");
-  fact(list, "Source row", source.record_ordinal ? `${source.dataset_file} record ${source.record_ordinal}` : null);
-  fact(list, "Dataset hash", `${run.snapshot.source.dataset_sha256.slice(0, 12)}…`);
-  fact(list, "Scheduled", fields.SCHEDULED_DEPARTURE ? `dep ${fields.SCHEDULED_DEPARTURE}, arr ${fields.SCHEDULED_ARRIVAL} (local, as recorded)` : null, "historical");
-  fact(list, "Scenario", run.scenario ? `${run.scenario.scenario_id} rev ${run.scenario_revision}` : null, "synthetic");
-  fact(list, "Simulation epoch", run.scenario && run.scenario.simulation_epoch_utc, "synthetic");
-  fact(list, "Rules / policy", `${run.ruleset_version} / ${run.policy_version}`, "illustrative");
-  fact(list, "Resource revision", run.resource_revision);
-  const ops = run.snapshot.facts.find((f) => f.fact_id === "overlay.operations")?.value;
-  if (ops) {
-    const p = ops.policy;
-    fact(list, "Organizer workbook", `${p.airport_code} · ${p.workbook_sha256.slice(0, 12)}…`, "synthetic limits");
-    fact(list, "Airport limits", `${p.active_runways} runways · ${p.gates} gates · ${p.max_ops_per_hour} movements/hour`);
-    fact(list, "Modeled subset", `${ops.modeled_runway_ids.length} runway; up to ${p.spare_gates} spare gates`);
-    fact(list, "Turnaround / gate notice", `${p.min_turnaround_s / 60} / ${p.gate_notice_s / 60} min`);
-    fact(list, "Fuel policy", `${p.reserve_hold_min} min reserve + ${p.contingency_percent}% trip contingency`);
-    fact(list, "Crew policy", `${p.flight_crew_duty_s / 3600} h flight duty; ${p.ground_shift_s / 3600} h ground shift, ${p.overtime_multiplier}× overtime`);
+function renderSteps() {
+  const current = step();
+  const finished = current === 3 && run.approval_state !== "PENDING";
+  for (const li of $("steps").children) {
+    const n = Number(li.dataset.step);
+    li.className = n < current || finished ? "done" : n === current ? "current" : "";
   }
-  $("operational-notes").textContent = ops ? ops.assumptions.join(" ") : "Legacy illustrative test scenario.";
-  $("source-details").textContent = JSON.stringify({source: run.snapshot.source, facts: run.snapshot.facts}, null, 2);
+  $("step-2").classList.toggle("dim", current < 2);
+  $("review-card").classList.toggle("dim", current < 3);
 }
 
-function renderRun() {
+function renderFlight() {
+  const f = run.source.fields || {};
+  const box = $("flight-summary");
+  box.replaceChildren();
+  const route = el("span", null, "route");
+  route.append(document.createTextNode(f.ORIGIN_AIRPORT || "?"), el("span", "→", "arrow"),
+    document.createTextNode(f.DESTINATION_AIRPORT || "?"));
+  const date = f.YEAR ? `${Number(f.DAY)} ${MONTHS[Number(f.MONTH) - 1]} ${f.YEAR}` : "";
+  const reasons = [];
+  if (Number(f.WEATHER_DELAY) > 15) reasons.push(`${f.WEATHER_DELAY} min by weather`);
+  if (Number(f.LATE_AIRCRAFT_DELAY) > 20) reasons.push(`${f.LATE_AIRCRAFT_DELAY} min by a late incoming aircraft`);
+  box.append(route, el("span", `${f.AIRLINE || ""} ${f.FLIGHT_NUMBER || ""} · ${date}`, "meta"),
+    el("span", reasons.length ? `Delayed ${reasons.join(" and ")}` : "", "delay"));
+}
+
+function renderNegotiation() {
+  const status = $("negotiation-status");
+  const n = run.round_count;
+  const outcome = run.negotiation_outcome;
+  if (!run.run_id) status.textContent = "Not started yet. Each desk sends one offer per turn, for at most 3 turns. If they cannot agree, fixed rules pick the earliest safe option.";
+  else if (run.processing_state !== "TERMINAL") status.textContent = `Turn ${Math.max(n, 1)} of 3 in progress…`;
+  else if (outcome === "FEASIBLE_CONSENSUS") status.textContent = `All three desks agreed after ${n} ${n === 1 ? "turn" : "turns"}.`;
+  else if (outcome === "FEASIBLE_FALLBACK") {
+    const why = FALLBACK_REASONS[run.fallback_reason] || run.fallback_reason?.toLowerCase().replaceAll("_", " ");
+    status.textContent = `The desks did not reach agreement${why ? ` (${why})` : ""}, so the fixed rules picked the earliest safe option.`;
+  } else if (outcome === "CANCELLED") status.textContent = "The negotiation was stopped.";
+  else status.textContent = "The desks were not asked, because there was no safe option to discuss.";
+
+  const box = $("agent-cards");
+  box.replaceChildren();
+  for (const role of ROLES) {
+    const card = el("article", null, "desk");
+    card.append(el("h3", ROLE_NAMES[role]), el("p", ROLE_NOTES[role], "role-note"));
+    const offer = (run.offers || {})[role];
+    const previous = run.previous_votes?.[role];
+    const vote = (run.votes || {})[role];
+    if (offer) {
+      const turn = el("div", null, "turn");
+      turn.append(el("div", "Turn 1 · offer", "turn-label"),
+        el("p", offer.preferred_candidate_id ? `First choice: ${describe(offer.preferred_candidate_id)}` : "Refused every option"));
+      const others = (offer.concession_candidate_ids || []).filter((id) => id !== offer.preferred_candidate_id).length;
+      if (others) turn.append(el("p", `Would also accept ${others} other ${others === 1 ? "option" : "options"}`, "why"));
+      if (offer.rationale) turn.append(el("p", offer.rationale, "why"));
+      card.append(turn);
+    }
+    if (previous) card.append(voteBlock(2, previous, run.previous_candidate_id, false));
+    if (vote) card.append(voteBlock(run.round_count, vote, run.candidate?.candidate_id, vote.plan_hash !== run.plan_hash));
+    if (!offer && !vote) {
+      card.append(el("p", run.run_id && run.processing_state !== "TERMINAL" ? "Waiting for a reply…" : "Not asked", "waiting"));
+    }
+    box.append(card);
+  }
+}
+
+function voteBlock(turnNumber, vote, candidateId, mismatch) {
+  const turn = el("div", null, "turn");
+  const words = { ACCEPT: "Agreed", REJECT: "Rejected", NEEDS_INFORMATION: "Asked for more information" };
+  const yes = vote.decision === "ACCEPT" && !mismatch;
+  turn.append(el("div", `Turn ${turnNumber} · vote on ${describe(candidateId)}`, "turn-label"),
+    el("p", `${words[vote.decision] || vote.decision}${mismatch ? " (but on a different version of the plan)" : ""}`, `vote ${yes ? "yes" : "no"}`));
+  if (vote.rationale) turn.append(el("p", vote.rationale, "why"));
+  return turn;
+}
+
+function reviewState() {
+  const outcome = run.negotiation_outcome;
+  const approval = run.approval_state;
+  if (!run.run_id) return ["info", "Nothing to decide yet", "Start a negotiation in step 1."];
+  if (approval === "APPLIED_SIMULATION") return ["ok", "Approved and applied", `The landing slot, gate, crew and equipment are now booked in the simulation (airport record version ${run.resource_revision_after ?? "updated"}).`];
+  if (approval === "REJECTED") return ["info", "Rejected", "Nothing was changed."];
+  if (approval === "CANCELLED") return ["info", "Stopped", "Nothing was changed."];
+  if (approval === "STALE") return ["bad", "This plan is out of date", "Something at the airport changed after the plan was made, so it can no longer be approved. Start over with fresh data."];
+  if (approval === "EXPIRED") return ["bad", "This plan has expired", "Plans must be approved within a few minutes. Start over to get a fresh one."];
+  if (run.processing_state && run.processing_state !== "TERMINAL") return ["info", "Negotiating…", `Turn ${Math.max(run.round_count, 1)} of 3. The plan will appear here when the desks finish.`];
+  if (outcome === "FEASIBLE_CONSENSUS") return ["ok", "The desks agreed on a plan", "Check it below. Their agreement alone changes nothing; you decide."];
+  if (outcome === "FEASIBLE_FALLBACK") return ["warn", "The desks did not agree", "The fixed rules picked the earliest option that passes every safety check. Review it carefully."];
+  if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["bad", "No safe option found", "Every option in the 30-minute search window breaks at least one safety rule. A person needs to handle this outside the system."];
+  if (outcome === "INSUFFICIENT_DATA") return ["bad", "Missing information", "Some required numbers are missing, so nothing was planned and the desks were not asked. The system never guesses."];
+  if (outcome === "SYSTEM_ERROR") return ["bad", "Something went wrong", "The checks could not be completed, so nothing can be approved."];
+  return ["info", "Waiting", ""];
+}
+
+function renderReview() {
+  const [tone, title, detail] = reviewState();
+  const banner = $("review-state");
+  banner.className = `banner ${tone}`;
+  banner.replaceChildren(el("strong", title), el("span", detail));
+
+  const box = $("plan-summary");
+  box.replaceChildren();
+  const plan = run.candidate;
+  if (plan) {
+    box.append(el("p", `Land at ${simClock(plan.landing_time_s)} and park at gate ${plan.gate_id}.`, "summary"));
+    const b0 = run.baseline_b0;
+    if (b0) {
+      const hold = minutes(plan.added_holding_min - b0.added_holding_min);
+      const overtime = minutes(plan.crew_overtime_min - b0.crew_overtime_min);
+      const parts = [];
+      if (hold) parts.push(`${Math.abs(hold)} min ${hold > 0 ? "more" : "less"} holding in the air`);
+      if (overtime) parts.push(`${Math.abs(overtime)} min ${overtime > 0 ? "more" : "less"} ground-crew overtime`);
+      box.append(el("p", parts.length
+        ? `Compared with the earliest safe option: ${parts.join(", ")}.`
+        : "This is the same as the earliest safe option.", "tradeoff"));
+    }
+    const stats = el("div", null, "stats");
+    for (const [label, value] of [
+      ["Landing", simClock(plan.landing_time_s)],
+      ["At the gate", simClock(plan.gate_in_time_s)],
+      ["Extra holding", `${minutes(plan.added_holding_min)} min`],
+      ["Fuel to spare", `${Number(plan.fuel_margin_kg)} kg`],
+      ["Crew overtime", `${minutes(plan.crew_overtime_min)} min`],
+    ]) {
+      const cell = el("div", null, "stat");
+      cell.append(el("div", label, "label"), el("div", value, "value"));
+      stats.append(cell);
+    }
+    box.append(stats);
+  } else if (run.run_id && run.processing_state === "TERMINAL") {
+    const reasons = el("ul", null, "reasons");
+    for (const fact of run.missing_facts || []) reasons.append(el("li", `Missing: ${FACT_NAMES[fact] || fact.replaceAll("_", " ")}`));
+    const total = run.catalog_total_count ?? run.catalog?.candidates?.length;
+    for (const [rule, count] of Object.entries(run.blockers || {}).sort((a, b) => b[1] - a[1])) {
+      reasons.append(el("li", `${RULE_NAMES[rule] || rule}: fails for ${count}${total ? ` of ${total}` : ""} options`));
+    }
+    if (reasons.children.length) box.append(el("p", "Why:", "muted small"), reasons);
+  }
+  renderSafety();
+
+  const result = $("review-result");
+  if (run.review_result) {
+    result.hidden = false;
+    result.className = `result ${run.review_result.http_status === 200 ? "ok" : "bad"}`;
+    result.textContent = run.review_result.message;
+  } else {
+    result.hidden = true;
+  }
+}
+
+function friendlyMargin(check) {
+  if (check.margin === null || check.margin === undefined) return "";
+  const value = Number(check.margin);
+  if (value === 0) return "right at the limit";
+  if (check.units === "s") return Math.abs(value) >= 120 ? `${Math.round(value / 60)} min spare` : `${value} s spare`;
+  if (check.units === "kg") return `${value} kg spare`;
+  return `${value} ${check.units} spare`;
+}
+
+function renderSafety() {
+  const box = $("safety-summary");
+  box.replaceChildren();
+  const checks = run.checks || [];
+  if (!checks.length) return;
+  const passed = checks.filter((c) => c.status === "PASS").length;
+  const all = passed === checks.length;
+  const details = el("details", null, "safety");
+  const summary = el("summary");
+  summary.append(el("span", all ? `✓ All ${checks.length} safety checks passed` : `✗ ${checks.length - passed} of ${checks.length} safety checks did not pass`, all ? "pass" : "fail"),
+    el("span", " · show list", "muted small"));
+  details.append(summary);
+  const list = el("ul");
+  for (const check of checks) {
+    const item = el("li");
+    const ok = check.status === "PASS";
+    item.append(el("span", ok ? "✓" : check.status === "FAIL" ? "✗" : "?", `mark ${ok ? "pass" : "fail"}`),
+      el("span", RULE_NAMES[check.rule_id] || check.rule_id), el("span", ok ? friendlyMargin(check) : check.reason_code.replaceAll("_", " ").toLowerCase(), "extra"));
+    list.append(item);
+  }
+  details.append(list);
+  box.append(details);
+}
+
+function renderControls() {
+  const plan = run.candidate;
+  const token = $("session-token").value.trim();
+  const authorized = LIVE && sessionConfigured && token;
+  const running = LIVE && run.run_id && run.processing_state !== "TERMINAL";
+  $("start-btn").disabled = !authorized || busy || Boolean(running);
+  $("cancel-btn").disabled = !authorized || busy || !(running || (LIVE && run.approval_state === "PENDING"));
+  $("cancel-btn").hidden = !LIVE || !run.run_id;
+
+  const reviewable = run.approval_state === "PENDING" && plan && run.checks.length > 0
+    && run.checks.every((c) => c.status === "PASS");
+  const fallback = run.negotiation_outcome === "FEASIBLE_FALLBACK";
+  const closed = TERMINAL_APPROVAL.includes(run.approval_state);
+  $("ack-row").hidden = !(reviewable && fallback);
+  $("review-controls").hidden = !run.run_id || (!reviewable && !closed && run.processing_state !== "TERMINAL");
+  const canAct = reviewable && authorized && !busy;
+  const hasReason = $("reason-input").value.trim().length > 0;
+  $("approve-btn").disabled = !canAct || !hasReason || (fallback && !$("ack-box").checked);
+  $("reject-btn").disabled = !canAct || !hasReason;
+  $("reason-input").disabled = !canAct;
+  $("approve-btn").hidden = $("reject-btn").hidden = $("reason-input").parentElement.hidden = !reviewable;
+  $("rerun-btn").disabled = !authorized || busy;
+  $("rerun-btn").hidden = !LIVE;
+  $("review-hint").textContent = !reviewable
+    ? (closed || run.processing_state === "TERMINAL" ? "This plan is closed. Start over to get a new one." : "")
+    : !LIVE ? "This is a saved example, so the buttons are off."
+      : !token ? "Enter the access code in step 1 to decide."
+        : !hasReason ? "Write a short reason, then approve or reject. The server re-checks every safety rule before anything is booked."
+          : "The server re-checks every safety rule against the current airport before anything is booked.";
+}
+
+// ---------- Technical details ----------
+
+function renderRunFacts() {
   const list = $("run-facts");
   list.replaceChildren();
-  fact(list, "Processing", run.processing_state);
+  fact(list, "Processing state", run.processing_state);
   fact(list, "Outcome", run.negotiation_outcome);
+  fact(list, "Approval state", run.approval_state);
   fact(list, "Turns", `${run.round_count} of 3`);
   fact(list, "Model calls", `${run.model_call_count} of 9`);
   fact(list, "Agent invocations", run.agent_invocation_count);
   if (run.provider) fact(list, "Provider", `${run.provider.mode} · ${run.provider.model}`, run.provider.prompt_version);
   if (run.planning_mode) fact(list, "Planner", run.planning_mode);
   if (run.elapsed_ms != null) fact(list, "Elapsed", `${run.elapsed_ms} ms`);
-  fact(list, "Approval", run.approval_state);
   if (run.fallback_reason) fact(list, "Fallback reason", run.fallback_reason);
   if (run.reason_code) fact(list, "Reason code", run.reason_code);
-  const running = LIVE && run.run_id && run.processing_state !== "TERMINAL";
-  const authorized = LIVE && sessionConfigured && $("session-token").value.trim();
-  $("start-btn").disabled = !authorized || busy || Boolean(running);
-  $("cancel-btn").disabled = !authorized || busy || !(running || (LIVE && run.approval_state === "PENDING"));
-  $("start-btn").title = LIVE ? "" : "Needs the backend";
-}
-
-function reviewState() {
-  const outcome = run.negotiation_outcome;
-  const approval = run.approval_state;
-  if (!run.run_id) return ["state-info", "Ready to coordinate", "Select a scenario and start a run."];
-  if (approval === "APPLIED_SIMULATION") return ["state-ok", "Applied to simulation", `Resource revision is now ${run.resource_revision_after ?? "updated"}.`];
-  if (approval === "REJECTED") return ["state-info", "Rejected", "The simulated schedule was not changed."];
-  if (approval === "CANCELLED") return ["state-info", "Cancelled", "The simulated schedule was not changed."];
-  if (approval === "STALE") return ["state-bad", "Stale: approval blocked", "Airport resources changed after this plan was made. Start a new run."];
-  if (approval === "EXPIRED") return ["state-bad", "Expired: approval blocked", "The recommendation was not approved in time. Start a new run."];
-  if (outcome === "FEASIBLE_CONSENSUS") return ["state-ok", "Consensus awaiting review", "All three agents accepted the plan shown below. Their agreement does not apply it; you decide."];
-  if (outcome === "FEASIBLE_FALLBACK") return ["state-warn", "Fallback awaiting review", "No agent consensus was obtained. Deterministic rules selected the earliest feasible plan."];
-  if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["state-bad", "No feasible option in the searched window", "Every candidate failed at least one hard check. Needs qualified review outside the simulator."];
-  if (outcome === "INSUFFICIENT_DATA") return ["state-bad", "Input review required", "Required facts are missing, so no plan can be checked. Nothing is guessed."];
-  if (outcome === "SYSTEM_ERROR") return ["state-bad", "System error", "Checks could not be completed reliably. No plan can be approved."];
-  if (run.processing_state && run.processing_state !== "TERMINAL") return ["state-info", "Negotiating", `Turn ${run.round_count} of 3.`];
-  return ["state-info", outcome || "Waiting", ""];
-}
-
-function renderReview() {
-  const [cls, title, detail] = reviewState();
-  const state = $("review-state");
-  state.className = `state ${cls}`;
-  state.replaceChildren(el("span", title), el("small", detail));
-
-  const list = $("plan-facts");
-  list.replaceChildren();
-  const plan = run.candidate;
-  if (plan) {
-    fact(list, "Plan", plan.candidate_id);
-    fact(list, "Landing", clock(plan.landing_time_s));
-    fact(list, "Gate-in", clock(plan.gate_in_time_s));
-    fact(list, "Gate / route", `${plan.gate_id} via ${plan.taxi_route_id}`);
-    fact(list, "Handling complete", clock(plan.service_end_s));
-    fact(list, "Fuel margin", num(plan.fuel_margin_kg, "kg"), "modelled");
-    fact(list, "Crew overtime", num(plan.crew_overtime_min, "min"), "modelled");
-    const b0 = run.baseline_b0;
-    if (b0) {
-      const hold = plan.added_holding_min - b0.added_holding_min;
-      const overtime = plan.crew_overtime_min - b0.crew_overtime_min;
-      fact(list, "vs B0 (earliest feasible)", `${signed(hold)} min hold, ${signed(overtime)} min overtime`);
-    }
-    fact(list, "Plan hash", plan.plan_hash ? `${plan.plan_hash.slice(0, 12)}…` : null);
-    fact(list, "Review expires", run.expires_at ? new Date(run.expires_at).toLocaleString() : null);
-  } else {
-    if (run.missing_facts && run.missing_facts.length) fact(list, "Missing facts", run.missing_facts.join(", "));
-    const blockers = Object.entries(run.blockers || {});
-    if (blockers.length) fact(list, "Blocking rules (candidates)", blockers.map(([rule, n]) => `${rule}: ${n}`).join("; "));
-    if (run.search_bounds) {
-      const b = run.search_bounds;
-      fact(list, "Searched", `${clock(b.earliest_landing_s)} to ${clock(b.latest_landing_s)}, ${b.raw_candidate_count} candidates`);
-    }
-  }
-
-  const reviewable = run.approval_state === "PENDING" && plan && run.checks.length > 0
-    && run.checks.every((c) => c.status === "PASS");
-  const fallback = run.negotiation_outcome === "FEASIBLE_FALLBACK";
-  $("ack-row").hidden = !(reviewable && fallback);
-  $("review-controls").hidden = !reviewable && !TERMINAL_APPROVAL.includes(run.approval_state);
-  const canAct = reviewable && LIVE && sessionConfigured && $("session-token").value.trim() && !busy;
-  const hasReason = $("reason-input").value.trim().length > 0;
-  $("approve-btn").disabled = !canAct || !hasReason || (fallback && !$("ack-box").checked);
-  $("reject-btn").disabled = !canAct || !hasReason;
-  $("reason-input").disabled = !canAct;
-  $("rerun-btn").disabled = !LIVE || busy || !sessionConfigured || !$("session-token").value.trim();
-  $("review-hint").textContent = !reviewable
-    ? (TERMINAL_APPROVAL.includes(run.approval_state) ? "This recommendation is closed. Start a new run to decide again." : "")
-    : LIVE ? "Enter a reason for your decision. The server re-checks every hard rule against current airport state before applying."
-      : "Sample data: approval needs the backend. The approved and stale samples show the real approval logic's results.";
-
-  const result = $("review-result");
-  if (run.review_result) {
-    result.hidden = false;
-    result.className = `result ${run.review_result.http_status === 200 ? "state-ok" : "state-bad"}`;
-    const rules = run.review_result.failed_rules && run.review_result.failed_rules.length
-      ? ` Failed: ${run.review_result.failed_rules.join(", ")}.` : "";
-    result.textContent = `${run.review_result.status}: ${run.review_result.message}${rules}`;
-  } else {
-    result.hidden = true;
-  }
-}
-
-const signed = (value) => (value > 0 ? `+${value}` : `${value}`);
-
-function renderAgents() {
-  const box = $("agent-cards");
-  box.replaceChildren();
-  for (const role of ROLES) {
-    const card = el("article", null, "agent");
-    card.append(el("h3", role));
-    const offer = (run.offers || {})[role];
-    const vote = (run.votes || {})[role];
-    if (!offer && !vote) card.append(el("p", "No message", "label"));
-    if (offer) {
-      card.append(el("p", "Turn 1 offer", "label"));
-      card.append(el("p", `Prefers ${offer.preferred_candidate_id ?? "none (refused)"}`));
-      if (offer.concession_candidate_ids && offer.concession_candidate_ids.length) {
-        card.append(el("p", `Could concede to ${offer.concession_candidate_ids.join(", ")}`));
-      }
-      card.append(el("p", offer.rationale));
-    }
-    if (vote) {
-      const previous = run.previous_votes?.[role];
-      if (previous) {
-        card.append(el("p", `Turn 2: ${previous.decision} on ${run.previous_candidate_id}`, "label"));
-        card.append(el("p", previous.rationale));
-      }
-      const matches = vote.plan_hash === run.plan_hash;
-      card.append(el("p", `Turn ${run.round_count} vote`, "label"));
-      card.append(el("p", `${vote.decision} (${matches ? "same" : "different"} plan hash)`,
-        `status status-${vote.decision === "ACCEPT" && matches ? "PASS" : "FAIL"}`));
-      card.append(el("p", vote.rationale));
-    }
-    box.append(card);
-  }
+  if (run.candidate) fact(list, "Plan", run.candidate.candidate_id);
+  if (run.plan_hash) fact(list, "Plan hash", `${run.plan_hash.slice(0, 16)}…`);
+  if (run.expires_at) fact(list, "Review expires", new Date(run.expires_at).toLocaleString());
+  if (run.run_id) fact(list, "Run ID", run.run_id);
 }
 
 function renderCandidates() {
@@ -361,44 +496,74 @@ function renderCandidates() {
   for (const c of run.candidates || []) {
     const row = el("tr");
     if (c.candidate_id === selected) row.className = "selected";
+    const labels = [];
+    if (c.candidate_id === selected) labels.push("chosen");
+    if (run.baseline_b0 && c.candidate_id === run.baseline_b0.candidate_id) labels.push("B0 earliest safe");
+    if (run.baseline_b1 && c.candidate_id === run.baseline_b1.candidate_id) labels.push("B1 best overall");
     const cells = [
-      c.candidate_id + (c.candidate_id === selected ? " (proposed)" : "") +
-        (run.baseline_b0 && c.candidate_id === run.baseline_b0.candidate_id ? " (B0)" : "") +
-        (run.baseline_b1 && c.candidate_id === run.baseline_b1.candidate_id ? " (B1)" : ""),
-      clock(c.landing_time_s), clock(c.gate_in_time_s), `${c.gate_id} / ${c.taxi_route_id}`,
-      num(c.added_holding_min, "min"), num(c.fuel_margin_kg, "kg"), num(c.crew_overtime_min, "min"),
+      c.candidate_id + (labels.length ? ` (${labels.join(", ")})` : ""),
+      simClock(c.landing_time_s), simClock(c.gate_in_time_s), `${c.gate_id} via ${c.taxi_route_id}`,
+      `${minutes(c.added_holding_min)} min`, `${Number(c.fuel_margin_kg)} kg`, `${minutes(c.crew_overtime_min)} min`,
       `${Number(c.costs.ATC).toFixed(3)} / ${Number(c.costs.PILOT).toFixed(3)} / ${Number(c.costs.GROUND).toFixed(3)}`,
     ];
     for (const text of cells) row.append(el("td", text));
-    const status = c.feasible ? "PASS" : "FAIL";
-    row.append(el("td", c.feasible ? "✓ all pass" : "✗ blocked", `status status-${status}`));
+    row.append(el("td", c.feasible ? "✓ passes" : "✗ blocked", `status-${c.feasible ? "PASS" : "FAIL"}`));
     body.append(row);
   }
   $("cand-note").textContent = (run.candidates || []).length
-    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked candidates, ${run.catalog_feasible_count} feasible. B0 is earliest feasible; B1 minimizes the joint cost tuple across the full catalog. Costs are simulation policy scores.` : "No candidates to compare.";
+    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked options, ${run.catalog_feasible_count} of which pass every safety rule. B0 is the earliest safe option; B1 has the lowest combined cost over all options. Costs are simulation policy scores, lower is better.`
+    : "No options to compare for this outcome.";
 }
 
 function renderChecks() {
   const box = $("check-list");
   box.replaceChildren();
   if (!run.checks || !run.checks.length) {
-    box.append(el("p", "No plan was checked for this outcome.", "hint"));
+    box.append(el("p", "No plan was checked for this outcome.", "muted small"));
     return;
   }
   for (const check of run.checks) {
     const item = el("details", null, "check");
     const summary = el("summary");
-    summary.append(el("span", ICON[check.status], `status status-${check.status}`));
-    summary.append(el("span", `${check.rule_id} · ${check.reason_code}`));
+    summary.append(el("span", ICON[check.status], `status-${check.status}`));
+    summary.append(el("span", `${check.rule_id} · ${RULE_NAMES[check.rule_id] || check.reason_code}`));
     const margin = check.margin === null || check.margin === undefined ? "" : `margin ${check.margin} ${check.units}`;
-    summary.append(el("span", margin, "margin"));
+    summary.append(el("span", margin, "muted"));
     item.append(summary);
     item.append(el("pre", JSON.stringify({
       actual: check.actual, operator: check.operator, required: check.required, units: check.units,
-      evidence: check.evidence_ids, rule_version: check.rule_version,
+      reason: check.reason_code, evidence: check.evidence_ids, rule_version: check.rule_version,
     }, null, 2)));
     box.append(item);
   }
+}
+
+function renderScenario() {
+  const list = $("scenario-facts");
+  list.replaceChildren();
+  const source = run.source || {};
+  const fields = source.fields || {};
+  fact(list, "Historical flight", source.natural_identity, "real");
+  fact(list, "Qualifies by", source.qualifies_by, "real");
+  fact(list, "Source row", source.record_ordinal ? `${source.dataset_file} record ${source.record_ordinal}` : null);
+  fact(list, "Dataset hash", `${run.snapshot.source.dataset_sha256.slice(0, 12)}…`);
+  fact(list, "Scheduled", fields.SCHEDULED_DEPARTURE ? `dep ${fields.SCHEDULED_DEPARTURE}, arr ${fields.SCHEDULED_ARRIVAL} (local)` : null, "real");
+  fact(list, "Scenario", run.scenario ? `${run.scenario.scenario_id} revision ${run.scenario_revision}` : null, "simulated");
+  fact(list, "Simulation start", run.scenario && run.scenario.simulation_epoch_utc, "simulated");
+  fact(list, "Rules / policy", `${run.ruleset_version} / ${run.policy_version}`);
+  fact(list, "Airport record version", run.resource_revision);
+  const ops = run.snapshot.facts.find((f) => f.fact_id === "overlay.operations")?.value;
+  if (ops) {
+    const p = ops.policy;
+    fact(list, "Organisers' workbook", `${p.airport_code} · ${p.workbook_sha256.slice(0, 12)}…`);
+    fact(list, "Airport limits", `${p.active_runways} runways · ${p.gates} gates · ${p.max_ops_per_hour} movements/hour`);
+    fact(list, "Modelled here", `${ops.modeled_runway_ids.length} runway, up to ${p.spare_gates} spare gates`);
+    fact(list, "Turnaround / gate notice", `${p.min_turnaround_s / 60} / ${p.gate_notice_s / 60} min`);
+    fact(list, "Fuel policy", `${p.reserve_hold_min} min reserve + ${p.contingency_percent}% contingency`);
+    fact(list, "Crew policy", `${p.flight_crew_duty_s / 3600} h flight duty, ${p.ground_shift_s / 3600} h ground shift, ${p.overtime_multiplier}× overtime`);
+  }
+  $("operational-notes").textContent = ops ? ops.assumptions.join(" ") : "Illustrative test scenario.";
+  $("source-details").textContent = JSON.stringify({source: run.snapshot.source, facts: run.snapshot.facts}, null, 2);
 }
 
 function eventSummary(event) {
@@ -412,14 +577,13 @@ function renderEvidence() {
   list.replaceChildren();
   for (const event of run.events || []) {
     const item = el("li");
-    item.append(el("strong", `${event.sequence}. ${event.event_type}`), el("span", ` ${event.actor} `, "actor"),
-      el("span", eventSummary(event)));
+    item.append(el("strong", event.event_type), el("span", ` ${event.actor} `, "actor"), el("span", eventSummary(event)));
     list.append(item);
   }
   const link = $("export-link");
   link.hidden = !run.run_id;
   link.href = LIVE ? `/api/runs/${encodeURIComponent(run.run_id)}/export` : `/static/fixtures/${encodeURIComponent(fixtureName)}.json`;
-  link.textContent = LIVE ? "Download trace" : "Download sample";
+  link.textContent = LIVE ? "Download full trace (JSON)" : "Download this example (JSON)";
   link.setAttribute("download", `${run.run_id}.json`);
   $("evaluation").textContent = !LIVE || !evaluationReport || evaluationReport.status === "NOT_YET_EVALUATED"
     ? "Not yet evaluated" : evaluationReport.summary || "Measured report available at /api/evaluations/latest.";
@@ -499,8 +663,8 @@ async function startRun(refresh = false) {
 
 function showError(error) {
   const state = $("review-state");
-  state.className = "state state-bad";
-  state.replaceChildren(el("span", "Could not load run data"), el("small", error.message));
+  state.className = "banner bad";
+  state.replaceChildren(el("strong", "Could not load the data"), el("span", error.message));
   clearTimeout(pollTimer);
   for (const id of ["start-btn", "cancel-btn", "approve-btn", "reject-btn", "rerun-btn"]) $(id).disabled = true;
 }
@@ -519,12 +683,12 @@ $("scenario-select").addEventListener("change", async () => {
   load().catch(showError);
 });
 $("session-token").addEventListener("input", () => { if (run) render(); });
-$("ack-box").addEventListener("change", () => renderReview());
-$("reason-input").addEventListener("input", () => renderReview());
+$("ack-box").addEventListener("change", () => renderControls());
+$("reason-input").addEventListener("input", () => renderControls());
 $("approve-btn").addEventListener("click", () => operate(() => decide("APPROVE")));
 $("reject-btn").addEventListener("click", () => {
   if (!$("reason-input").value.trim()) {
-    $("review-hint").textContent = "Enter a short reason before rejecting.";
+    $("review-hint").textContent = "Write a short reason before rejecting.";
     $("reason-input").focus();
     return;
   }
@@ -544,7 +708,8 @@ async function init() {
     sessionConfigured = health.session_configured;
     scenarioList = await scenariosResponse.json();
     for (const snapshot of scenarioList) {
-      const option = el("option", `${snapshot.scenario_id} · revision ${snapshot.revision}`);
+      const f = snapshot.source.original_fields;
+      const option = el("option", `${f.AIRLINE}${f.FLIGHT_NUMBER} ${f.ORIGIN_AIRPORT}→${f.DESTINATION_AIRPORT} · ${snapshot.scenario_id}`);
       option.value = snapshot.scenario_id;
       $("scenario-select").append(option);
     }
