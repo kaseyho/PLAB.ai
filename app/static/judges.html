@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How PLAB.ai addresses Airbus Challenge 2: independent agents, deterministic checks, human approval, measured evaluations and rubric evidence.">
+  <title>PLAB.ai · Challenge and judging guide</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand guide-brand" href="/" aria-label="PLAB.ai — open the interactive demo">
+        <span class="logo" aria-hidden="true">P</span>
+        <div><strong>PLAB.ai</strong><span class="brand-sub">Challenge and judging guide</span></div>
+      </a>
+      <nav class="topbar-right" aria-label="Project links">
+        <a class="nav-link" href="/">Open interactive demo</a>
+        <a class="nav-link" href="https://github.com/kaseyho/PLAB.ai">Source code</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap guide">
+    <section class="intro">
+      <p class="challenge-label">Airbus Challenge #2 · Air traffic decisions</p>
+      <h1>Three teams. One checked arrival plan. A human decision.</h1>
+      <p><b>Working prototype:</b> an airport duty manager can turn a disrupted flight into
+        a proposed landing time, gate and taxi route, inspect each team's position, then approve or reject.
+        Everything runs in a simulator.</p>
+    </section>
+    <p class="guide-flow" aria-label="Workflow: sourced facts, deterministic checks, independent agents, human approval">
+      <span>Sourced facts</span><span aria-hidden="true">→</span>
+      <span>Rule-checked options</span><span aria-hidden="true">→</span>
+      <span>ATC · Pilot · Ground</span><span aria-hidden="true">→</span>
+      <span>Human approval</span>
+    </p>
+    <nav class="guide-nav" aria-label="Guide sections">
+      <a href="#challenge">Problem → response</a>
+      <a href="#rubric">Six judging criteria</a>
+      <a href="#evaluation">Measured results</a>
+      <a href="#demo">Three-minute walkthrough</a>
+    </nav>
+
+    <section class="card" id="challenge" aria-labelledby="challenge-h">
+      <h2 id="challenge-h">How we answer the problem statement</h2>
+      <p>The challenge describes phone calls and manual updates across ATC, pilots and ground staff,
+        with incompatible decisions causing more delay and holding. PLAB.ai gives the duty manager
+        a shared, versioned decision record. The time saved over that manual process has not yet been measured.</p>
+      <dl class="guide-map">
+        <div>
+          <dt>Three independent agents</dt>
+          <dd><p><b>ATC:</b> runway availability, wake spacing, taxi blockages and movement capacity.<br>
+            <b>Pilot:</b> fuel, permitted arrival conditions and passenger connections; flight-duty limits are also checked.<br>
+            <b>Ground:</b> gates, handling crews, equipment, overtime and turnaround.</p>
+            <p>Each role gets a separate model invocation and returns structured JSON. The agents explain
+              preferences and concessions; deterministic code computes schedules, costs and feasibility.</p>
+            <p class="guide-evidence"><a href="/?sample=third-turn#step-2">Inspect three separate message histories</a> · saved, scripted example</p></dd>
+        </div>
+        <div>
+          <dt>Consensus within three turns</dt>
+          <dd><p>One turn means one message per role. Turn 1 collects offers and concessions; Turn 2 votes on
+            one complete plan; Turn 3 can revise it after dissent. Consensus needs three fresh accepts of
+            the same plan hash. At most nine generation requests, with no hidden retries.</p>
+            <p>A 45-second run budget bounds waiting. Missing or invalid replies can end negotiation early.</p>
+            <p class="guide-evidence"><a href="https://github.com/kaseyho/PLAB.ai/blob/main/app/coordinator.py">Coordinator and request limits</a></p></dd>
+        </div>
+        <div>
+          <dt>Real flight + explicit operational inputs</dt>
+          <dd><p>The supplied CSV was verified: <b>358,774 flights from 2015</b>, each with
+            <code>WEATHER_DELAY &gt; 15</code> or <code>LATE_AIRCRAFT_DELAY &gt; 20</code>.
+            D01 uses AA1057, DFW–MIA, delayed 102 minutes by weather.</p>
+            <p>DOT supplies the historical trigger. The organiser's <b>synthetic workbook</b> supplies airport
+              inventory, movements/hour, turnaround, wake, fuel and crew rules. Additional traffic,
+              occupancy, fuel state and connections are declared simulation inputs. Source hashes and workbook cells are retained.</p>
+            <p class="guide-evidence"><a href="/?sample=third-turn#scenario-facts">Inspect source facts and assumptions</a></p></dd>
+        </div>
+        <div>
+          <dt>A feasible revised decision</dt>
+          <dd><p>Code enumerates up to 124 landing/gate/taxi combinations and applies 15 checks.
+            A plan must pass every required check before it can be reviewed. The output includes landing
+            and gate-in times, gate, route, fuel margin and ground-crew overtime.</p>
+            <p class="guide-evidence"><a href="/?sample=third-turn#check-list">Inspect rules, margins and evidence IDs</a></p></dd>
+        </div>
+        <div>
+          <dt>Deterministic fallback</dt>
+          <dd><p>If negotiation fails, fixed rules select the earliest feasible option from the checked catalog,
+            using <b>zero model calls</b>. Failed or unknown checks cannot be waived. If no plan is feasible
+            or essential data is missing, the app gives a non-executable outcome with a reason.</p>
+            <p class="guide-evidence"><a href="/?sample=fallback#review-card">Fallback</a> ·
+              <a href="/?sample=no-feasible#review-card">No feasible plan</a> ·
+              <a href="/?sample=insufficient-data#review-card">Missing fuel data</a> · saved examples</p></dd>
+        </div>
+        <div>
+          <dt>Human control + trace</dt>
+          <dd><p>Agreement alone changes nothing. A human supplies a decision reason; fallback additionally
+            needs an explicit acknowledgement. Approval rechecks the exact plan, source versions, current
+            resources and expiry before atomically booking runway, gate, crew and equipment in the simulator.</p>
+            <p>Messages, checks, counts and decisions are persisted in a downloadable, hash-chained audit log.</p>
+            <p class="guide-evidence"><a href="/?sample=stale#review-card">See a stale plan blocked</a> ·
+              <a href="/?sample=applied#event-list">Inspect an approval trace</a> · saved examples</p></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card" id="rubric" aria-labelledby="rubric-h">
+      <h2 id="rubric-h">Evidence for every judging criterion</h2>
+      <p>These are the supplied rubric weights, not self-awarded scores.
+        Technical soundness, honest evaluation and trust together account for <b>65%</b>.</p>
+      <dl class="guide-map">
+        <div><dt>Problem realism <span>20%</span></dt><dd>A named duty-manager workflow, a qualifying
+          historical disruption and conflicting ATC/Pilot/Ground responsibilities. The prototype covers one
+          arrival at a time. <a href="#challenge">See the problem-to-feature mapping.</a></dd></div>
+        <div><dt>Technical soundness <span>25%</span></dt><dd>A working path from inputs to a persisted,
+          approved simulation update. Independent LLM messages express preferences; Python owns arithmetic,
+          constraints, selection and application. <a href="/">Try a live run without API keys.</a></dd></div>
+        <div><dt>Honest evaluation <span>20%</span></dt><dd>A frozen suite, B0/B1 baselines, actual denominators
+          and retained failures. Initial live consensus was <b>1/6</b>; passing the system's contract checks
+          does not mean the agents succeeded. <a href="#evaluation">Read the measured results.</a></dd></div>
+        <div><dt>Trust and traceability <span>20%</span></dt><dd>Checkable source cells, rule margins,
+          same-plan votes, visible uncertainty and a mandatory human decision. Stale or unsupported plans
+          cannot be applied. <a href="/?sample=applied#tech">Inspect the evidence and audit trail.</a></dd></div>
+        <div><dt>Impact <span>10%</span></dt><dd>The UI exposes holding, fuel and overtime trade-offs against
+          fair deterministic baselines. Real coordination time and operational savings remain unmeasured;
+          the initial live suite did not improve on B0. <a href="#impact">See the exact comparison.</a></dd></div>
+        <div><dt>Time discipline <span>5%</span></dt><dd>A focused presentation route fits within three minutes.
+          Submission timing must come from the hackathon portal; this site does not establish it.
+          <a href="#demo">Follow the timed walkthrough.</a></dd></div>
+      </dl>
+      <p class="guide-evidence"><a href="https://github.com/kaseyho/PLAB.ai/blob/main/docs/judging_rubrics.md">Supplied judging rubric</a></p>
+    </section>
+
+    <section class="card" id="evaluation" aria-labelledby="evaluation-h">
+      <h2 id="evaluation-h">What we measured — and where it fails</h2>
+      <p><b>Initial frozen holdout, 31 October 2026:</b> qwen3.8:27b, prompt roles-v6.
+        Six nominal cases used the live model; six fault cases used labelled fixtures.</p>
+      <dl class="guide-metrics">
+        <div><dt>Live consensus</dt><dd>1 / 6</dd><p>Five used checked fallback</p></div>
+        <div><dt>Contract cases passed</dt><dd>12 / 12</dd><p>System behavior, not AI accuracy</p></div>
+        <div><dt>Real model requests</dt><dd>24</dd><p>12.24 s median nominal run</p></div>
+      </dl>
+      <p>Live failures: two timeouts, one final-vote dissent, one unknown evidence reference and one
+        offer-policy violation. Fault cases covered blocked gates, impossible fuel, missing fuel,
+        stale approval, timeout and malformed replies.</p>
+      <p><b>Current-version limit:</b> a later roles-v7 development run reached 0/4 consensus, with three
+        prompt-adapter errors and one policy violation. The adapter was then fixed; a focused live smoke
+        still timed out and used fallback. No full live re-evaluation followed. The 1/6 result is historical
+        evidence, not a benchmark of the final prompt.</p>
+      <p class="guide-source-links"><a href="https://github.com/kaseyho/PLAB.ai/blob/main/evals/results/initial-live-holdout.json">Initial live report</a>
+        <a href="https://github.com/kaseyho/PLAB.ai/blob/main/evals/results/development-debug.json">Retained development failures</a>
+        <a href="/api/evaluations/latest">Server report (JSON)</a></p>
+
+      <h3 id="impact">Impact: a measured trade-off, not a savings claim</h3>
+      <p><b>B0</b> selects the earliest feasible plan. <b>B1</b> minimises the highest role cost, then total
+        cost. Both use the same inputs, rules and full candidate catalog as the agent system.</p>
+      <p>All six nominal cases in the initial live report matched B0's modeled impacts. No live benefit
+        over that baseline was demonstrated. The <a href="/?sample=third-turn#review-card">scripted D01 third-turn example</a>
+        illustrates a different compromise: <b>2 extra minutes of holding for 35 fewer minutes of ground-crew
+        overtime</b>. This is a synthetic trade-off, not a measured historical saving or proof that agents beat B1.</p>
+
+      <details class="raw">
+        <summary>Scope limits and the next validation step</summary>
+        <ul>
+          <li>One runway, two candidate spare gates and a fixed background schedule. This is not airport-wide rescheduling.</li>
+          <li>Movement counts proxy throughput; supplied route-permission labels proxy weather/turbulence.
+            Departure wake times are explicitly reused as an arrival-simulation proxy. Distance separation and full flight-plan changes are outside this MVP.</li>
+          <li>Synthetic operational state cannot establish real-world safety or savings. The small holdout shares scenario templates;
+            it is not a generalization benchmark. The audit chain is inspectable, not tamper-proof against the database owner.</li>
+          <li>Next: verify the corrected prompt and provider latency on a new frozen live evaluation,
+            then validate operational assumptions and review time with practitioners. These steps are not claimed complete.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section class="card" id="demo" aria-labelledby="demo-h">
+      <h2 id="demo-h">A three-minute judge walkthrough</h2>
+      <p>The saved examples below are read-only and use scripted messages. Use the
+        <a href="/">interactive demo</a> for live calls and a real human approval within the simulator.</p>
+      <ol>
+        <li><b>0:00–0:25 · The user and trigger.</b> Choose D01 and start a run in
+          <a href="/" target="_blank" rel="noopener">a separate demo tab</a>. Distinguish DOT history,
+          synthetic workbook limits and simulated current conditions.</li>
+        <li><b>0:25–1:10 · Coordination.</b> Open the <a href="/?sample=third-turn#step-2">third-turn example</a>.
+          Expand each agent's messages: different preferences, Turn 2 dissent, then fresh agreement on the revised plan.</li>
+        <li><b>1:10–1:50 · Human control.</b> Show the checks and decision reason in the live demo.
+          Approve only after review; a fallback also needs acknowledgement. Show the recorded simulation update.</li>
+        <li><b>1:50–2:20 · A visible limit.</b> Open <a href="/?sample=insufficient-data#review-card">missing fuel data</a>:
+          there is no approvable plan. Explain how timeouts produce a clearly labelled fallback.</li>
+        <li><b>2:20–3:00 · Evidence.</b> Present 1/6 live consensus separately from 12/12 contract cases,
+          explain B0/B1 and the synthetic trade-off, then state the next validation step.</li>
+      </ol>
+    </section>
+
+    <footer class="foot muted small">
+      <p class="guide-source-links"><a href="https://github.com/kaseyho/PLAB.ai/blob/main/docs/problem_statement.md">Problem statement</a>
+        <a href="https://github.com/kaseyho/PLAB.ai/blob/main/docs/organizer_updates.md">Organiser clarification</a>
+        <a href="https://github.com/kaseyho/PLAB.ai/blob/main/docs/submission.md">Source mapping and demo notes</a>
+        <a href="/">Return to the app</a></p>
+      Simulation only. No real aircraft or airport systems are controlled.
+    </footer>
+  </main>
+</body>
+</html>

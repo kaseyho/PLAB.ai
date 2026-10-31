@@ -4,6 +4,13 @@ A working airport coordination simulator: independent ATC, Pilot and Ground agen
 negotiate a checked arrival plan, and a duty manager approves its application.
 The organizer's workbook supplies synthetic operational limits.
 
+**[Open the public demo](https://plab-ai.onrender.com/)** ·
+**[Judge guide: requirements, rubric and evidence](https://plab-ai.onrender.com/static/judges.html)**
+
+The judge guide maps every challenge requirement and all six weighted criteria to
+observable features, saved examples and measured results. It separates live-model
+consensus from contract checks, and includes a three-minute presentation route.
+
 ## Public judge deployment
 
 The Render configuration in `render.yaml` runs the Python service on the free demo
@@ -35,7 +42,7 @@ The demo prints a temporary operator access code when PLAB_SESSION_TOKEN is unse
 Alternatively set it to at least 16 random characters in .env. Keep credentials out of Git.
 
 Open **http://127.0.0.1:8000**, enter that access code, select D01, and click
-**Start run**. Review the plan, messages, checks and B0/B1 comparisons. Enter a
+**Start negotiation**. Review the plan, messages, checks and B0/B1 comparisons. Enter a
 reason and approve or reject. Fallback also needs the acknowledgement.
 Each launch uses a fresh SQLite database under artifacts/demos/.
 

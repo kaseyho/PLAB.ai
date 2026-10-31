@@ -81,7 +81,7 @@ Keep a worked D01 arithmetic example as a legacy regression fixture until its co
 
 Negotiation is autonomous until a terminal recommendation. The reviewer then sees historical and operational provenance, exact checks and margins, domain trade-offs, same-hash votes, expiry and fallback status. Both approval and rejection require a reason. Fallback needs an explicit acknowledgement that consensus failed.
 
-Nothing changes before approval. The shared SQLite transaction revalidates current resources and commits the reservation, revision and review event exactly once. Stale or unknown checks, unauthorized requests, duplicate applications and conflicting resource use are blocked. Persisted application currently reserves runway and gate occupancy only; crew/equipment booking remains a stated limitation.
+Nothing changes before approval. The shared SQLite transaction revalidates current resources and commits the reservation, revision and review event exactly once. Stale or unknown checks, unauthorized requests, duplicate applications and conflicting resource use are blocked. Persisted application reserves runway, gate, handling crew and required equipment together in the simulator.
 
 The hash-chained log supports inspection but is not tamper-proof against the database owner. Store concise explanations and evidence, never hidden model reasoning or secrets.
 

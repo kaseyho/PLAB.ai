@@ -1,14 +1,33 @@
 # Hackathon MVP: launch and demonstrate
 
-The app is runnable now. Use the commands in [README](../README.md); provider keys
-and the operator token stay in local `.env`.
+The app is runnable now at [the public demo](https://plab-ai.onrender.com/), with
+team-provided model access and no visitor API key. The
+[judge guide](https://plab-ai.onrender.com/static/judges.html) maps the problem
+statement and all six rubric criteria to working features and evidence.
+For local use, follow [README](../README.md); credentials stay in `.env`.
+
+## How the submission answers the rubric
+
+| Criterion | Weight | Concrete answer and evidence |
+|---|---:|---|
+| Problem realism | 20% | A duty manager coordinates one disrupted arrival across ATC, Pilot and Ground. D01 is the qualifying historical AA1057 flight; workbook limits and additional simulation inputs are explicitly distinguished. |
+| Technical soundness | 25% | Separate structured role invocations, at most three turns/nine requests, deterministic candidate checks and selection, zero-call fallback, persisted API results and atomic simulator application. |
+| Honest evaluation | 20% | Frozen inputs and B0/B1 comparisons; 1/6 initial live nominal consensus versus 12/12 contract cases, including fixture faults. Later development failures remain visible. These are different measures. |
+| Trust and traceability | 20% | Source hashes/cells, check margins, same-plan votes, human reason and fallback acknowledgement. Approval rechecks freshness and resources; missing data and stale plans block application. |
+| Impact | 10% | Paired holding, fuel and overtime comparisons. All six initial nominal live cases matched B0's modeled impacts; no live improvement was demonstrated. The scripted third-turn example illustrates a 2-minute holding / 35-minute overtime trade-off, not real-world savings. |
+| Time discipline | 5% | A timed three-minute walkthrough is published. A valid submission timestamp must be established by the hackathon portal. |
+
+The guide links directly to the agent histories, checks, source facts, approval
+trace and refusal examples. Saved examples are labelled scripted and read-only;
+they do not stand in for live-agent performance. No judging score is self-awarded.
 
 ## Presentation route, under three minutes
 
 1. Start `uv run python -m app.demo --offline --third-turn` for a reliable,
    explicitly labelled fixture-agent demonstration with the real rules and review gate.
    Start without those flags to use the configured live provider.
-2. Open `http://127.0.0.1:8000`, enter the operator token and choose D01.
+2. Open the public demo, or `http://127.0.0.1:8000` for the local presentation.
+   Only the local version requires the operator token. Choose D01.
    Show the real historical AA1057 trigger, filtered record 47, and workbook sources.
 3. Start the run. Show each role's offer, the injected Turn 2 dissent in offline
    mode, and three fresh Turn 3 accepts of the revised plan hash.

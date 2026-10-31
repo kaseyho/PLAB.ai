@@ -63,6 +63,8 @@ body {
 .topbar-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .sim-tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 3px 7px; }
 .examples { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.nav-link { color: var(--accent); font-size: 14px; text-underline-offset: 3px; }
+.intro .challenge-label { font-size: 12px; margin-bottom: 8px; }
 
 /* Intro */
 .intro { padding: 24px 0 4px; }
@@ -229,6 +231,33 @@ pre { margin: 6px 0; padding: 10px; background: var(--bg); border-radius: 6px; f
 
 .foot { padding: 8px 0 32px; }
 .time-note { margin: 8px 0 12px; font-size: 12px; color: var(--muted); }
+
+/* Judge guide: the requirement and its evidence stay next to each other. */
+.guide a { color: var(--accent); text-underline-offset: 3px; }
+.guide-brand { color: var(--ink); text-decoration: none; }
+.guide-nav { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 12px 0 22px; font-size: 14px; }
+.guide-flow { display: flex; flex-wrap: wrap; gap: 8px 12px; padding: 12px 0; border-block: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+.guide-flow span[aria-hidden] { color: var(--muted); }
+.guide-map { margin: 0; }
+.guide-map > div { display: grid; grid-template-columns: minmax(145px, 1fr) minmax(0, 3fr); gap: 12px 24px; padding: 16px 0; border-top: 1px solid var(--line); }
+.guide-map > div:first-child { border-top: 0; padding-top: 0; }
+.guide-map > div:last-child { padding-bottom: 0; }
+.guide-map dt { font-weight: 600; }
+.guide-map dt span { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+.guide-map dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.guide-map p { margin: 0 0 8px; }
+.guide-map p:last-child { margin-bottom: 0; }
+.guide-evidence { font-size: 13px; color: var(--muted); }
+.guide-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.guide-metrics div { border-left: 2px solid var(--line); padding-left: 12px; }
+.guide-metrics dt { font-size: 13px; color: var(--muted); }
+.guide-metrics dd { margin: 2px 0; font-size: 26px; font-weight: 600; }
+.guide-metrics p { margin: 0; color: var(--muted); font-size: 12px; }
+.guide .card > p, .guide .card > ul, .guide .card > ol { font-size: 14px; }
+.guide .card > p:last-child { margin-bottom: 0; }
+.guide li { margin: 10px 0; }
+.guide :target, #tech:target, #step-2:target, #review-card:target { scroll-margin-top: 20px; }
+.guide-source-links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 button, select, input { transition: border-color 120ms, background-color 120ms; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -251,5 +280,8 @@ button, select, input { transition: border-color 120ms, background-color 120ms; 
   .stat:last-child { grid-column: 1 / -1; border: 0; }
   .topbar-right { gap: 10px; }
   .buttons button.primary { flex: 1; }
+  .guide-map > div { grid-template-columns: 1fr; gap: 6px; }
+  .guide-map dt span { display: inline; margin-left: 8px; }
+  .guide-metrics { gap: 10px; }
   details.check summary { grid-template-columns: 80px minmax(0, 1fr); }
 }

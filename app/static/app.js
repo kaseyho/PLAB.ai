@@ -548,7 +548,7 @@ function renderCandidates() {
     const labels = [];
     if (c.candidate_id === selected) labels.push("chosen");
     if (run.baseline_b0 && c.candidate_id === run.baseline_b0.candidate_id) labels.push("B0 earliest safe");
-    if (run.baseline_b1 && c.candidate_id === run.baseline_b1.candidate_id) labels.push("B1 best overall");
+    if (run.baseline_b1 && c.candidate_id === run.baseline_b1.candidate_id) labels.push("B1 joint optimum");
     const cells = [
       c.candidate_id + (labels.length ? ` (${labels.join(", ")})` : ""),
       simClock(c.landing_time_s), simClock(c.gate_in_time_s), `${c.gate_id} via ${c.taxi_route_id}`,
@@ -560,7 +560,7 @@ function renderCandidates() {
     body.append(row);
   }
   $("cand-note").textContent = (run.candidates || []).length
-    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked options, ${run.catalog_feasible_count} of which pass every safety rule. B0 is the earliest safe option; B1 has the lowest combined cost over all options. Costs are simulation policy scores, lower is better.`
+    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked options, ${run.catalog_feasible_count} of which pass every safety rule. B0 is the earliest feasible option. B1 minimises the highest role cost, then total cost, over the same full catalog. Costs are simulation policy scores, lower is better.`
     : "No options to compare for this outcome.";
 }
 
@@ -635,8 +635,11 @@ function renderEvidence() {
   link.href = LIVE ? `/api/runs/${encodeURIComponent(run.run_id)}/export` : `/static/fixtures/${encodeURIComponent(fixtureName)}.json`;
   link.textContent = LIVE ? "Download full trace (JSON)" : "Download this example (JSON)";
   link.setAttribute("download", `${run.run_id}.json`);
-  $("evaluation").textContent = !LIVE || !evaluationReport || evaluationReport.status === "NOT_YET_EVALUATED"
-    ? "Not yet evaluated" : evaluationReport.summary || "Measured report available at /api/evaluations/latest.";
+  $("evaluation").textContent = !LIVE
+    ? "This scripted example demonstrates behavior. It is not a model evaluation; see the measured results below."
+    : !evaluationReport || evaluationReport.status === "NOT_YET_EVALUATED"
+      ? "No evaluation report is loaded."
+      : `${evaluationReport.summary || "Measured report available below."} Report prompt: ${evaluationReport.provider?.prompt_version || "not recorded"}. See the results page for version limits.`;
 }
 
 async function post(path, body) {
@@ -772,5 +775,13 @@ async function init() {
   }
   await load();
   if (runParam) $("scenario-select").value = run.snapshot.scenario_id;
+  // Judge-guide links open the relevant evidence after the run has rendered.
+  const target = $(location.hash.slice(1));
+  if (target) {
+    for (let node = target; node; node = node.parentElement) {
+      if (node.tagName === "DETAILS") node.open = true;
+    }
+    target.scrollIntoView({block: "start"});
+  }
 }
 init().catch(showError);
