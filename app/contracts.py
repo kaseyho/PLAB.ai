@@ -33,6 +33,7 @@ Count = Annotated[StrictInt, Field(ge=0)]
 Revision = Annotated[StrictInt, Field(ge=1)]
 Nonnegative = Annotated[Decimal, Field(ge=0, allow_inf_nan=False)]
 IdList = Annotated[tuple[Identifier, ...], Field(max_length=124)]
+ApiMode = Literal["responses", "chat_completions"]
 REQUIRED_RULES = (
     "ATC-RWY-01",
     "ATC-SEP-01",
@@ -381,7 +382,9 @@ class ProviderInfo(Contract):
     mode: Literal["LIVE", "FIXTURE", "UNAVAILABLE", "RECORDED_REPLAY"]
     model: str
     api_base: str | None = None
-    prompt_version: str = "roles-v1"
+    api_mode: ApiMode = "responses"
+    reasoning_effort: Literal["none"] | None = None
+    prompt_version: str = "roles-v5"
     max_output_tokens: Annotated[StrictInt, Field(ge=1, le=500)] = 500
     retries: Literal[0] = 0
 

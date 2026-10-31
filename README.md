@@ -20,8 +20,10 @@ cp -n .env.example .env
 Configure `.env` locally. Never commit credentials:
 
 - `SOCLAAS_API_KEY`, `SOCLAAS_MODEL`, `SOCLAAS_BASE_URL`: the configured SoCLaaS
-  provider. Use an active key and a supported model ID. The example's `default`
-  value is not a verified model choice.
+  provider. Use an active key and a supported model ID. The example uses
+  `qwen3.8:27b`, verified on the backend conflict fixture.
+- `SOCLAAS_API_MODE=chat_completions`: the verified gateway endpoint. The adapter
+  requests reasoning disabled to reserve the output budget for the structured reply.
 - Alternatively, leave `SOCLAAS_API_KEY` unset and configure `OPENAI_API_KEY`,
   `OPENAI_MODEL`, and optionally `OPENAI_BASE_URL`.
 - `PLAB_SESSION_TOKEN`: a local operator token of at least 16 characters. Generate
@@ -31,11 +33,16 @@ Configure `.env` locally. Never commit credentials:
   `http://127.0.0.1:8000`.
 
 Environment variables take precedence over `.env`. A configured SoCLaaS key takes
-precedence over OpenAI configuration. The adapter uses the OpenAI SDK's Responses
-API with a strict JSON schema, a 500-token output cap, and zero retries. SoCLaaS
+precedence over OpenAI configuration. The adapter uses the OpenAI SDK, with Chat
+Completions for SoCLaaS and Responses for OpenAI. Both request a strict JSON schema,
+a 500-token output cap, and zero retries; local schema and policy validation remain
+mandatory. Set `<PROVIDER>_API_MODE` to `responses` or `chat_completions` to select
+the endpoint explicitly. The endpoint never switches during a run. SoCLaaS
 documents a [Responses API subset](https://soclaas.comp.nus.edu.sg/guides/api.html);
-capability must be verified for the selected model. An unsupported request becomes
-an explicit provider failure and deterministic fallback, never a hidden retry.
+its responses did not consistently obey the requested schema in the initial smoke
+tests. The exact contract is also included in the trusted role prompt. An unsupported
+request becomes an explicit provider failure and deterministic fallback, never a
+hidden retry.
 
 ## Run Developer B's slice now
 

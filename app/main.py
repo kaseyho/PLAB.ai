@@ -25,6 +25,7 @@ from pydantic import JsonValue, ValidationError
 
 from app.agents import AgentProvider, OpenAIProvider, UnavailableProvider
 from app.contracts import (
+    ApiMode,
     PlanningHooks,
     ResourceState,
     ReviewHook,
@@ -52,6 +53,7 @@ class Settings:
     api_key: str = field(default="", repr=False)
     model: str = ""
     base_url: str = "https://api.openai.com/v1"
+    api_mode: ApiMode = "responses"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -62,6 +64,11 @@ class Settings:
             if provider == "SOCLAAS"
             else "https://api.openai.com/v1"
         )
+        api_mode = os.getenv(
+            f"{provider}_API_MODE", "chat_completions" if provider == "SOCLAAS" else "responses"
+        )
+        if api_mode not in ("responses", "chat_completions"):
+            raise ValueError("Provider API_MODE must be responses or chat_completions")
         return cls(
             db_path=Path(os.getenv("PLAB_DB_PATH", "artifacts/plab.sqlite3")),
             public_origin=os.getenv("PLAB_PUBLIC_ORIGIN", "http://127.0.0.1:8000").rstrip("/"),
@@ -70,6 +77,7 @@ class Settings:
             api_key=os.getenv(f"{provider}_API_KEY", ""),
             model=os.getenv(f"{provider}_MODEL", ""),
             base_url=os.getenv(f"{provider}_BASE_URL", default_base),
+            api_mode=cast(ApiMode, api_mode),
         )
 
 
@@ -108,7 +116,9 @@ def create_app(
     planning = planner or discover_planner()
     review_hook = reviewer or discover_reviewer()
     agent_provider: AgentProvider = provider or (
-        OpenAIProvider(config.api_key, config.model, base_url=config.base_url)
+        OpenAIProvider(
+            config.api_key, config.model, base_url=config.base_url, api_mode=config.api_mode
+        )
         if config.api_key and config.model
         else UnavailableProvider()
     )

@@ -214,9 +214,34 @@ local `data/flights.csv`; they match. Its operational checks remain explicitly
 synthetic test certificates. Offline protocol success does not satisfy the live
 model or deterministic aviation-evaluation gates.
 
-The first live attempt on 2026-10-31 reached the configured SoCLaaS endpoint but
-authentication failed. The persisted result is labelled provider-failure fallback,
-with three attempted requests and no fabricated consensus. An active key and a
-supported model are still required to verify a real conflict/concession success.
-Full integration additionally needs A's simulator/dashboard and C's real
-planner/checker/scenarios/evaluation report. Those gates are not claimed complete.
+Live conflict/concession verification succeeded on 2026-10-31 with SoCLaaS
+`qwen3.8:27b`, Chat Completions, `reasoning_effort=none`, and prompt version
+`roles-v5`. Run `55d875d9-dfc1-4542-bd62-3575071bd85b` made six separately identified
+provider calls in two rounds and terminated in 8,595 ms. ATC and Pilot initially
+preferred C1 and offered C2 as a concession; Ground preferred C3 and initially
+accepted both C2 and C3. All three then returned `ACCEPT` for the same C2 plan hash.
+The trace chain validates. Approval was `PENDING`; no resources were applied.
+
+The full trace remains local under
+`artifacts/backend-smoke/55d875d9-dfc1-4542-bd62-3575071bd85b.json`. It records 24,235
+input tokens and 1,185 output tokens as reported by the gateway across the six
+requests. The local `.env` and example configuration select the verified model
+and endpoint; credentials remain ignored. The endpoint is fixed before a run,
+not changed as an automatic retry.
+
+Retain the earlier attempts: authentication failure, malformed/nonconforming
+responses, offer-policy/ranking violations, valid refusals with no mutual offer,
+and an output-token limit reached before a reasoning model returned its answer.
+All terminated as explicit fallback, without weakening validators or exceeding
+the request budget. See `artifacts/backend-smoke/verification.json` for the full
+attempt inventory. These were development iterations over one synthetic fixture,
+not independent scenarios or a frozen evaluation suite: ten live attempts in total,
+one consensus, nine fallbacks, and 33 started requests across all attempts. The
+first attempt was the earlier authentication failure. One successful attempt
+does not establish a convergence rate. Rationale prose can still misstate costs
+or relationships; render trusted metrics from deterministic results and retain
+human review rather than treating JSON validation as semantic verification.
+
+The **provider** is live; the **planner/check certificates remain fixtures**. Full
+integration still needs A's simulator/dashboard and C's real planner, checker,
+scenarios, and evaluation report. Those gates are not claimed complete.

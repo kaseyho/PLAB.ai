@@ -11,6 +11,7 @@ from pydantic import JsonValue
 from app.contracts import (
     AgentOffer,
     AgentVote,
+    ApiMode,
     CandidatePlan,
     ProviderInfo,
     Role,
@@ -32,12 +33,27 @@ Historical trigger fields select the scenario; they are not live observations or
 Numerical values are rendered from evidence by the application. Cite IDs in a brief rationale
 instead of restating numbers. Give a decision summary, never hidden chain-of-thought.
 Keep the rationale under 40 words and cite at most three evidence IDs.
-For an OFFER: rank offered candidates in supplied domain order. Choose the preferred ID from
-your offered initial set, or null if that set is empty. Offer only subsets of the allowed
-initial/concession sets. Consider a permitted concession that addresses other domains' needs.
+For an OFFER, these field mappings are mandatory:
+- acceptable_candidate_ids must be a subset of allowed_initial_ids, not all feasible plans.
+- concession_candidate_ids must be a subset of allowed_concession_ids.
+- Concessions may be outside allowed_initial_ids. That is their purpose: an initial
+  preference is not a hard constraint. Use allowed_concession_ids as the eligibility
+  authority; being outside the initial set does not make a permitted concession invalid.
+- ranked_candidate_ids must contain exactly the union of those two offered sets, without
+  duplicates, in domain_order. Do not rank candidates you did not offer.
+- preferred_candidate_id must belong to acceptable_candidate_ids, or be null if it is empty.
+Feasibility does not enlarge either allowed set. You may offer empty sets. Consider a permitted
+concession that addresses other domains' needs; do not offer outside the stated envelope.
+Your goal is a jointly workable plan within your role's allowed budget, not merely reporting
+your cheapest candidate. Assess the published cross-domain impacts of each allowed concession.
+Offer compromises you are willing to discuss in round 2. An empty concession set declines all
+permitted compromises; explain that choice in your rationale. The final vote remains independent.
 For a VOTE: inspect the selected complete plan, checks, and all peer offers. Explicitly
 ACCEPT, REJECT, or NEEDS_INFORMATION. Echo exactly the proposed plan_hash.
 An offer is not a final commitment. Refuse unsupported commitments; do not fake consensus.
+Return exactly one JSON object matching the required output schema below. Include every
+required field, including empty arrays and a null preferred ID when appropriate. Do not
+include Markdown fences, headings, or text outside the JSON object.
 """
 
 
@@ -72,9 +88,16 @@ class OpenAIProvider:
         model: str,
         *,
         base_url: str = "https://api.openai.com/v1",
+        api_mode: ApiMode = "responses",
         client: AsyncOpenAI | None = None,
     ) -> None:
-        self.info = ProviderInfo(mode="LIVE", model=model, api_base=base_url)
+        self.info = ProviderInfo(
+            mode="LIVE",
+            model=model,
+            api_base=base_url,
+            api_mode=api_mode,
+            reasoning_effort="none" if api_mode == "chat_completions" else None,
+        )
         self.client = client or AsyncOpenAI(
             api_key=api_key, base_url=base_url, max_retries=0, timeout=12.0
         )
@@ -87,10 +110,41 @@ class OpenAIProvider:
         timeout_s: float,
     ) -> ProviderReply:
         schema = AgentOffer if round_number == 1 else AgentVote
+        client = self.client.with_options(max_retries=0, timeout=timeout_s)
+        if self.info.api_mode == "chat_completions":
+            completion = await client.chat.completions.create(
+                model=self.info.model,
+                store=False,
+                max_tokens=self.info.max_output_tokens,
+                reasoning_effort="none",
+                n=1,
+                messages=[
+                    {"role": "system", "content": cast(str, prompt["system"])},
+                    {"role": "user", "content": canonical_json(prompt["context"])},
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": schema.__name__,
+                        "strict": True,
+                        "schema": schema.model_json_schema(),
+                    },
+                },
+            )
+            choice = completion.choices[0] if completion.choices else None
+            status: str = choice.finish_reason if choice else "empty"
+            if choice and choice.message.refusal:
+                status = "refused"
+            return ProviderReply(
+                text=(choice.message.content or "") if choice else "",
+                response_id=completion.id,
+                actual_model=completion.model,
+                input_tokens=completion.usage.prompt_tokens if completion.usage else None,
+                output_tokens=completion.usage.completion_tokens if completion.usage else None,
+                status="completed" if status == "stop" else status,
+            )
         # All output fields are required, including nullable preferred_candidate_id.
-        response = await self.client.with_options(
-            max_retries=0, timeout=timeout_s
-        ).responses.create(
+        response = await client.responses.create(
             model=self.info.model,
             store=False,
             max_output_tokens=self.info.max_output_tokens,
@@ -200,6 +254,11 @@ def build_prompt(run: RunRecord, role: Role, round_number: int) -> dict[str, Jso
         "domain_order": cast(JsonValue, ranked),
         "allowed_initial_ids": cast(JsonValue, sorted(initial)),
         "allowed_concession_ids": cast(JsonValue, sorted(concessions)),
+        "concession_policy": {
+            "initial_preference_is_not_a_hard_constraint": True,
+            "additional_domain_cost_allowed": str(run.snapshot.concession_delta.for_role(role)),
+            "eligible_ids_are_computed_by_server": True,
+        },
         "full_catalog_count": len(run.catalog.candidates),
     }
     if round_number == 2:
@@ -216,7 +275,17 @@ def build_prompt(run: RunRecord, role: Role, round_number: int) -> dict[str, Jso
             }
             for r, o in run.offers.items()
         }
-    return {"system": ROLE_INSTRUCTIONS[role] + "\n" + COMMON_INSTRUCTIONS, "context": context}
+    schema = AgentOffer if round_number == 1 else AgentVote
+    # Repeat the output contract for gateways that do not enforce text.format.
+    # Local validation still rejects prose and schema violations.
+    system = (
+        ROLE_INSTRUCTIONS[role]
+        + "\n"
+        + COMMON_INSTRUCTIONS
+        + "\nRequired output schema:\n"
+        + canonical_json(schema.model_json_schema())
+    )
+    return {"system": system, "context": context}
 
 
 def validate_payload(run: RunRecord, role: Role, payload: AgentOffer | AgentVote) -> None:

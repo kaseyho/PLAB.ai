@@ -67,7 +67,9 @@ def main() -> None:
     if args.live and not (settings.api_key and settings.model):
         parser.error("Configure SOCLAAS_API_KEY/SOCLAAS_MODEL or OPENAI_API_KEY/OPENAI_MODEL")
     provider: AgentProvider = (
-        OpenAIProvider(settings.api_key, settings.model, base_url=settings.base_url)
+        OpenAIProvider(
+            settings.api_key, settings.model, base_url=settings.base_url, api_mode=settings.api_mode
+        )
         if args.live
         else FixtureProvider()
     )
