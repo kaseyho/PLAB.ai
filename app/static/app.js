@@ -45,6 +45,10 @@ let loadPromise = null;
 let evaluationReport = null;
 let evaluationLoaded = false;
 let fuelInputRevision = null;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let motionPaused = false;
+let motionRunId = null;
+let motionWasActive = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -134,7 +138,9 @@ function load() {
 
 async function loadRun() {
   if (LIVE && runParam) {
-    const response = await fetch(`/api/runs/${encodeURIComponent(runParam)}`, { credentials: "same-origin" });
+    const response = await fetch(`/api/runs/${encodeURIComponent(runParam)}`, {
+      credentials: "same-origin", signal: AbortSignal.timeout(12000),
+    });
     if (response.status === 404 && publicDemo) {
       runParam = null;
       lastSeq = 0;
@@ -145,7 +151,9 @@ async function loadRun() {
     if (!response.ok) throw new Error(`Run request failed (${response.status})`);
     const fresh = await response.json();
     const events = await fetch(
-      `/api/runs/${encodeURIComponent(runParam)}/events?after_seq=${lastSeq}`, { credentials: "same-origin" });
+      `/api/runs/${encodeURIComponent(runParam)}/events?after_seq=${lastSeq}`, {
+        credentials: "same-origin", signal: AbortSignal.timeout(12000),
+      });
     const newEvents = events.ok ? await events.json() : [];
     if (!events.ok) throw new Error(`Event request failed (${events.status})`);
     const combined = [...(run ? run.events : []), ...newEvents];
@@ -241,6 +249,7 @@ function render() {
   renderFlight();
   renderInputs();
   renderNegotiation();
+  renderRunMotion();
   renderReview();
   renderControls();
   renderRunFacts();
@@ -456,7 +465,9 @@ function agentProgress(role) {
   const error = run.events.findLast((event) => event.event_type === "AGENT_PROTOCOL_ERROR"
     && event.payload.role === role && (!start || event.sequence > start.sequence));
   const terminal = run.processing_state === "TERMINAL";
-  const result = {label: run.run_id ? "Not run" : "Ready", tone: "", detail: "", rationale: "", code: null};
+  const pending = !terminal && start?.payload.round === run.round_count && !response;
+  const result = {label: run.run_id ? "Not run" : "Ready", tone: "", detail: "", rationale: "", code: null,
+    pending, responseStatus: response?.payload.status};
   if (vote) {
     const accepted = vote.decision === "ACCEPT";
     result.label = accepted ? "Accepted proposal" : vote.decision === "REJECT" ? "Rejected proposal" : "Needs information";
@@ -493,6 +504,102 @@ function agentProgress(role) {
     result.detail = terminal ? "No validated decision was recorded before the run stopped." : "";
   }
   return result;
+}
+
+// Keep these nodes in place: polling must not restart an in-flight animation.
+function setMotionText(id, value) {
+  if ($(id).textContent !== value) $(id).textContent = value;
+}
+
+function syncMotionPreference() {
+  const paused = motionPaused || reducedMotion.matches || document.hidden;
+  $("run-visual").dataset.motion = paused ? "paused" : "playing";
+  const button = $("motion-toggle");
+  button.disabled = reducedMotion.matches;
+  button.setAttribute("aria-pressed", String(motionPaused || reducedMotion.matches));
+  button.textContent = reducedMotion.matches ? "Reduced motion" : motionPaused ? "Resume motion" : "Pause motion";
+  button.title = reducedMotion.matches ? "Your device prefers reduced motion. Status updates stay active."
+    : `${motionPaused ? "Resume" : "Pause"} the animation. The run keeps going.`;
+}
+
+function renderRunMotion() {
+  const panel = $("run-visual");
+  panel.hidden = !run?.run_id;
+  if (!run?.run_id) {
+    panel.dataset.active = "false";
+    motionRunId = null;
+    motionWasActive = false;
+    return;
+  }
+  const active = LIVE && run.processing_state !== "TERMINAL";
+  const sameRun = motionRunId === run.run_id;
+  const mayAnimate = sameRun && !motionPaused && !reducedMotion.matches && !document.hidden;
+  const stages = {
+    CREATED: ["Preparing", "Starting the run"],
+    VALIDATING: ["Checking", "Checking inputs"],
+    PREPARING: ["Checking", "Checking available plans"],
+    ROUND_1: ["Offers", "Comparing offers"],
+    RECONCILING: ["Matching", "Finding a shared option"],
+    ROUND_2: ["Voting", "Voting on one plan"],
+    REVISING: ["Revising", "Finding another option"],
+    ROUND_3: ["Re-voting", "Voting on the revised plan"],
+    FINAL_VALIDATION: ["Checking", "Rechecking the chosen plan"],
+    FALLBACK: ["Backup", "Rules are choosing a backup", "warn"],
+  };
+  const outcomes = {
+    FEASIBLE_CONSENSUS: ["Agreed", "Agents agreed · your review next", "ok"],
+    FEASIBLE_FALLBACK: ["Backup", "No agreement · review the backup", "warn"],
+    NO_FEASIBLE_OPTION_IN_SEARCH_SPACE: ["Blocked", "No plan passed every check", "bad"],
+    INSUFFICIENT_DATA: ["Missing data", "Required data is missing", "warn"],
+    CANCELLED: ["Stopped", "Run stopped · nothing applied", "neutral"],
+    INTERRUPTED: ["Interrupted", "Run interrupted · nothing applied", "warn"],
+    SYSTEM_ERROR: ["Error", "Run failed · nothing applied", "bad"],
+  };
+  const decisions = {
+    APPLIED_SIMULATION: ["Applied", "Approved and applied to simulation", "ok"],
+    REJECTED: ["Rejected", "You rejected the plan · nothing applied", "neutral"],
+    STALE: ["Out of date", "Resources changed · run again", "warn"],
+    EXPIRED: ["Expired", "Review window closed · run again", "warn"],
+    CANCELLED: ["Stopped", "Run stopped · nothing applied", "neutral"],
+  };
+  const [title, caption, tone = "neutral"] = decisions[run.approval_state]
+    || (run.processing_state === "TERMINAL" ? outcomes[run.negotiation_outcome] : stages[run.processing_state])
+    || ["Waiting", "Waiting for run status", "neutral"];
+  const voting = /^ROUND_[123]$/.test(run.processing_state);
+  setMotionText("hub-label", voting ? `Turn ${run.round_count} / 3` : "Plan");
+  setMotionText("hub-state", title);
+  setMotionText("motion-stage", caption);
+  const replies = run.round_count === 1 ? Object.keys(run.offers || {}).length : Object.keys(run.votes || {}).length;
+  setMotionText("motion-count", active && voting ? `${replies} / 3 valid replies`
+    : run.elapsed_ms != null ? `${minutes(run.elapsed_ms / 1000)} s · ${run.round_count} / 3 turns` : "");
+  setMotionText("motion-mode", !LIVE ? "Saved run" : run.provider?.mode === "FIXTURE" ? "Scripted run"
+    : run.provider?.mode === "UNAVAILABLE" ? "Rule-based run" : "Live run");
+  panel.dataset.active = String(active);
+  panel.dataset.tone = tone;
+  $("motion-toggle").hidden = !active;
+  for (const role of ROLES) {
+    const progress = agentProgress(role);
+    const node = $(`signal-${role}`);
+    const state = active && progress.pending ? "waiting" : progress.tone === "accepted" ? "accepted"
+      : progress.tone === "attention" ? "attention" : progress.label === "Offer received" ? "offered" : "idle";
+    const label = state === "waiting" ? "Thinking" : state === "accepted" ? "Accepted proposal"
+      : progress.code === "NEEDS_INFORMATION" ? "Needs info"
+      : progress.responseStatus === "RECEIVED" && progress.label === "Waiting for reply" ? "Checking reply" : progress.label;
+    if (mayAnimate && node.dataset.state === "waiting" && ["accepted", "offered", "attention"].includes(state)) {
+      node.querySelector(".signal-icon").animate([
+        {transform: "scale(1)"}, {transform: "scale(1.16)"}, {transform: "scale(1)"},
+      ], {duration: 420, easing: "ease-out"});
+    }
+    node.dataset.state = state;
+    $(`signal-path-${role}`).dataset.state = state;
+    setMotionText(`signal-status-${role}`, label);
+  }
+  if (mayAnimate && motionWasActive && !active) {
+    $("plan-hub").animate([{opacity: .35}, {opacity: 1}], {duration: 450, easing: "ease-out"});
+  }
+  motionRunId = run.run_id;
+  motionWasActive = active;
+  syncMotionPreference();
 }
 
 function renderConsensusExplanation() {
@@ -1097,6 +1204,21 @@ async function startRun(refresh = false) {
 }
 
 function showError(error) {
+  $("run-visual").dataset.active = "false";
+  $("run-visual").dataset.tone = "warn";
+  $("motion-toggle").hidden = true;
+  setMotionText("hub-label", "Plan");
+  setMotionText("hub-state", "Unconfirmed");
+  setMotionText("motion-stage", "Connection lost · reload to check this run");
+  setMotionText("motion-count", "");
+  motionWasActive = false;
+  for (const role of ROLES) {
+    if ($(`signal-${role}`).dataset.state === "waiting") {
+      $(`signal-${role}`).dataset.state = "idle";
+      $(`signal-path-${role}`).dataset.state = "idle";
+      setMotionText(`signal-status-${role}`, "Unconfirmed");
+    }
+  }
   const state = $("review-state");
   delete state.dataset.state;
   state.className = "banner bad";
@@ -1104,6 +1226,13 @@ function showError(error) {
   clearTimeout(pollTimer);
   for (const id of ["start-btn", "cancel-btn", "approve-btn", "reject-btn", "rerun-btn"]) $(id).disabled = true;
 }
+
+$("motion-toggle").addEventListener("click", () => {
+  motionPaused = !motionPaused;
+  syncMotionPreference();
+});
+reducedMotion.addEventListener("change", syncMotionPreference);
+document.addEventListener("visibilitychange", syncMotionPreference);
 
 $("fixture-select").addEventListener("change", (event) => {
   const query = event.target.value ? `?sample=${encodeURIComponent(event.target.value)}` : "";

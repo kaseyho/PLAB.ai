@@ -139,6 +139,49 @@
       </div>
       <p class="lead" id="negotiation-status"></p>
 
+      <div class="run-visual" id="run-visual" data-active="false" data-tone="neutral" hidden>
+        <div class="run-visual-heading">
+          <span id="motion-mode">Plan exchange</span>
+          <button type="button" id="motion-toggle" aria-controls="run-map" aria-pressed="false"
+            title="Pause the animation. The run keeps going.">Pause motion</button>
+        </div>
+        <div class="run-map" id="run-map" aria-hidden="true">
+          <svg class="signal-paths" viewBox="0 0 600 216" preserveAspectRatio="none" fill="none">
+            <g id="signal-path-ATC" data-state="idle">
+              <path class="signal-track" d="M84 54 C196 54 184 156 300 156"/>
+              <path class="signal-flow" d="M84 54 C196 54 184 156 300 156" pathLength="100"/>
+            </g>
+            <g id="signal-path-PILOT" data-state="idle">
+              <path class="signal-track" d="M300 34 V156"/>
+              <path class="signal-flow" d="M300 34 V156" pathLength="100"/>
+            </g>
+            <g id="signal-path-GROUND" data-state="idle">
+              <path class="signal-track" d="M516 54 C404 54 416 156 300 156"/>
+              <path class="signal-flow" d="M516 54 C404 54 416 156 300 156" pathLength="100"/>
+            </g>
+          </svg>
+          <div class="signal-node signal-atc" id="signal-ATC" data-state="idle">
+            <div class="signal-icon"><span class="signal-halo"></span><svg viewBox="0 0 24 24"><use href="/static/roles.svg#atc"/></svg></div>
+            <span class="signal-name">ATC</span><span class="signal-status" id="signal-status-ATC">Ready</span>
+          </div>
+          <div class="signal-node signal-pilot" id="signal-PILOT" data-state="idle">
+            <div class="signal-icon"><span class="signal-halo"></span><svg viewBox="0 0 24 24"><use href="/static/roles.svg#pilot"/></svg></div>
+            <span class="signal-name">Pilot</span><span class="signal-status" id="signal-status-PILOT">Ready</span>
+          </div>
+          <div class="signal-node signal-ground" id="signal-GROUND" data-state="idle">
+            <div class="signal-icon"><span class="signal-halo"></span><svg viewBox="0 0 24 24"><use href="/static/roles.svg#ground"/></svg></div>
+            <span class="signal-name">Ground</span><span class="signal-status" id="signal-status-GROUND">Ready</span>
+          </div>
+          <div class="plan-hub" id="plan-hub">
+            <span class="hub-orbit"></span><span class="hub-ring"></span>
+            <span class="hub-label" id="hub-label">Plan</span><strong id="hub-state">Ready</strong>
+          </div>
+        </div>
+        <div class="run-visual-caption" role="status" aria-live="polite" aria-atomic="true">
+          <span id="motion-stage">Ready</span><span id="motion-count"></span>
+        </div>
+      </div>
+
       <div id="consensus-explanation" hidden></div>
       <div class="desks" id="agent-cards"></div>
       <details class="method" id="execution-details">
