@@ -24,6 +24,7 @@ from pydantic import (
     StrictBool,
     StrictInt,
     StringConstraints,
+    field_validator,
     model_validator,
 )
 
@@ -468,6 +469,13 @@ class ReviewRequest(Contract):
     expires_at: AwareDatetime
     reason: ShortText
     acknowledge_fallback: StrictBool = False
+
+    @field_validator("reason")
+    @classmethod
+    def nonblank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("A review reason cannot be blank")
+        return value.strip()
 
 
 class ReviewEffect(Contract):

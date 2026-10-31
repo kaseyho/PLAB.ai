@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PLAB.ai Duty Desk</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>PLAB.ai</h1>
+      <span class="subtitle">Disrupted arrival coordination</span>
+    </div>
+    <div class="badges">
+      <span class="badge badge-sim">Simulation only</span>
+      <span class="badge" id="mode-badge">Loading</span>
+    </div>
+  </header>
+
+  <main>
+    <p class="mode-note" id="mode-note" hidden></p>
+
+    <section class="panel" aria-labelledby="scenario-h">
+      <div class="panel-head">
+        <h2 id="scenario-h">Scenario</h2>
+        <label id="scenario-picker">Scenario <select id="scenario-select"></select></label>
+        <label class="fixture-picker" id="fixture-picker" hidden>
+          Sample
+          <select id="fixture-select">
+            <option value="consensus">Consensus awaiting review</option>
+            <option value="fallback">Fallback awaiting review</option>
+            <option value="no-feasible">No feasible option</option>
+            <option value="insufficient-data">Insufficient data</option>
+            <option value="stale">Stale at approval</option>
+            <option value="applied">Applied to simulation</option>
+          </select>
+        </label>
+      </div>
+      <dl class="facts" id="scenario-facts"></dl>
+      <details><summary>Source and operational assumptions</summary><pre id="source-details"></pre></details>
+    </section>
+
+    <section class="panel" aria-labelledby="run-h">
+      <div class="panel-head">
+        <h2 id="run-h">Run</h2>
+        <div class="actions">
+          <button type="button" id="start-btn" disabled>Start run</button>
+          <button type="button" id="cancel-btn" class="secondary" disabled>Cancel run</button>
+        </div>
+      </div>
+      <dl class="facts" id="run-facts"></dl>
+      <label id="session-row">Local operator session
+        <input id="session-token" type="password" autocomplete="off" spellcheck="false"
+          aria-describedby="session-hint" placeholder="Enter the configured operator token">
+      </label>
+      <p class="hint" id="session-hint">Held in this tab only. Required to start, cancel, or review a run.</p>
+    </section>
+
+    <section class="panel review" id="review-card" aria-labelledby="review-h">
+      <h2 id="review-h">Review</h2>
+      <div class="state" id="review-state" role="status"></div>
+      <dl class="facts" id="plan-facts"></dl>
+      <div id="review-controls">
+        <label class="ack" id="ack-row" hidden>
+          <input type="checkbox" id="ack-box">
+          I understand the agents did not reach consensus; this plan comes from the deterministic fallback.
+        </label>
+        <label class="reason">
+          Reason (required to reject)
+          <input type="text" id="reason-input" maxlength="500" autocomplete="off">
+        </label>
+        <div class="actions">
+          <button type="button" id="approve-btn" disabled>Approve simulated plan</button>
+          <button type="button" id="reject-btn" class="secondary" disabled>Reject</button>
+          <button type="button" id="rerun-btn" class="secondary" disabled>Refresh and rerun</button>
+        </div>
+        <p class="hint" id="review-hint"></p>
+      </div>
+      <p class="result" id="review-result" role="alert" hidden></p>
+    </section>
+
+    <section class="panel" aria-labelledby="agents-h">
+      <h2 id="agents-h">Agents</h2>
+      <div class="agents" id="agent-cards"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="cands-h">
+      <h2 id="cands-h">Candidates</h2>
+      <div class="table-wrap">
+        <table id="candidate-table">
+          <thead><tr>
+            <th scope="col">Plan</th><th scope="col">Landing</th><th scope="col">Gate-in</th>
+            <th scope="col">Gate / route</th><th scope="col">Added hold</th>
+            <th scope="col">Fuel margin</th><th scope="col">Crew overtime</th><th scope="col">Checks</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cand-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="checks-h">
+      <h2 id="checks-h">Hard checks</h2>
+      <div id="check-list"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="evidence-h">
+      <div class="panel-head">
+        <h2 id="evidence-h">Evidence</h2>
+        <a id="export-link" class="button secondary" download>Download trace</a>
+      </div>
+      <ol class="events" id="event-list"></ol>
+      <h3>Evaluation</h3>
+      <p id="evaluation">Not yet evaluated</p>
+      <a href="/api/evaluations/latest">View evaluation report</a>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
