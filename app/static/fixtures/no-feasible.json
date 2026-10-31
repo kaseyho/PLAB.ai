@@ -1,0 +1,104 @@
+{
+  "mode": "fixture",
+  "mode_note": "Sample payload. Plans and checks are computed by the real checker; agent offers and votes are illustrative, not a live model run.",
+  "run_id": "run-fixture-no-feasible",
+  "parent_run_id": null,
+  "scenario": {
+    "scenario_id": "D01",
+    "description": "PRD Appendix A worked fixture: G2 is free early but its crew is on overtime; G1 frees at t=1500. Illustrative values only.",
+    "simulation_epoch_utc": "2026-10-31T00:00:00Z",
+    "provenance": {
+      "search": "synthetic_scenario",
+      "aircraft": "synthetic_scenario",
+      "runway": "synthetic_scenario",
+      "movements": "synthetic_scenario",
+      "separation_s": "policy",
+      "capacity": "policy",
+      "routes": "synthetic_scenario",
+      "taxi_blockages": "synthetic_scenario",
+      "gates": "synthetic_scenario",
+      "crews": "synthetic_scenario",
+      "equipment": "synthetic_scenario",
+      "fuel": "synthetic_scenario",
+      "arrival_options": "synthetic_scenario",
+      "service": "synthetic_scenario",
+      "connections": "synthetic_scenario"
+    }
+  },
+  "source": {
+    "label": "historical_observed, retrospective",
+    "dataset_file": "flights.csv",
+    "record_ordinal": 71,
+    "natural_identity": "2015-01-01 AA1057 N3ASAA DFW-MIA sched 0515",
+    "fields": {
+      "YEAR": "2015",
+      "MONTH": "1",
+      "DAY": "1",
+      "AIRLINE": "AA",
+      "FLIGHT_NUMBER": "1057",
+      "TAIL_NUMBER": "N3ASAA",
+      "ORIGIN_AIRPORT": "DFW",
+      "DESTINATION_AIRPORT": "MIA",
+      "SCHEDULED_DEPARTURE": "0515",
+      "SCHEDULED_ARRIVAL": "0856",
+      "WEATHER_DELAY": "102",
+      "LATE_AIRCRAFT_DELAY": "0",
+      "CANCELLED": "0",
+      "DIVERTED": "0"
+    },
+    "predicate": "(WEATHER_DELAY > 15) OR (LATE_AIRCRAFT_DELAY > 20)",
+    "qualifies_by": "WEATHER_DELAY 102 > 15"
+  },
+  "scenario_revision": 1,
+  "resource_revision": 1,
+  "ruleset_version": "toy-rules-v1",
+  "policy_version": "balanced-v1",
+  "processing_state": "TERMINAL",
+  "round_count": 0,
+  "model_call_count": 0,
+  "plan_hash": null,
+  "candidate": null,
+  "checks": [],
+  "candidates": [],
+  "offers": {},
+  "votes": {},
+  "fallback_reason": "No candidate keeps the fuel reserve (injected: projected fuel 2000 kg)",
+  "blockers": {
+    "ATC-RWY-01": 3,
+    "ATC-SEP-01": 15,
+    "GROUND-CREW-01": 42,
+    "GROUND-OCC-01": 16,
+    "PILOT-FUEL-01": 93
+  },
+  "missing_facts": [],
+  "search_bounds": {
+    "earliest_landing_s": 600,
+    "latest_landing_s": 2400,
+    "step_s": 60,
+    "route_ids": [
+      "G1-long",
+      "G1-short",
+      "G2-route"
+    ],
+    "raw_candidate_count": 93
+  },
+  "baseline_b0": null,
+  "expires_at": "2026-10-31T12:02:00+00:00",
+  "evaluation": null,
+  "events": [
+    {
+      "seq": 1,
+      "type": "RUN_CREATED",
+      "actor": "system",
+      "summary": "Run created"
+    },
+    {
+      "seq": 2,
+      "type": "ESCALATED",
+      "actor": "system",
+      "summary": "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE"
+    }
+  ],
+  "negotiation_outcome": "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE",
+  "approval_state": "NOT_APPLICABLE"
+}
