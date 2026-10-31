@@ -171,6 +171,13 @@ def _definition(snapshot: ScenarioSnapshot) -> scenarios.ScenarioSnapshot:
     if snapshot.policy_version != POLICY_ID:
         raise ServiceError("UNSUPPORTED_OBJECTIVE_POLICY")
     facts = {fact.fact_id: fact for fact in snapshot.facts}
+    if facts["snapshot.versions"].value != {
+        "scenario_revision": snapshot.revision,
+        "resource_revision": snapshot.resource_revision,
+        "ruleset_version": snapshot.ruleset_version,
+        "policy_version": snapshot.policy_version,
+    }:
+        raise ServiceError("VERSION_EVIDENCE_MISMATCH")
     raw = {
         "scenario_id": snapshot.scenario_id,
         "scenario_revision": snapshot.revision,
@@ -221,9 +228,8 @@ def _plan(
         - Fraction(str(fuel.reserve_floor_kg))
         - Fraction(str(fuel.uncertainty_allowance_kg))
     )
-    overtime = Fraction(
-        max(0, native.service_end_s - overlay.crew(native.crew_id).regular_shift_end_s), 60
-    )
+    regular_end = overlay.crew(native.crew_id).regular_shift_end_s
+    overtime = Fraction(max(0, native.service_end_s - max(native.service_start_s, regular_end)), 60)
     lateness = Fraction(max(0, native.service_end_s - overlay.service.target_service_end_s), 60)
     missed = sum(
         group.passengers

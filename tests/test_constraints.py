@@ -84,7 +84,40 @@ def test_capacity_window_counts_focal_movement():
     # BG1 and BG2 share window [0, 3600); with the focal flight that is 3 movements.
     snapshot = scenario(lambda raw: raw["overlay"]["capacity"].update(max_movements=2))
     cap = result(checks(snapshot, 600, "G2-route"), "ATC-CAP-01")
-    assert (cap.status, cap.actual, cap.margin) == ("FAIL", 3, -1)
+    assert (cap.status, cap.actual["movements"], cap.margin) == ("FAIL", 3, -1)
+
+
+def test_capacity_uses_sliding_window_across_clock_boundaries():
+    # 600 s windows, max 2. A clock-aligned window [600, 1200) would hold only focal + BG2,
+    # but the sliding window [300, 900) holds BG1, focal and BG2.
+    snapshot = scenario(
+        lambda raw: raw["overlay"].update(capacity={"window_s": 600, "max_movements": 2})
+    )
+    cap = result(checks(snapshot, 600, "G2-route"), "ATC-CAP-01")
+    assert (cap.status, cap.actual) == ("FAIL", {"movements": 3, "window": [300, 900]})
+
+
+def test_separation_catches_heavy_two_places_ahead():
+    # Heavy at 300 s, medium at 420 s, focal medium at 600 s: 180 s behind the medium is
+    # fine, but only 300 s behind the heavy against a 360 s requirement.
+    def heavy_ahead(raw):
+        raw["overlay"]["movements"] = [
+            {"movement_id": "HVY", "time_s": 300, "wake_category": "H", "occupancy_s": 60},
+            {"movement_id": "MED", "time_s": 420, "wake_category": "M", "occupancy_s": 60},
+            {"movement_id": "NXT", "time_s": 900, "wake_category": "M", "occupancy_s": 60},
+        ]
+        raw["overlay"]["separation_s"] = {"H>M": 360, "M>M": 180}
+
+    sep = result(checks(scenario(heavy_ahead), 600, "G2-route"), "ATC-SEP-01")
+    assert (sep.status, sep.margin) == ("FAIL", -60)
+    assert sep.actual == {"HVY": 300, "MED": 180, "NXT": 300}
+
+
+@pytest.mark.parametrize("landing, status", [(2400, "PASS"), (2460, "FAIL")])
+def test_plan_outside_search_window_is_rejected(landing, status):
+    # D01 searches 600..2400 s; facts beyond that are not modelled.
+    fresh = result(checks(scenario(), landing, "G2-route"), "SYSTEM-FRESH-01")
+    assert fresh.status == status
 
 
 @pytest.mark.parametrize(

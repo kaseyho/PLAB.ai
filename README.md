@@ -31,6 +31,9 @@ Configure `.env` locally. Never commit credentials:
 - `PLAB_REVIEWER_ID`, `PLAB_DB_PATH`, `PLAB_PUBLIC_ORIGIN`: local reviewer identity,
   SQLite location, and browser origin. Defaults bind the service to
   `http://127.0.0.1:8000`.
+- Put the supplied dataset at `data/flights.csv`, or set `PLAB_DATA_DIR` to its
+  containing directory. D01 loads record 71 and preserves its original fields
+  and the actual file hash.
 
 Environment variables take precedence over `.env`. A configured SoCLaaS key takes
 precedence over OpenAI configuration. The adapter uses the OpenAI SDK, with Chat
@@ -63,7 +66,8 @@ even when `provider.mode=LIVE`. Fixture checks are test certificates, not an
 aviation checker or evaluation baseline. The fixture review hook only demonstrates
 atomic storage behavior. Nothing applies automatically.
 
-Once Developers A and C supply their owned modules and scenarios:
+To run the backend with the deterministic planner integrated from
+[PR #1](https://github.com/kaseyho/PLAB.ai/pull/1):
 
 ```sh
 uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 1
@@ -74,10 +78,12 @@ require `Authorization: Bearer <PLAB_SESSION_TOKEN>`; starting a run and recordi
 a review also require `Idempotency-Key`. Poll run status and incremental events.
 The API serves Developer A's `app/static/index.html` at `/` when present.
 
-The default service deliberately reports `PLANNING_NOT_CONNECTED` or
-`REVIEW_NOT_CONNECTED` until the corresponding teammate's implementation exists.
-See [the integration handoff](docs/backend_handoff.md) for exact signatures,
-payloads, and acceptance evidence.
+The default service uses the integrated checker and D01 scenario. A missing CSV
+appears in `/health` as `SOURCE_FILE_NOT_FOUND`; it never fabricates a historical
+row. Developer A's review/simulator hook remains to be integrated, so applying a
+plan reports `REVIEW_NOT_CONNECTED` until that hook exists. Negotiation does not
+apply a plan. See [the integration handoff](docs/backend_handoff.md) for exact
+signatures, payloads, and acceptance evidence.
 
 ## Verify
 
@@ -88,11 +94,11 @@ uv run mypy
 uv run pytest -q
 ```
 
-The tests make no live model calls. They cover coordination, provider request
-construction, failure recovery, persistence, authorization, and atomic approval.
-They do not replace Developer C's aviation-rule tests, B0/B1 comparisons, or frozen
-evaluation suite. `/api/evaluations/latest` returns `NOT_YET_EVALUATED` until C
-writes `artifacts/evals/latest.json`.
+The tests make no live model calls. They cover the scenario hard rules, catalog
+and fallback integration, coordination, provider requests, failure recovery,
+persistence, authorization, and atomic approval. B0/B1 comparisons and the frozen
+evaluation suite remain separate team gates. `/api/evaluations/latest` returns
+`NOT_YET_EVALUATED` until C writes `artifacts/evals/latest.json`.
 
 `data/` is ignored because the supplied flight CSV exceeds GitHub's file size
 limit. Runtime databases, traces, reports, local environment files, and caches are

@@ -92,6 +92,19 @@ def test_model_supplied_impact_and_cost_edits_do_not_pass_revalidation():
         )
 
 
+@pytest.mark.parametrize("shift_end,overtime", [(3000, 0), (2100, 10), (1400, 20)])
+def test_crew_overtime_counts_only_task_time_after_the_shift(shift_end, overtime):
+    snapshot = shared(lambda raw: raw["overlay"]["crews"][0].update(regular_shift_end_s=shift_end))
+    plan = next(
+        e.plan
+        for e in planning.build_catalog(snapshot).candidates
+        if e.plan.candidate_id == "L960-G1-long"
+    )
+    # Service is [1500, 2700): waiting before the task is never charged as overtime.
+    assert plan.impacts.crew_overtime_min == overtime
+    assert plan.costs.GROUND == Decimal(overtime) / 40
+
+
 @pytest.mark.parametrize("fuel,expected", [(None, Outcome.INSUFFICIENT), (0, Outcome.NO_PLAN)])
 async def test_missing_or_impossible_fuel_never_invokes_agents_or_creates_plan(
     tmp_path, fuel, expected
@@ -146,6 +159,37 @@ def test_fuel_reserve_cannot_be_lowered_by_editing_a_synthetic_fact():
     )
     with pytest.raises(ServiceError, match="FUEL_POLICY_MISMATCH"):
         planning.build_catalog(snapshot.model_copy(update={"facts": facts}))
+
+
+def test_revised_snapshot_requires_current_version_evidence():
+    snapshot = shared().model_copy(update={"revision": 2, "resource_revision": 2})
+    with pytest.raises(ServiceError, match="VERSION_EVIDENCE_MISMATCH"):
+        planning.build_catalog(snapshot)
+    facts = tuple(
+        f.model_copy(update={"value": {**f.value, "scenario_revision": 2, "resource_revision": 2}})
+        if f.fact_id == "snapshot.versions"
+        else f
+        for f in snapshot.facts
+    )
+    current = snapshot.model_copy(update={"facts": facts})
+    catalog = planning.build_catalog(current)
+    candidate_id = planning.select_fallback(current, catalog).candidate_id
+    plan = next(e.plan for e in catalog.candidates if e.plan.candidate_id == candidate_id)
+    require_passing_checks(current, plan, planning.check_plan(current, plan))
+    assert plan.scenario_revision == plan.resource_revision == 2
+
+
+def test_unknown_checker_evidence_cannot_be_substituted(monkeypatch):
+    original = planning.constraints.check_plan
+
+    def invalid_evidence(snapshot, plan):
+        checks = original(snapshot, plan)
+        checks[0] = checks[0].model_copy(update={"evidence_ids": ["invented.fact"]})
+        return checks
+
+    monkeypatch.setattr(planning.fallback, "check_plan", invalid_evidence)
+    with pytest.raises(ServiceError, match="UNKNOWN_CHECK_EVIDENCE"):
+        planning.build_catalog(shared())
 
 
 def test_unknown_reference_outcomes_do_not_change_planning():
