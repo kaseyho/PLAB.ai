@@ -1,0 +1,1136 @@
+{
+  "run_id": "bc331e8b-1a45-49ed-b78d-f32ac312a239",
+  "parent_run_id": null,
+  "snapshot": {
+    "scenario_id": "backend-fixture",
+    "revision": 1,
+    "resource_id": "fixture-airport",
+    "resource_revision": 1,
+    "ruleset_version": "toy-rules-v1",
+    "policy_version": "balanced-v1",
+    "simulation_epoch": "2026-10-31T00:00:00Z",
+    "source": {
+      "dataset_id": "local-flights-2015",
+      "dataset_sha256": "afa4e42188b113dd69427a3fbd00a4b6979c6235c866f963c2899d18a3403a83",
+      "record_ordinal": 71,
+      "identity": "2015-01-01-AA1057-DFW-MIA",
+      "original_fields": {
+        "AIRLINE": "AA",
+        "CANCELLED": "0",
+        "DAY": "1",
+        "DESTINATION_AIRPORT": "MIA",
+        "DIVERTED": "0",
+        "FLIGHT_NUMBER": "1057",
+        "LATE_AIRCRAFT_DELAY": "0",
+        "MONTH": "1",
+        "ORIGIN_AIRPORT": "DFW",
+        "WEATHER_DELAY": "102",
+        "YEAR": "2015"
+      }
+    },
+    "facts": [
+      {
+        "fact_id": "fixture-assumptions",
+        "domain": null,
+        "value": "Supplied integration-test certificates; no operational rule engine",
+        "units": "label",
+        "provenance": "synthetic_scenario",
+        "source_reference": "technical_prd.md Appendix A / backend integration fixture",
+        "source_version": "fixture-v1",
+        "observed_at": null,
+        "valid_until": null,
+        "input_ids": []
+      }
+    ],
+    "required_fact_ids": [
+      "fixture-assumptions"
+    ],
+    "required_rule_ids": [
+      "ATC-RWY-01",
+      "ATC-SEP-01",
+      "ATC-TAXI-01",
+      "ATC-CAP-01",
+      "PILOT-FUEL-01",
+      "PILOT-ROUTE-01",
+      "GROUND-GATE-01",
+      "GROUND-OCC-01",
+      "GROUND-CREW-01",
+      "GROUND-EQUIP-01",
+      "SYSTEM-FRESH-01"
+    ],
+    "concession_delta": {
+      "ATC": "0.25",
+      "PILOT": "0.25",
+      "GROUND": "0.25"
+    },
+    "valid_until": null
+  },
+  "planning_mode": "FIXTURE",
+  "provider": {
+    "mode": "FIXTURE",
+    "model": "deterministic-test-double",
+    "api_base": null,
+    "prompt_version": "roles-v1",
+    "max_output_tokens": 500,
+    "retries": 0
+  },
+  "processing_state": "TERMINAL",
+  "negotiation_outcome": "FEASIBLE_CONSENSUS",
+  "approval_state": "PENDING",
+  "round_count": 2,
+  "agent_invocation_count": 6,
+  "model_call_count": 0,
+  "created_at": "2026-10-31T04:00:24.494273Z",
+  "deadline_at": "2026-10-31T04:01:09.494273Z",
+  "finished_at": "2026-10-31T04:00:24.525324Z",
+  "expires_at": "2026-10-31T04:02:24.525449Z",
+  "elapsed_ms": 33,
+  "catalog": {
+    "candidates": [
+      {
+        "plan": {
+          "candidate_id": "C1",
+          "scenario_id": "backend-fixture",
+          "scenario_revision": 1,
+          "resource_revision": 1,
+          "ruleset_version": "toy-rules-v1",
+          "policy_version": "balanced-v1",
+          "landing_time_s": 600,
+          "runway_id": "R1",
+          "runway_occupancy_end_s": 660,
+          "taxi_route_id": "route-C1",
+          "route_edge_intervals": [
+            {
+              "start_s": 600,
+              "end_s": 1080,
+              "edge_id": "edge-C1"
+            }
+          ],
+          "gate_id": "G2",
+          "gate_in_time_s": 1080,
+          "service_start_s": 1080,
+          "service_end_s": 2280,
+          "gate_release_s": 2280,
+          "crew_id": "crew-G2",
+          "arrival_option_id": "permitted-fixture",
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "2840",
+            "reserve_margin_kg": "540",
+            "crew_overtime_min": "20",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          },
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "0.5"
+          },
+          "evidence_ids": [
+            "fixture-assumptions"
+          ]
+        },
+        "checks": [
+          {
+            "check_id": "C1:ATC-RWY-01",
+            "rule_id": "ATC-RWY-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:ATC-SEP-01",
+            "rule_id": "ATC-SEP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:ATC-TAXI-01",
+            "rule_id": "ATC-TAXI-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:ATC-CAP-01",
+            "rule_id": "ATC-CAP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:PILOT-FUEL-01",
+            "rule_id": "PILOT-FUEL-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "PILOT",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:PILOT-ROUTE-01",
+            "rule_id": "PILOT-ROUTE-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "PILOT",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:GROUND-GATE-01",
+            "rule_id": "GROUND-GATE-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:GROUND-OCC-01",
+            "rule_id": "GROUND-OCC-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:GROUND-CREW-01",
+            "rule_id": "GROUND-CREW-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:GROUND-EQUIP-01",
+            "rule_id": "GROUND-EQUIP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C1:SYSTEM-FRESH-01",
+            "rule_id": "SYSTEM-FRESH-01",
+            "rule_version": "toy-rules-v1",
+            "domain": null,
+            "candidate_id": "C1",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          }
+        ]
+      },
+      {
+        "plan": {
+          "candidate_id": "C2",
+          "scenario_id": "backend-fixture",
+          "scenario_revision": 1,
+          "resource_revision": 1,
+          "ruleset_version": "toy-rules-v1",
+          "policy_version": "balanced-v1",
+          "landing_time_s": 960,
+          "runway_id": "R1",
+          "runway_occupancy_end_s": 1020,
+          "taxi_route_id": "route-C2",
+          "route_edge_intervals": [
+            {
+              "start_s": 960,
+              "end_s": 1500,
+              "edge_id": "edge-C2"
+            }
+          ],
+          "gate_id": "G1",
+          "gate_in_time_s": 1500,
+          "service_start_s": 1500,
+          "service_end_s": 2700,
+          "gate_release_s": 2700,
+          "crew_id": "crew-G1",
+          "arrival_option_id": "permitted-fixture",
+          "impacts": {
+            "additional_landing_delay_s": 360,
+            "modeled_fuel_used_kg": "480",
+            "fuel_at_gate_kg": "2520",
+            "reserve_margin_kg": "220",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          },
+          "costs": {
+            "ATC": "0.2",
+            "PILOT": "0.3",
+            "GROUND": "0"
+          },
+          "evidence_ids": [
+            "fixture-assumptions"
+          ]
+        },
+        "checks": [
+          {
+            "check_id": "C2:ATC-RWY-01",
+            "rule_id": "ATC-RWY-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:ATC-SEP-01",
+            "rule_id": "ATC-SEP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:ATC-TAXI-01",
+            "rule_id": "ATC-TAXI-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:ATC-CAP-01",
+            "rule_id": "ATC-CAP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:PILOT-FUEL-01",
+            "rule_id": "PILOT-FUEL-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "PILOT",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:PILOT-ROUTE-01",
+            "rule_id": "PILOT-ROUTE-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "PILOT",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:GROUND-GATE-01",
+            "rule_id": "GROUND-GATE-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:GROUND-OCC-01",
+            "rule_id": "GROUND-OCC-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:GROUND-CREW-01",
+            "rule_id": "GROUND-CREW-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:GROUND-EQUIP-01",
+            "rule_id": "GROUND-EQUIP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C2:SYSTEM-FRESH-01",
+            "rule_id": "SYSTEM-FRESH-01",
+            "rule_version": "toy-rules-v1",
+            "domain": null,
+            "candidate_id": "C2",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          }
+        ]
+      },
+      {
+        "plan": {
+          "candidate_id": "C3",
+          "scenario_id": "backend-fixture",
+          "scenario_revision": 1,
+          "resource_revision": 1,
+          "ruleset_version": "toy-rules-v1",
+          "policy_version": "balanced-v1",
+          "landing_time_s": 1200,
+          "runway_id": "R1",
+          "runway_occupancy_end_s": 1260,
+          "taxi_route_id": "route-C3",
+          "route_edge_intervals": [
+            {
+              "start_s": 1200,
+              "end_s": 1500,
+              "edge_id": "edge-C3"
+            }
+          ],
+          "gate_id": "G1",
+          "gate_in_time_s": 1500,
+          "service_start_s": 1500,
+          "service_end_s": 2700,
+          "gate_release_s": 2700,
+          "crew_id": "crew-G1",
+          "arrival_option_id": "permitted-fixture",
+          "impacts": {
+            "additional_landing_delay_s": 600,
+            "modeled_fuel_used_kg": "600",
+            "fuel_at_gate_kg": "2400",
+            "reserve_margin_kg": "100",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          },
+          "costs": {
+            "ATC": "0.333333333333",
+            "PILOT": "0.375",
+            "GROUND": "0"
+          },
+          "evidence_ids": [
+            "fixture-assumptions"
+          ]
+        },
+        "checks": [
+          {
+            "check_id": "C3:ATC-RWY-01",
+            "rule_id": "ATC-RWY-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:ATC-SEP-01",
+            "rule_id": "ATC-SEP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:ATC-TAXI-01",
+            "rule_id": "ATC-TAXI-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:ATC-CAP-01",
+            "rule_id": "ATC-CAP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "ATC",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:PILOT-FUEL-01",
+            "rule_id": "PILOT-FUEL-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "PILOT",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:PILOT-ROUTE-01",
+            "rule_id": "PILOT-ROUTE-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "PILOT",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:GROUND-GATE-01",
+            "rule_id": "GROUND-GATE-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:GROUND-OCC-01",
+            "rule_id": "GROUND-OCC-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:GROUND-CREW-01",
+            "rule_id": "GROUND-CREW-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:GROUND-EQUIP-01",
+            "rule_id": "GROUND-EQUIP-01",
+            "rule_version": "toy-rules-v1",
+            "domain": "GROUND",
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          },
+          {
+            "check_id": "C3:SYSTEM-FRESH-01",
+            "rule_id": "SYSTEM-FRESH-01",
+            "rule_version": "toy-rules-v1",
+            "domain": null,
+            "candidate_id": "C3",
+            "status": "PASS",
+            "actual": "fixture certificate",
+            "operator": "fixture",
+            "required": "fixture certificate",
+            "units": "fixture",
+            "margin": null,
+            "evidence_ids": [
+              "fixture-assumptions"
+            ],
+            "reason_code": "FIXTURE_ONLY"
+          }
+        ]
+      }
+    ],
+    "shortlist_ids": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "blocking_reasons": []
+  },
+  "candidate": {
+    "candidate_id": "C2",
+    "scenario_id": "backend-fixture",
+    "scenario_revision": 1,
+    "resource_revision": 1,
+    "ruleset_version": "toy-rules-v1",
+    "policy_version": "balanced-v1",
+    "landing_time_s": 960,
+    "runway_id": "R1",
+    "runway_occupancy_end_s": 1020,
+    "taxi_route_id": "route-C2",
+    "route_edge_intervals": [
+      {
+        "start_s": 960,
+        "end_s": 1500,
+        "edge_id": "edge-C2"
+      }
+    ],
+    "gate_id": "G1",
+    "gate_in_time_s": 1500,
+    "service_start_s": 1500,
+    "service_end_s": 2700,
+    "gate_release_s": 2700,
+    "crew_id": "crew-G1",
+    "arrival_option_id": "permitted-fixture",
+    "impacts": {
+      "additional_landing_delay_s": 360,
+      "modeled_fuel_used_kg": "480",
+      "fuel_at_gate_kg": "2520",
+      "reserve_margin_kg": "220",
+      "crew_overtime_min": "0",
+      "turnaround_lateness_min": "0",
+      "missed_connection_passengers": 0
+    },
+    "costs": {
+      "ATC": "0.2",
+      "PILOT": "0.3",
+      "GROUND": "0"
+    },
+    "evidence_ids": [
+      "fixture-assumptions"
+    ]
+  },
+  "checks": [
+    {
+      "check_id": "C2:ATC-RWY-01",
+      "rule_id": "ATC-RWY-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "ATC",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:ATC-SEP-01",
+      "rule_id": "ATC-SEP-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "ATC",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:ATC-TAXI-01",
+      "rule_id": "ATC-TAXI-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "ATC",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:ATC-CAP-01",
+      "rule_id": "ATC-CAP-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "ATC",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:PILOT-FUEL-01",
+      "rule_id": "PILOT-FUEL-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "PILOT",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:PILOT-ROUTE-01",
+      "rule_id": "PILOT-ROUTE-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "PILOT",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:GROUND-GATE-01",
+      "rule_id": "GROUND-GATE-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "GROUND",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:GROUND-OCC-01",
+      "rule_id": "GROUND-OCC-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "GROUND",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:GROUND-CREW-01",
+      "rule_id": "GROUND-CREW-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "GROUND",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:GROUND-EQUIP-01",
+      "rule_id": "GROUND-EQUIP-01",
+      "rule_version": "toy-rules-v1",
+      "domain": "GROUND",
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    },
+    {
+      "check_id": "C2:SYSTEM-FRESH-01",
+      "rule_id": "SYSTEM-FRESH-01",
+      "rule_version": "toy-rules-v1",
+      "domain": null,
+      "candidate_id": "C2",
+      "status": "PASS",
+      "actual": "fixture certificate",
+      "operator": "fixture",
+      "required": "fixture certificate",
+      "units": "fixture",
+      "margin": null,
+      "evidence_ids": [
+        "fixture-assumptions"
+      ],
+      "reason_code": "FIXTURE_ONLY"
+    }
+  ],
+  "offers": {
+    "ATC": {
+      "preferred_candidate_id": "C1",
+      "ranked_candidate_ids": [
+        "C1",
+        "C2"
+      ],
+      "acceptable_candidate_ids": [
+        "C1"
+      ],
+      "concession_candidate_ids": [
+        "C1",
+        "C2"
+      ],
+      "objections": [],
+      "evidence_ids": [
+        "impact:C2:ATC"
+      ],
+      "rationale": "Fixture offer within the supplied envelope."
+    },
+    "GROUND": {
+      "preferred_candidate_id": "C2",
+      "ranked_candidate_ids": [
+        "C2",
+        "C3"
+      ],
+      "acceptable_candidate_ids": [
+        "C2",
+        "C3"
+      ],
+      "concession_candidate_ids": [
+        "C2",
+        "C3"
+      ],
+      "objections": [],
+      "evidence_ids": [
+        "impact:C2:GROUND"
+      ],
+      "rationale": "Fixture offer within the supplied envelope."
+    },
+    "PILOT": {
+      "preferred_candidate_id": "C1",
+      "ranked_candidate_ids": [
+        "C1",
+        "C2"
+      ],
+      "acceptable_candidate_ids": [
+        "C1"
+      ],
+      "concession_candidate_ids": [
+        "C1",
+        "C2"
+      ],
+      "objections": [],
+      "evidence_ids": [
+        "impact:C2:PILOT"
+      ],
+      "rationale": "Fixture offer within the supplied envelope."
+    }
+  },
+  "votes": {
+    "ATC": {
+      "plan_hash": "6e6450419598f29b8723c83c0b907f766dbd8d1088ebe11f01273af795879d2f",
+      "decision": "ACCEPT",
+      "reason_codes": [
+        "FIXTURE_ACCEPT"
+      ],
+      "evidence_ids": [
+        "impact:C2:ATC"
+      ],
+      "rationale": "Fixture acceptance of the exact proposed plan."
+    },
+    "GROUND": {
+      "plan_hash": "6e6450419598f29b8723c83c0b907f766dbd8d1088ebe11f01273af795879d2f",
+      "decision": "ACCEPT",
+      "reason_codes": [
+        "FIXTURE_ACCEPT"
+      ],
+      "evidence_ids": [
+        "impact:C2:GROUND"
+      ],
+      "rationale": "Fixture acceptance of the exact proposed plan."
+    },
+    "PILOT": {
+      "plan_hash": "6e6450419598f29b8723c83c0b907f766dbd8d1088ebe11f01273af795879d2f",
+      "decision": "ACCEPT",
+      "reason_codes": [
+        "FIXTURE_ACCEPT"
+      ],
+      "evidence_ids": [
+        "impact:C2:PILOT"
+      ],
+      "rationale": "Fixture acceptance of the exact proposed plan."
+    }
+  },
+  "fallback_reason": null,
+  "reason_code": null,
+  "plan_hash": "6e6450419598f29b8723c83c0b907f766dbd8d1088ebe11f01273af795879d2f",
+  "snapshot_hash": "7dc15d63c108885aee3f405122fe150db88dc0ef7fb6ac91cef1846876f46351",
+  "scenario_revision": 1,
+  "resource_revision": 1,
+  "ruleset_version": "toy-rules-v1",
+  "policy_version": "balanced-v1",
+  "candidate_set_hash": "88171b75e1afcb564a62f4c137c822b4d8fabb0aeb4f7fe5ab5574074a4e3582"
+}

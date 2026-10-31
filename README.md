@@ -1,1 +1,93 @@
-`/data` is git-ignored as it exceed's GitHub file size limit of 500MB.
+# PLAB.ai
+
+Airport coordination simulator for the Airbus challenge: independent ATC, Pilot,
+and Ground agents negotiate a checked plan, then a human reviews its simulated
+application. This is a prototype, not an operational aviation system.
+
+The requirements are in [the technical PRD](docs/technical_prd.md); ownership is in
+[the three-developer work plan](docs/developer_work_plan.md).
+
+## Backend setup
+
+Use Python 3.12 and [uv](https://docs.astral.sh/uv/). Dependencies are locked in
+`uv.lock`.
+
+```sh
+uv sync --locked --dev
+cp -n .env.example .env
+```
+
+Configure `.env` locally. Never commit credentials:
+
+- `SOCLAAS_API_KEY`, `SOCLAAS_MODEL`, `SOCLAAS_BASE_URL`: the configured SoCLaaS
+  provider. Use an active key and a supported model ID. The example's `default`
+  value is not a verified model choice.
+- Alternatively, leave `SOCLAAS_API_KEY` unset and configure `OPENAI_API_KEY`,
+  `OPENAI_MODEL`, and optionally `OPENAI_BASE_URL`.
+- `PLAB_SESSION_TOKEN`: a local operator token of at least 16 characters. Generate
+  one with `openssl rand -hex 24` and put it in this field locally.
+- `PLAB_REVIEWER_ID`, `PLAB_DB_PATH`, `PLAB_PUBLIC_ORIGIN`: local reviewer identity,
+  SQLite location, and browser origin. Defaults bind the service to
+  `http://127.0.0.1:8000`.
+
+Environment variables take precedence over `.env`. A configured SoCLaaS key takes
+precedence over OpenAI configuration. The adapter uses the OpenAI SDK's Responses
+API with a strict JSON schema, a 500-token output cap, and zero retries. SoCLaaS
+documents a [Responses API subset](https://soclaas.comp.nus.edu.sg/guides/api.html);
+capability must be verified for the selected model. An unsupported request becomes
+an explicit provider failure and deterministic fallback, never a hidden retry.
+
+## Run Developer B's slice now
+
+```sh
+# Offline protocol smoke: deterministic role responses and planner fixtures.
+uv run python -m examples.backend_demo
+
+# Real provider calls over the same explicitly labelled planner fixture.
+uv run python -m examples.backend_demo --live
+
+# Local fixture API for Developer A; add --live to use the configured provider.
+uv run python -m examples.backend_demo --serve
+```
+
+Each command uses a fresh database under `artifacts/backend-smoke/`. Smoke runs
+save their full trace and print the path. `planning_mode=FIXTURE` remains visible
+even when `provider.mode=LIVE`. Fixture checks are test certificates, not an
+aviation checker or evaluation baseline. The fixture review hook only demonstrates
+atomic storage behavior. Nothing applies automatically.
+
+Once Developers A and C supply their owned modules and scenarios:
+
+```sh
+uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 1
+```
+
+Visit `/docs` for the API schema and `/health` for integration status. Mutations
+require `Authorization: Bearer <PLAB_SESSION_TOKEN>`; starting a run and recording
+a review also require `Idempotency-Key`. Poll run status and incremental events.
+The API serves Developer A's `app/static/index.html` at `/` when present.
+
+The default service deliberately reports `PLANNING_NOT_CONNECTED` or
+`REVIEW_NOT_CONNECTED` until the corresponding teammate's implementation exists.
+See [the integration handoff](docs/backend_handoff.md) for exact signatures,
+payloads, and acceptance evidence.
+
+## Verify
+
+```sh
+uv run ruff check app examples tests
+uv run ruff format --check app examples tests
+uv run mypy
+uv run pytest -q
+```
+
+The tests make no live model calls. They cover coordination, provider request
+construction, failure recovery, persistence, authorization, and atomic approval.
+They do not replace Developer C's aviation-rule tests, B0/B1 comparisons, or frozen
+evaluation suite. `/api/evaluations/latest` returns `NOT_YET_EVALUATED` until C
+writes `artifacts/evals/latest.json`.
+
+`data/` is ignored because the supplied flight CSV exceeds GitHub's file size
+limit. Runtime databases, traces, reports, local environment files, and caches are
+also ignored. Retain failures and review evidence before deliberately publishing
+any generated artifact.

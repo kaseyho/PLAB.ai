@@ -1,0 +1,64 @@
+{
+  "scenario_id": "backend-fixture",
+  "revision": 1,
+  "resource_id": "fixture-airport",
+  "resource_revision": 1,
+  "ruleset_version": "toy-rules-v1",
+  "policy_version": "balanced-v1",
+  "simulation_epoch": "2026-10-31T00:00:00Z",
+  "source": {
+    "dataset_id": "local-flights-2015",
+    "dataset_sha256": "afa4e42188b113dd69427a3fbd00a4b6979c6235c866f963c2899d18a3403a83",
+    "record_ordinal": 71,
+    "identity": "2015-01-01-AA1057-DFW-MIA",
+    "original_fields": {
+      "YEAR": "2015",
+      "MONTH": "1",
+      "DAY": "1",
+      "AIRLINE": "AA",
+      "FLIGHT_NUMBER": "1057",
+      "ORIGIN_AIRPORT": "DFW",
+      "DESTINATION_AIRPORT": "MIA",
+      "WEATHER_DELAY": "102",
+      "LATE_AIRCRAFT_DELAY": "0",
+      "CANCELLED": "0",
+      "DIVERTED": "0"
+    }
+  },
+  "facts": [
+    {
+      "fact_id": "fixture-assumptions",
+      "domain": null,
+      "value": "Supplied integration-test certificates; no operational rule engine",
+      "units": "label",
+      "provenance": "synthetic_scenario",
+      "source_reference": "technical_prd.md Appendix A / backend integration fixture",
+      "source_version": "fixture-v1",
+      "observed_at": null,
+      "valid_until": null,
+      "input_ids": []
+    }
+  ],
+  "required_fact_ids": [
+    "fixture-assumptions"
+  ],
+  "required_rule_ids": [
+    "ATC-RWY-01",
+    "ATC-SEP-01",
+    "ATC-TAXI-01",
+    "ATC-CAP-01",
+    "PILOT-FUEL-01",
+    "PILOT-ROUTE-01",
+    "GROUND-GATE-01",
+    "GROUND-OCC-01",
+    "GROUND-CREW-01",
+    "GROUND-EQUIP-01",
+    "SYSTEM-FRESH-01"
+  ],
+  "concession_delta": {
+    "ATC": "0.25",
+    "PILOT": "0.25",
+    "GROUND": "0.25"
+  },
+  "valid_until": null
+}
