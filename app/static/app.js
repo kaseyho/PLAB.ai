@@ -169,9 +169,9 @@ async function loadRun() {
 
 const ROLE_NAMES = { ATC: "Air traffic control", PILOT: "Pilot", GROUND: "Ground operations" };
 const ROLE_NOTES = {
-  ATC: "Runway, spacing between aircraft, hourly capacity",
-  PILOT: "Fuel reserve, weather routing, crew duty hours",
-  GROUND: "Gate, handling crew, equipment, turnaround",
+  ATC: "Runway and aircraft spacing",
+  PILOT: "Fuel and flight-crew limits",
+  GROUND: "Gates and handling crews",
 };
 const RULE_NAMES = {
   "SYSTEM-FRESH-01": "Plan matches the latest data",
@@ -210,6 +210,8 @@ const FACT_NAMES = {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function render() {
+  const openDetails = [...document.querySelectorAll("details[id][open]")].map((node) => node.id);
+  const focusedDetail = document.activeElement?.tagName === "SUMMARY" ? document.activeElement.parentElement.id : null;
   renderMode();
   renderSteps();
   renderFlight();
@@ -221,6 +223,8 @@ function render() {
   renderChecks();
   renderScenario();
   renderEvidence();
+  for (const id of openDetails) if ($(id)) $(id).open = true;
+  if (focusedDetail) $(focusedDetail)?.querySelector("summary")?.focus({preventScroll: true});
 }
 
 function simClock(seconds) {
@@ -255,15 +259,15 @@ function renderMode() {
   const fixture = run.provider?.mode === "FIXTURE";
   $("mode-note").hidden = LIVE && !fixture;
   $("mode-note").textContent = !LIVE
-    ? "You are looking at a saved example. The rules and checks are real; the desks' messages come from a test script, not a live AI. Choose “Live desk” at the top right to run your own."
-    : "Demo mode: the desks' messages come from a test script, not a live AI. The rules, checks and approval are real.";
+    ? "Saved example · scripted agent messages with real rule checks. Choose “Interactive demo” to start your own run."
+    : "Offline demo · scripted agent messages. Rule checks and human approval are active.";
   $("fixture-select").value = fixtureName || "";
   $("start-row").hidden = !LIVE;
   $("session-hint").hidden = !LIVE;
   $("session-row").hidden = publicDemo;
   $("scenario-select").disabled = busy;
   if (LIVE) $("session-hint").textContent = publicDemo
-    ? "Ready to try: model access is provided by the team. Your simulation is separate from other visitors; no API key or access code is needed."
+    ? "No API key needed. Your simulation is separate from other visitors."
     : sessionConfigured
     ? "Kept in this browser tab only. Needed to start, stop or decide."
     : "No access code is set up on the server. Add PLAB_SESSION_TOKEN to .env and restart.";
@@ -271,10 +275,15 @@ function renderMode() {
 
 function renderSteps() {
   const current = step();
-  const finished = current === 3 && run.approval_state !== "PENDING";
+  const finished = current === 3 && ["APPLIED_SIMULATION", "REJECTED", "CANCELLED"].includes(run.approval_state);
   for (const li of $("steps").children) {
     const n = Number(li.dataset.step);
     li.className = n < current || finished ? "done" : n === current ? "current" : "";
+    if (n === current && !finished) li.setAttribute("aria-current", "step");
+    else li.removeAttribute("aria-current");
+  }
+  for (const [index, id] of ["step-1", "step-2", "review-card"].entries()) {
+    $(id).classList.toggle("current", current === index + 1 && !finished);
   }
   $("step-2").classList.toggle("dim", current < 2);
   $("review-card").classList.toggle("dim", current < 3);
@@ -299,14 +308,14 @@ function renderNegotiation() {
   const status = $("negotiation-status");
   const n = run.round_count;
   const outcome = run.negotiation_outcome;
-  if (!run.run_id) status.textContent = "Not started yet. Each desk sends one offer per turn, for at most 3 turns. If they cannot agree, fixed rules pick the earliest safe option.";
-  else if (run.processing_state !== "TERMINAL") status.textContent = `Turn ${Math.max(n, 1)} of 3 in progress…`;
-  else if (outcome === "FEASIBLE_CONSENSUS") status.textContent = `All three desks agreed after ${n} ${n === 1 ? "turn" : "turns"}.`;
+  if (!run.run_id) status.textContent = "Start a negotiation to compare the three agents’ proposals.";
+  else if (run.processing_state !== "TERMINAL") status.textContent = n ? `Turn ${n} of 3 · waiting for the agents’ replies…` : "Checking the available plans…";
+  else if (outcome === "FEASIBLE_CONSENSUS") status.textContent = `All three agents agreed on the same plan in ${n} ${n === 1 ? "turn" : "turns"}.`;
   else if (outcome === "FEASIBLE_FALLBACK") {
     const why = FALLBACK_REASONS[run.fallback_reason] || run.fallback_reason?.toLowerCase().replaceAll("_", " ");
-    status.textContent = `The desks did not reach agreement${why ? ` (${why})` : ""}, so the fixed rules picked the earliest safe option.`;
+    status.textContent = `No agreement${why ? `: ${why}` : ""}. A checked fallback is ready below.`;
   } else if (outcome === "CANCELLED") status.textContent = "The negotiation was stopped.";
-  else status.textContent = "The desks were not asked, because there was no safe option to discuss.";
+  else status.textContent = run.agent_invocation_count ? "The run ended. See the outcome below." : "No agent calls were needed. See the outcome below.";
 
   const box = $("agent-cards");
   box.replaceChildren();
@@ -316,6 +325,24 @@ function renderNegotiation() {
     const offer = (run.offers || {})[role];
     const previous = run.previous_votes?.[role];
     const vote = (run.votes || {})[role];
+    const requested = run.events.some((event) => event.event_type === "AGENT_REQUEST_STARTED" && event.payload?.role === role);
+    const accepted = vote?.decision === "ACCEPT" && vote.plan_hash === run.plan_hash;
+    const waiting = run.run_id && run.processing_state !== "TERMINAL";
+    let label = run.run_id ? "Not run" : "Ready";
+    let tone = "";
+    if (vote) {
+      label = accepted ? "Agreed" : vote.decision === "REJECT" ? "Declined" : "Needs review";
+      tone = accepted ? "accepted" : "attention";
+    } else if (offer) label = "Offer received";
+    else if (waiting) label = "Waiting for reply";
+    else if (requested) {
+      label = "No valid reply";
+      tone = "attention";
+    }
+    card.append(el("p", label, `desk-status ${tone}`));
+    const messages = el("details", null, "agent-messages");
+    messages.id = `messages-${role}`;
+    messages.append(el("summary", "View agent messages"));
     if (offer) {
       const turn = el("div", null, "turn");
       turn.append(el("div", "Turn 1 · offer", "turn-label"),
@@ -323,15 +350,11 @@ function renderNegotiation() {
       const others = (offer.concession_candidate_ids || []).filter((id) => id !== offer.preferred_candidate_id).length;
       if (others) turn.append(el("p", `Would also accept ${others} other ${others === 1 ? "option" : "options"}`, "why"));
       if (offer.rationale) turn.append(el("p", offer.rationale, "why"));
-      card.append(turn);
+      messages.append(turn);
     }
-    if (previous) card.append(voteBlock(2, previous, run.previous_candidate_id, false));
-    if (vote) card.append(voteBlock(run.round_count, vote, run.candidate?.candidate_id, vote.plan_hash !== run.plan_hash));
-    if (!offer && !vote) {
-      const requested = run.events.some((event) => event.event_type === "AGENT_REQUEST_STARTED" && event.payload?.role === role);
-      const waiting = run.run_id && run.processing_state !== "TERMINAL";
-      card.append(el("p", waiting ? "Waiting for a reply…" : requested ? "No valid reply received" : "Not asked", "waiting"));
-    }
+    if (previous) messages.append(voteBlock(2, previous, run.previous_candidate_id, false));
+    if (vote) messages.append(voteBlock(run.round_count, vote, run.candidate?.candidate_id, vote.plan_hash !== run.plan_hash));
+    if (offer || previous || vote) card.append(messages);
     box.append(card);
   }
 }
@@ -349,17 +372,17 @@ function voteBlock(turnNumber, vote, candidateId, mismatch) {
 function reviewState() {
   const outcome = run.negotiation_outcome;
   const approval = run.approval_state;
-  if (!run.run_id) return ["info", "Nothing to decide yet", "Start a negotiation in step 1."];
-  if (approval === "APPLIED_SIMULATION") return ["ok", "Approved and applied", `The landing slot, gate, crew and equipment are now booked in the simulation (airport record version ${run.resource_revision_after ?? "updated"}).`];
+  if (!run.run_id) return ["info", "Your plan will appear here", "Review the checks, then approve or reject with a reason."];
+  if (approval === "APPLIED_SIMULATION") return ["ok", "Applied to simulation", "The runway, gate, crew and equipment are booked. Your decision is recorded in the audit trail."];
   if (approval === "REJECTED") return ["info", "Rejected", "Nothing was changed."];
   if (approval === "CANCELLED") return ["info", "Stopped", "Nothing was changed."];
-  if (approval === "STALE") return ["bad", "This plan is out of date", "Something at the airport changed after the plan was made, so it can no longer be approved. Start over with fresh data."];
-  if (approval === "EXPIRED") return ["bad", "This plan has expired", "Plans must be approved within a few minutes. Start over to get a fresh one."];
-  if (run.processing_state && run.processing_state !== "TERMINAL") return ["info", "Negotiating…", `Turn ${Math.max(run.round_count, 1)} of 3. The plan will appear here when the desks finish.`];
-  if (outcome === "FEASIBLE_CONSENSUS") return ["ok", "The desks agreed on a plan", "Check it below. Their agreement alone changes nothing; you decide."];
-  if (outcome === "FEASIBLE_FALLBACK") return ["warn", "The desks did not agree", "The fixed rules picked the earliest option that passes every safety check. Review it carefully."];
-  if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["bad", "No safe option found", "Every option in the 30-minute search window breaks at least one safety rule. A person needs to handle this outside the system."];
-  if (outcome === "INSUFFICIENT_DATA") return ["bad", "Missing information", "Some required numbers are missing, so nothing was planned and the desks were not asked. The system never guesses."];
+  if (approval === "STALE") return ["warn", "This plan is out of date", "Airport resources changed. Run again to check an updated plan."];
+  if (approval === "EXPIRED") return ["warn", "Review window closed", "This plan’s two-minute review window has ended. Run again for an updated plan."];
+  if (run.processing_state && run.processing_state !== "TERMINAL") return ["info", "Negotiating…", `Turn ${Math.max(run.round_count, 1)} of 3. The plan will appear here when the agents finish.`];
+  if (outcome === "FEASIBLE_CONSENSUS") return ["info", "Ready for your review", "All three agents accepted this plan. Your approval is still required."];
+  if (outcome === "FEASIBLE_FALLBACK") return ["warn", "Fallback plan · review required", "Fixed rules selected the earliest plan that passes the checks. The agents did not reach agreement."];
+  if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["bad", "No plan passes the checks", "None of the options in the search window is feasible. Choose another flight, or inspect the reasons below."];
+  if (outcome === "INSUFFICIENT_DATA") return ["warn", "Required information is missing", "No plan can be approved. See what’s missing below, or choose another flight."];
   if (outcome === "SYSTEM_ERROR") return ["bad", "Something went wrong", "The checks could not be completed, so nothing can be approved."];
   return ["info", "Waiting", ""];
 }
@@ -368,7 +391,10 @@ function renderReview() {
   const [tone, title, detail] = reviewState();
   const banner = $("review-state");
   banner.className = `banner ${tone}`;
-  banner.replaceChildren(el("strong", title), el("span", detail));
+  if (banner.dataset.state !== title + detail) {
+    banner.replaceChildren(el("strong", title), el("span", detail));
+    banner.dataset.state = title + detail;
+  }
 
   const box = $("plan-summary");
   box.replaceChildren();
@@ -399,6 +425,7 @@ function renderReview() {
       stats.append(cell);
     }
     box.append(stats);
+    box.append(el("p", "Times use the scenario clock. Fuel and overtime are modelled.", "time-note"));
   } else if (run.run_id && run.processing_state === "TERMINAL") {
     const reasons = el("ul", null, "reasons");
     for (const fact of run.missing_facts || []) reasons.append(el("li", `Missing: ${FACT_NAMES[fact] || fact.replaceAll("_", " ")}`));
@@ -437,9 +464,10 @@ function renderSafety() {
   const passed = checks.filter((c) => c.status === "PASS").length;
   const all = passed === checks.length;
   const details = el("details", null, "safety");
+  details.id = "safety-details";
   const summary = el("summary");
   summary.append(el("span", all ? `✓ All ${checks.length} safety checks passed` : `✗ ${checks.length - passed} of ${checks.length} safety checks did not pass`, all ? "pass" : "fail"),
-    el("span", " · show list", "muted small"));
+    el("span", " · view checks", "muted small"));
   details.append(summary);
   const list = el("ul");
   for (const check of checks) {
@@ -459,8 +487,10 @@ function renderControls() {
   const authorized = LIVE && sessionConfigured && (publicDemo || token);
   const running = LIVE && run.run_id && run.processing_state !== "TERMINAL";
   $("start-btn").disabled = !authorized || busy || Boolean(running);
+  $("start-btn").hidden = Boolean(run.run_id) && !running;
+  $("start-btn").textContent = running ? "Negotiating…" : busy ? "Starting…" : "Start negotiation";
   $("cancel-btn").disabled = !authorized || busy || !(running || (LIVE && run.approval_state === "PENDING"));
-  $("cancel-btn").hidden = !LIVE || !run.run_id;
+  $("cancel-btn").hidden = !running;
 
   const reviewable = run.approval_state === "PENDING" && plan && run.checks.length > 0
     && run.checks.every((c) => c.status === "PASS");
@@ -475,13 +505,14 @@ function renderControls() {
   $("reason-input").disabled = !canAct;
   $("approve-btn").hidden = $("reject-btn").hidden = $("reason-input").parentElement.hidden = !reviewable;
   $("rerun-btn").disabled = !authorized || busy;
-  $("rerun-btn").hidden = !LIVE;
-  $("review-hint").textContent = !reviewable
-    ? (closed || run.processing_state === "TERMINAL" ? "This plan is closed. Start over to get a new one." : "")
-    : !LIVE ? "This is a saved example, so the buttons are off."
+  $("rerun-btn").hidden = !LIVE || run.processing_state !== "TERMINAL" || reviewable;
+  $("review-hint").textContent = !LIVE
+    ? "Saved example · choose “Interactive demo” to start your own run."
+    : !reviewable
+    ? (closed || run.processing_state === "TERMINAL" ? "Run again with current resources, or choose another flight above." : "")
       : !publicDemo && !token ? "Enter the access code in step 1 to decide."
-        : !hasReason ? "Write a short reason, then approve or reject. The server re-checks every safety rule before anything is booked."
-          : "The server re-checks every safety rule against the current airport before anything is booked.";
+        : !hasReason ? "Add a reason to enable approval or rejection."
+          : "Approval rechecks the plan and records your decision.";
 }
 
 // ---------- Technical details ----------
@@ -503,6 +534,7 @@ function renderRunFacts() {
   if (run.candidate) fact(list, "Plan", run.candidate.candidate_id);
   if (run.plan_hash) fact(list, "Plan hash", `${run.plan_hash.slice(0, 16)}…`);
   if (run.expires_at) fact(list, "Review expires", new Date(run.expires_at).toLocaleString());
+  if (run.resource_revision_after) fact(list, "Resource version after approval", run.resource_revision_after);
   if (run.run_id) fact(list, "Run ID", run.run_id);
 }
 
@@ -541,6 +573,7 @@ function renderChecks() {
   }
   for (const check of run.checks) {
     const item = el("details", null, "check");
+    item.id = `check-${check.rule_id}`;
     const summary = el("summary");
     summary.append(el("span", ICON[check.status], `status-${check.status}`));
     summary.append(el("span", `${check.rule_id} · ${RULE_NAMES[check.rule_id] || check.reason_code}`));
@@ -680,6 +713,7 @@ async function startRun(refresh = false) {
 
 function showError(error) {
   const state = $("review-state");
+  delete state.dataset.state;
   state.className = "banner bad";
   state.replaceChildren(el("strong", "Could not load the data"), el("span", error.message));
   clearTimeout(pollTimer);

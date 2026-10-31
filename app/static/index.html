@@ -12,24 +12,26 @@
       <div class="brand">
         <span class="logo" aria-hidden="true">P</span>
         <div>
-          <strong>PLAB</strong>
+          <strong>PLAB.ai</strong>
           <span class="brand-sub">Arrival disruption desk</span>
         </div>
       </div>
       <div class="topbar-right">
         <span class="sim-tag" title="Nothing here affects real aircraft or airports">Simulation</span>
         <label class="examples" id="fixture-picker">
-          <span>Examples</span>
-          <select id="fixture-select">
-            <option value="">Live desk</option>
-            <option value="consensus">Desks agreed</option>
-            <option value="third-turn">Agreed on turn 3</option>
-            <option value="fallback">Desks did not agree</option>
-            <option value="no-feasible">No safe option</option>
-            <option value="insufficient-data">Missing information</option>
-            <option value="stale">Plan out of date</option>
-            <option value="rejected">Rejected</option>
-            <option value="applied">Approved</option>
+          <span id="fixture-label">View</span>
+          <select id="fixture-select" aria-labelledby="fixture-label">
+            <option value="">Interactive demo</option>
+            <optgroup label="Saved examples">
+              <option value="consensus">Agents agreed</option>
+              <option value="third-turn">Agreed on turn 3</option>
+              <option value="fallback">No agent agreement</option>
+              <option value="no-feasible">No feasible plan</option>
+              <option value="insufficient-data">Missing information</option>
+              <option value="stale">Plan out of date</option>
+              <option value="rejected">Rejected</option>
+              <option value="applied">Approved</option>
+            </optgroup>
           </select>
         </label>
       </div>
@@ -39,25 +41,21 @@
   <main class="wrap">
     <section class="intro">
       <h1>Re-plan a disrupted arrival</h1>
-      <p>When a flight is delayed, three desks each look after their own part:
-        <b>air traffic control</b> (runway and spacing), the <b>pilot</b> (fuel and crew hours) and
-        <b>ground operations</b> (gate and handling crew). Here they negotiate a new landing time and gate.
-        Every option is checked against fixed safety rules first. Nothing changes until you approve it.</p>
+      <p>Choose a delayed flight. <b>ATC, Pilot and Ground agents</b> propose an arrival plan for you to review.
+        Nothing is booked until you approve.</p>
       <p class="note" id="mode-note" hidden></p>
     </section>
 
     <ol class="steps" id="steps" aria-label="Progress">
-      <li data-step="1"><span class="num">1</span><span>Choose a flight</span></li>
-      <li data-step="2"><span class="num">2</span><span>Desks negotiate</span></li>
-      <li data-step="3"><span class="num">3</span><span>You decide</span></li>
+      <li data-step="1"><span class="num">1</span><span>Choose flight</span></li>
+      <li data-step="2"><span class="num">2</span><span>Agents negotiate</span></li>
+      <li data-step="3"><span class="num">3</span><span>Review plan</span></li>
     </ol>
 
     <!-- Step 1 -->
     <section class="card" id="step-1" aria-labelledby="step1-h">
-      <h2 id="step1-h"><span class="num">1</span> Choose a disrupted flight</h2>
+      <h2 id="step1-h"><span class="num">1</span> Choose a flight</h2>
       <div class="flight" id="flight-summary"></div>
-      <p class="muted small" id="data-note">The flight and its delay are real (US DOT, 2015). Airport limits come from the
-        organisers' workbook. Traffic, fuel and crew numbers are simulated.</p>
       <div class="form-row" id="start-row">
         <label class="field" id="scenario-picker">
           <span>Flight</span>
@@ -70,39 +68,44 @@
         </label>
         <div class="buttons">
           <button type="button" id="start-btn" class="primary" disabled>Start negotiation</button>
-          <button type="button" id="cancel-btn" class="ghost" disabled>Stop</button>
+          <button type="button" id="cancel-btn" class="ghost" disabled>Stop run</button>
         </div>
       </div>
       <p class="muted small" id="session-hint">Kept in this browser tab only. Needed to start, stop or decide.</p>
+      <p class="muted small provenance" id="data-note">Historical flight: US DOT, 2015. Airport limits: organisers' workbook.
+        Traffic, fuel and crew conditions are simulated.</p>
     </section>
 
     <!-- Step 2 -->
     <section class="card" id="step-2" aria-labelledby="step2-h">
-      <h2 id="step2-h"><span class="num">2</span> The three desks negotiate</h2>
+      <div class="section-heading">
+        <h2 id="step2-h"><span class="num">2</span> Three agents negotiate</h2>
+        <span class="muted small">Up to 3 turns · 45-second limit</span>
+      </div>
       <p class="lead" id="negotiation-status"></p>
       <div class="desks" id="agent-cards"></div>
     </section>
 
     <!-- Step 3 -->
     <section class="card" id="review-card" aria-labelledby="review-h">
-      <h2 id="review-h"><span class="num">3</span> Your decision</h2>
+      <h2 id="review-h"><span class="num">3</span> Review and decide</h2>
       <div class="banner" id="review-state" role="status"></div>
       <div id="plan-summary"></div>
       <div id="safety-summary"></div>
       <div id="review-controls">
         <label class="check-row" id="ack-row" hidden>
           <input type="checkbox" id="ack-box">
-          <span>I understand the desks did not agree. This plan was picked by the fixed rules (earliest safe option).</span>
+          <span>I understand this is a rule-based fallback, without agreement from all three agents.</span>
         </label>
         <label class="field wide">
-          <span>Reason for your decision</span>
+          <span>Decision reason <span class="muted">(required)</span></span>
           <input type="text" id="reason-input" maxlength="500" autocomplete="off"
-            placeholder="e.g. Checked fuel margin and gate timing">
+            aria-describedby="review-hint" placeholder="e.g. Fuel margin and gate timing checked">
         </label>
         <div class="buttons">
           <button type="button" id="approve-btn" class="primary" disabled>Approve plan</button>
           <button type="button" id="reject-btn" class="ghost" disabled>Reject</button>
-          <button type="button" id="rerun-btn" class="link" disabled>Start over with fresh data</button>
+          <button type="button" id="rerun-btn" class="primary" disabled>Run again</button>
         </div>
         <p class="muted small" id="review-hint"></p>
       </div>
@@ -111,7 +114,7 @@
 
     <!-- Technical details for judges and engineers -->
     <details class="card tech" id="tech">
-      <summary><h2>Technical details</h2><span class="muted small">Run data, all options, rule results, audit log</span></summary>
+      <summary><h2>Evidence and technical details</h2><span class="muted small">Options, checks, sources and audit trail</span></summary>
 
       <h3>Run</h3>
       <dl class="facts" id="run-facts"></dl>
