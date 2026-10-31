@@ -6,15 +6,24 @@ so a stale or tampered catalog cannot leak into the result, and it never picks a
 "least unsafe" candidate.
 """
 
-from typing import Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.constraints import CandidatePlan, ConstraintResult, check_plan, derive_plan, is_approval_ready
+from app.constraints import (
+    CandidatePlan,
+    ConstraintResult,
+    check_plan,
+    derive_plan,
+    is_approval_ready,
+)
 from app.scenarios import ScenarioSnapshot
 
 FallbackStatus = Literal[
-    "FEASIBLE_FALLBACK", "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE", "INSUFFICIENT_DATA", "SYSTEM_ERROR",
+    "FEASIBLE_FALLBACK",
+    "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE",
+    "INSUFFICIENT_DATA",
+    "SYSTEM_ERROR",
 ]
 
 # Facts every candidate needs; any null stops planning before enumeration (PRD 8.2 step 1).
@@ -31,7 +40,7 @@ CRITICAL_FACTS = (
 
 
 class _Frozen(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
 
 class CheckedCandidate(_Frozen):
@@ -51,9 +60,9 @@ class SearchBounds(_Frozen):
 class FallbackResult(_Frozen):
     status: FallbackStatus
     fallback_reason: str
-    plan: Optional[CandidatePlan]
+    plan: CandidatePlan | None
     checks: list[ConstraintResult]
-    search_bounds: Optional[SearchBounds]
+    search_bounds: SearchBounds | None
     evaluated_count: int
     feasible_count: int
     blockers: dict[str, int]  # rule_id -> candidates it failed or left unknown
@@ -71,8 +80,19 @@ def missing_critical_facts(snapshot: ScenarioSnapshot) -> list[str]:
 
 def search_bounds(snapshot: ScenarioSnapshot) -> SearchBounds:
     search = snapshot.overlay.search
-    slots = len(range(search.earliest_landing_s, search.earliest_landing_s + search.horizon_s + 1, search.step_s))
-    route_ids = [route.route_id for route in sorted(snapshot.overlay.routes, key=lambda r: (r.gate_id, r.route_id))]
+    slots = len(
+        range(
+            search.earliest_landing_s,
+            search.earliest_landing_s + search.horizon_s + 1,
+            search.step_s,
+        )
+    )
+    route_ids = [
+        route.route_id
+        for route in sorted(snapshot.overlay.routes, key=lambda r: (r.gate_id, r.route_id))
+    ]
+    if slots * len(route_ids) > 124:
+        raise ValueError("Candidate search exceeds the PRD limit of 124 combinations")
     return SearchBounds(
         earliest_landing_s=search.earliest_landing_s,
         latest_landing_s=search.earliest_landing_s + search.horizon_s,
@@ -83,7 +103,7 @@ def search_bounds(snapshot: ScenarioSnapshot) -> SearchBounds:
 
 
 def enumerate_candidates(snapshot: ScenarioSnapshot) -> list[CandidatePlan]:
-    """Every landing slot (inclusive horizon, fixed step) x every declared route, in stable order."""
+    """Every bounded landing slot and declared route, in stable order."""
     bounds = search_bounds(snapshot)
     return [
         derive_plan(snapshot, landing, route_id)
@@ -96,16 +116,24 @@ def evaluate_catalog(snapshot: ScenarioSnapshot) -> list[CheckedCandidate]:
     checked = []
     for plan in enumerate_candidates(snapshot):
         checks = check_plan(snapshot, plan)
-        checked.append(CheckedCandidate(plan=plan, checks=checks, feasible=is_approval_ready(checks)))
+        checked.append(
+            CheckedCandidate(plan=plan, checks=checks, feasible=is_approval_ready(checks))
+        )
     return checked
 
 
-def procedural_order(plan: CandidatePlan) -> tuple:
+def procedural_order(plan: CandidatePlan) -> tuple[int, int, str, str, str]:
     """PRD 8.7 ordering, shared by fallback and the B0 procedural baseline."""
-    return (plan.landing_time_s, plan.gate_in_time_s, plan.gate_id, plan.taxi_route_id, plan.candidate_id)
+    return (
+        plan.landing_time_s,
+        plan.gate_in_time_s,
+        plan.gate_id,
+        plan.taxi_route_id,
+        plan.candidate_id,
+    )
 
 
-def first_feasible(catalog: list[CheckedCandidate]) -> Optional[CheckedCandidate]:
+def first_feasible(catalog: list[CheckedCandidate]) -> CheckedCandidate | None:
     feasible = [candidate for candidate in catalog if candidate.feasible]
     return min(feasible, key=lambda c: procedural_order(c.plan)) if feasible else None
 
@@ -121,8 +149,16 @@ def _blockers(catalog: list[CheckedCandidate]) -> dict[str, int]:
 
 def select_fallback(snapshot: ScenarioSnapshot, fallback_reason: str) -> FallbackResult:
     """Earliest feasible plan under the full hard-rule set, or a typed non-executable outcome."""
-    base = {"fallback_reason": fallback_reason, "plan": None, "checks": [], "search_bounds": None,
-            "evaluated_count": 0, "feasible_count": 0, "blockers": {}, "missing_facts": []}
+    base: dict[str, Any] = {
+        "fallback_reason": fallback_reason,
+        "plan": None,
+        "checks": [],
+        "search_bounds": None,
+        "evaluated_count": 0,
+        "feasible_count": 0,
+        "blockers": {},
+        "missing_facts": [],
+    }
     missing = missing_critical_facts(snapshot)
     if missing:
         return FallbackResult(**{**base, "status": "INSUFFICIENT_DATA", "missing_facts": missing})
@@ -130,15 +166,31 @@ def select_fallback(snapshot: ScenarioSnapshot, fallback_reason: str) -> Fallbac
         bounds = search_bounds(snapshot)
         catalog = evaluate_catalog(snapshot)
     except Exception as error:  # a checker fault must never yield an approvable plan
-        return FallbackResult(**{**base, "status": "SYSTEM_ERROR",
-                                 "fallback_reason": f"{fallback_reason}; checker error: {error!r}"})
+        return FallbackResult(
+            **{
+                **base,
+                "status": "SYSTEM_ERROR",
+                "fallback_reason": f"{fallback_reason}; checker error: {type(error).__name__}",
+            }
+        )
 
-    summary = {**base, "search_bounds": bounds, "evaluated_count": len(catalog),
-               "feasible_count": sum(c.feasible for c in catalog), "blockers": _blockers(catalog)}
+    summary = {
+        **base,
+        "search_bounds": bounds,
+        "evaluated_count": len(catalog),
+        "feasible_count": sum(c.feasible for c in catalog),
+        "blockers": _blockers(catalog),
+    }
     chosen = first_feasible(catalog)
     if chosen is not None:
-        return FallbackResult(**{**summary, "status": "FEASIBLE_FALLBACK", "plan": chosen.plan,
-                                 "checks": chosen.checks})
+        return FallbackResult(
+            **{
+                **summary,
+                "status": "FEASIBLE_FALLBACK",
+                "plan": chosen.plan,
+                "checks": chosen.checks,
+            }
+        )
     # No feasible plan: only claim "no option" if every candidate has a known failure.
     if all(any(check.status == "FAIL" for check in candidate.checks) for candidate in catalog):
         return FallbackResult(**{**summary, "status": "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE"})

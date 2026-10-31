@@ -1,12 +1,34 @@
 import copy
 import json
-import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+import pytest
 
-from app.scenarios import ScenarioSnapshot, snapshot_from_dict  # noqa: E402
+from app.contracts import ResourceState, StartRunRequest
+from app.scenarios import ScenarioSnapshot, snapshot_from_dict
+from app.store import Store
+from examples.backend_fixture import sample_snapshot
+
+
+@pytest.fixture
+def store(tmp_path: Path) -> Store:
+    result = Store(tmp_path / "test.sqlite3")
+    scenario = sample_snapshot()
+    result.register_scenario(scenario, ResourceState(resource_id=scenario.resource_id, revision=1))
+    return result
+
+
+def start_run(store, provider, key="start", **kwargs):
+    return store.create_run(
+        StartRunRequest(scenario_id="backend-fixture", scenario_revision=1),
+        key,
+        provider.info,
+        "FIXTURE",
+        kwargs.get("deadline_s", 45),
+    )[0]
+
+
+ROOT = Path(__file__).resolve().parent.parent
 
 D01 = json.loads((ROOT / "scenarios" / "D01.json").read_text())
 

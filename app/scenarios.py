@@ -1,4 +1,4 @@
-"""Typed operational facts the safety checks read (PRD 5.5), loaded from a labelled synthetic overlay.
+"""Typed operational facts (PRD 5.5) loaded from a labelled synthetic overlay.
 
 Every operational number comes from the overlay file, never from an agent. Required facts
 may be left null in an overlay; checks then report UNKNOWN and fallback reports
@@ -11,7 +11,7 @@ Historical row extraction belongs to the data owner; the snapshot only keeps its
 import hashlib
 import json
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -26,7 +26,7 @@ class ScenarioValidationError(ValueError):
 
 
 class _Frozen(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
 
 def _check_interval(interval: tuple[int, int]) -> tuple[int, int]:
@@ -39,18 +39,18 @@ def _check_interval(interval: tuple[int, int]) -> tuple[int, int]:
 class Movement(_Frozen):
     movement_id: str
     time_s: int = Field(ge=0)
-    wake_category: Optional[str]
+    wake_category: str | None
     occupancy_s: int = Field(gt=0)
 
 
 class Runway(_Frozen):
     runway_id: str
     available_intervals: list[tuple[int, int]]
-    focal_occupancy_s: Optional[int] = Field(default=None, gt=0)
+    focal_occupancy_s: int | None = Field(default=None, gt=0)
 
     @field_validator("available_intervals")
     @classmethod
-    def _intervals(cls, value):
+    def _intervals(cls, value: list[tuple[int, int]]) -> list[tuple[int, int]]:
         return [_check_interval(i) for i in value]
 
 
@@ -83,7 +83,7 @@ class Gate(_Frozen):
 
     @field_validator("reservations")
     @classmethod
-    def _intervals(cls, value):
+    def _intervals(cls, value: list[tuple[int, int]]) -> list[tuple[int, int]]:
         return [_check_interval(i) for i in value]
 
 
@@ -94,9 +94,11 @@ class Crew(_Frozen):
     max_duty_end_s: int = Field(ge=0)
 
     @model_validator(mode="after")
-    def _ordered(self):
+    def _ordered(self) -> Self:
         if not self.available_from_s <= self.regular_shift_end_s <= self.max_duty_end_s:
-            raise ValueError("crew times must satisfy available_from <= regular_shift_end <= max_duty_end")
+            raise ValueError(
+                "crew times must satisfy available_from <= regular_shift_end <= max_duty_end"
+            )
         return self
 
 
@@ -106,16 +108,16 @@ class Equipment(_Frozen):
 
     @field_validator("available_intervals")
     @classmethod
-    def _intervals(cls, value):
+    def _intervals(cls, value: list[tuple[int, int]]) -> list[tuple[int, int]]:
         return [_check_interval(i) for i in value]
 
 
 class Fuel(_Frozen):
-    projected_fuel_at_earliest_kg: Optional[float] = Field(default=None, ge=0)
-    hold_burn_kg_per_min: Optional[float] = Field(default=None, ge=0)
-    taxi_burn_kg_per_min: Optional[float] = Field(default=None, ge=0)
-    reserve_floor_kg: Optional[float] = Field(default=None, ge=0)
-    uncertainty_allowance_kg: Optional[float] = Field(default=None, ge=0)
+    projected_fuel_at_earliest_kg: float | None = Field(default=None, ge=0)
+    hold_burn_kg_per_min: float | None = Field(default=None, ge=0)
+    taxi_burn_kg_per_min: float | None = Field(default=None, ge=0)
+    reserve_floor_kg: float | None = Field(default=None, ge=0)
+    uncertainty_allowance_kg: float | None = Field(default=None, ge=0)
 
 
 class ArrivalOption(_Frozen):
@@ -123,11 +125,11 @@ class ArrivalOption(_Frozen):
 
     arrival_option_id: str
     landing_window: tuple[int, int]
-    permitted: Optional[bool]
+    permitted: bool | None
 
     @field_validator("landing_window")
     @classmethod
-    def _interval(cls, value):
+    def _interval(cls, value: tuple[int, int]) -> tuple[int, int]:
         return _check_interval(value)
 
 
@@ -153,8 +155,8 @@ class Search(_Frozen):
 
 
 class Aircraft(_Frozen):
-    aircraft_class: Optional[str]
-    wake_category: Optional[str]
+    aircraft_class: str | None
+    wake_category: str | None
 
 
 class Overlay(_Frozen):
@@ -174,23 +176,27 @@ class Overlay(_Frozen):
     fuel: Fuel
     arrival_options: list[ArrivalOption]
     service: Service
-    connections: Optional[list[ConnectionGroup]]
+    connections: list[ConnectionGroup] | None
 
     @field_validator("separation_s")
     @classmethod
-    def _separation(cls, value):
+    def _separation(cls, value: dict[str, int]) -> dict[str, int]:
         for key, seconds in value.items():
             if key.count(">") != 1 or seconds < 0:
-                raise ValueError(f"separation entry must be 'LEADER>FOLLOWER': seconds >= 0, got {key}: {seconds}")
+                raise ValueError(
+                    f"separation requires 'LEADER>FOLLOWER' and seconds >= 0: {key}: {seconds}"
+                )
         return value
 
     @field_validator("taxi_blockages")
     @classmethod
-    def _blockages(cls, value):
+    def _blockages(
+        cls, value: dict[str, list[tuple[int, int]]]
+    ) -> dict[str, list[tuple[int, int]]]:
         return {edge: [_check_interval(i) for i in intervals] for edge, intervals in value.items()}
 
     @model_validator(mode="after")
-    def _references(self):
+    def _references(self) -> Self:
         gate_ids = {gate.gate_id for gate in self.gates}
         crew_ids = {crew.crew_id for crew in self.crews}
         equipment_ids = {item.equipment_id for item in self.equipment}
@@ -202,7 +208,9 @@ class Overlay(_Frozen):
                 raise ValueError(f"gate {gate.gate_id} assigns unknown crew {gate.crew_id}")
             unknown = set(gate.required_equipment) - equipment_ids
             if unknown:
-                raise ValueError(f"gate {gate.gate_id} requires unknown equipment {sorted(unknown)}")
+                raise ValueError(
+                    f"gate {gate.gate_id} requires unknown equipment {sorted(unknown)}"
+                )
         return self
 
     def gate(self, gate_id: str) -> Gate:
@@ -216,7 +224,7 @@ class Overlay(_Frozen):
 
 
 class SourceLocator(_Frozen):
-    """Pointer to the qualifying historical row; extraction and eligibility are the data owner's job."""
+    """Pointer to the historical row; the loader verifies source data separately."""
 
     dataset_file: str
     record_ordinal: int = Field(gt=0)
@@ -244,7 +252,7 @@ def canonical_hash(payload: object) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def snapshot_from_dict(raw: dict) -> ScenarioSnapshot:
+def snapshot_from_dict(raw: dict[str, Any]) -> ScenarioSnapshot:
     """Validate an overlay document and freeze it with a content hash."""
     try:
         body = {
@@ -265,15 +273,22 @@ def snapshot_from_dict(raw: dict) -> ScenarioSnapshot:
         raise ScenarioValidationError(f"unsupported ruleset {body['ruleset_version']}")
     missing_provenance = set(Overlay.model_fields) - set(body["provenance"])
     if missing_provenance:
-        raise ScenarioValidationError(f"overlay sections without provenance: {sorted(missing_provenance)}")
-    hashed = {key: value.model_dump() if isinstance(value, BaseModel) else value for key, value in body.items()}
+        raise ScenarioValidationError(
+            f"overlay sections without provenance: {sorted(missing_provenance)}"
+        )
+    hashed = {
+        key: value.model_dump() if isinstance(value, BaseModel) else value
+        for key, value in body.items()
+    }
     try:
         return ScenarioSnapshot(**body, snapshot_hash=canonical_hash(hashed))
     except ValueError as error:
         raise ScenarioValidationError(str(error)) from error
 
 
-def load_scenario(scenario_id: str, revision: int, scenario_dir: Path = SCENARIO_DIR) -> ScenarioSnapshot:
+def load_scenario(
+    scenario_id: str, revision: int, scenario_dir: Path = SCENARIO_DIR
+) -> ScenarioSnapshot:
     path = scenario_dir / f"{scenario_id}.json"
     try:
         raw = json.loads(path.read_text())
@@ -281,6 +296,6 @@ def load_scenario(scenario_id: str, revision: int, scenario_dir: Path = SCENARIO
         raise ScenarioValidationError(f"scenario {scenario_id}: {error}") from error
     if raw.get("scenario_revision") != revision:
         raise ScenarioValidationError(
-            f"scenario {scenario_id} is at revision {raw.get('scenario_revision')}, requested {revision}"
+            f"scenario {scenario_id}: revision {raw.get('scenario_revision')}, requested {revision}"
         )
     return snapshot_from_dict(raw)

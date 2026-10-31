@@ -44,17 +44,23 @@ def test_fallback_is_deterministic():
 def test_no_fuel_envelope_gives_no_feasible_option_not_least_unsafe():
     # Appendix A.3 variant: 2000 kg projected is below the 2300 kg floor even at 600 s.
     outcome = select_fallback(
-        scenario(lambda raw: raw["overlay"]["fuel"].update(projected_fuel_at_earliest_kg=2000)), "dissent")
+        scenario(lambda raw: raw["overlay"]["fuel"].update(projected_fuel_at_earliest_kg=2000)),
+        "dissent",
+    )
     assert outcome.status == "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE"
     assert outcome.plan is None
     assert outcome.blockers["PILOT-FUEL-01"] == outcome.evaluated_count == 93
-    assert (outcome.search_bounds.earliest_landing_s, outcome.search_bounds.latest_landing_s) == (600, 2400)
+    assert (outcome.search_bounds.earliest_landing_s, outcome.search_bounds.latest_landing_s) == (
+        600,
+        2400,
+    )
 
 
 def test_both_gates_unavailable_gives_no_feasible_option():
     def block_gates(raw):
         for gate in raw["overlay"]["gates"]:
             gate["reservations"] = [[0, 86400]]
+
     outcome = select_fallback(scenario(block_gates), "dissent")
     assert outcome.status == "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE"
     assert outcome.blockers["GROUND-OCC-01"] == 93
@@ -62,14 +68,18 @@ def test_both_gates_unavailable_gives_no_feasible_option():
 
 def test_missing_fuel_gives_insufficient_data_before_enumeration():
     outcome = select_fallback(
-        scenario(lambda raw: raw["overlay"]["fuel"].update(projected_fuel_at_earliest_kg=None)), "timeout")
+        scenario(lambda raw: raw["overlay"]["fuel"].update(projected_fuel_at_earliest_kg=None)),
+        "timeout",
+    )
     assert outcome.status == "INSUFFICIENT_DATA"
     assert outcome.missing_facts == ["fuel.projected_fuel_at_earliest_kg"]
     assert outcome.plan is None and outcome.evaluated_count == 0
 
 
 def test_unknown_rule_applicability_gives_insufficient_data_not_no_option():
-    outcome = select_fallback(scenario(lambda raw: raw["overlay"].update(separation_s={})), "timeout")
+    outcome = select_fallback(
+        scenario(lambda raw: raw["overlay"].update(separation_s={})), "timeout"
+    )
     assert outcome.status == "INSUFFICIENT_DATA"
     assert outcome.plan is None
 
@@ -77,6 +87,7 @@ def test_unknown_rule_applicability_gives_insufficient_data_not_no_option():
 def test_checker_fault_gives_system_error(monkeypatch):
     def broken(*args):
         raise RuntimeError("boom")
+
     monkeypatch.setattr("app.fallback.check_plan", broken)
     outcome = select_fallback(scenario(), "timeout")
     assert outcome.status == "SYSTEM_ERROR"
