@@ -28,11 +28,13 @@
         <label class="fixture-picker" id="fixture-picker" hidden>
           Sample
           <select id="fixture-select">
+            <option value="">Live scenarios</option>
             <option value="consensus">Consensus awaiting review</option>
             <option value="fallback">Fallback awaiting review</option>
             <option value="no-feasible">No feasible option</option>
             <option value="insufficient-data">Insufficient data</option>
             <option value="stale">Stale at approval</option>
+            <option value="rejected">Rejected</option>
             <option value="applied">Applied to simulation</option>
           </select>
         </label>
@@ -67,7 +69,7 @@
           I understand the agents did not reach consensus; this plan comes from the deterministic fallback.
         </label>
         <label class="reason">
-          Reason (required to reject)
+          Reason (recorded with your decision)
           <input type="text" id="reason-input" maxlength="500" autocomplete="off">
         </label>
         <div class="actions">
@@ -92,7 +94,8 @@
           <thead><tr>
             <th scope="col">Plan</th><th scope="col">Landing</th><th scope="col">Gate-in</th>
             <th scope="col">Gate / route</th><th scope="col">Added hold</th>
-            <th scope="col">Fuel margin</th><th scope="col">Crew overtime</th><th scope="col">Checks</th>
+            <th scope="col">Fuel margin</th><th scope="col">Crew overtime</th>
+            <th scope="col">Cost ATC / Pilot / Ground</th><th scope="col">Checks</th>
           </tr></thead>
           <tbody></tbody>
         </table>

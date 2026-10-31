@@ -269,7 +269,10 @@ def create_app(
             raise ServiceError("POLICY_EDIT_REQUIRES_TRUSTED_SETUP", 422)
         from app.approvals import current_snapshot
 
-        snapshot = current_snapshot(snapshot, database.get_resource(snapshot.resource_id))
+        try:
+            snapshot = current_snapshot(snapshot, database.get_resource(snapshot.resource_id))
+        except (KeyError, ValidationError) as error:
+            raise ServiceError("INVALID_INPUT", 422) from error
         result = database.revise_scenario(snapshot)
         for run_id, task in list(tasks.items()):
             if database.get_run(run_id).processing_state == "TERMINAL":

@@ -6,10 +6,11 @@ This module rechecks current reservations and computes runway/gate reservations.
 
 from typing import cast
 
-from pydantic import JsonValue, TypeAdapter
+from pydantic import JsonValue, TypeAdapter, ValidationError, model_validator
 
 from app.contracts import (
     Contract,
+    Count,
     ResourceState,
     ReviewEffect,
     ReviewRequest,
@@ -21,17 +22,30 @@ from app.contracts import (
 from app.planning import check_plan
 from app.scenarios import Movement, Overlay
 
+APPLIED_KEY = "reservations"
+
 
 class Reservation(Contract):
     run_id: str
+    plan_hash: str | None = None
+    candidate_id: str | None = None
     runway_id: str
     movement: Movement
     gate_id: str
-    gate_interval: tuple[int, int]
+    gate_interval: tuple[Count, Count]
+
+    @model_validator(mode="after")
+    def valid_interval(self) -> "Reservation":
+        if self.gate_interval[0] >= self.gate_interval[1]:
+            raise ValueError("A gate reservation must have positive duration")
+        return self
 
 
 def reservations(resource: ResourceState) -> list[Reservation]:
-    return TypeAdapter(list[Reservation]).validate_python(resource.data.get("reservations", []))
+    try:
+        return TypeAdapter(list[Reservation]).validate_python(resource.data.get(APPLIED_KEY, []))
+    except ValidationError as error:
+        raise ServiceError("RESOURCE_STATE_INVALID") from error
 
 
 def current_snapshot(snapshot: ScenarioSnapshot, resource: ResourceState) -> ScenarioSnapshot:
@@ -52,12 +66,13 @@ def current_snapshot(snapshot: ScenarioSnapshot, resource: ResourceState) -> Sce
     gates = {gate.gate_id: gate for gate in overlay.gates}
     committed = reservations(resource)
     for reservation in committed:
+        if reservation.gate_id not in gates:
+            raise ServiceError("RESOURCE_STATE_INVALID")
         if reservation.runway_id == overlay.runway.runway_id:
             movements[reservation.movement.movement_id] = reservation.movement
-        if reservation.gate_id in gates:
-            gate = gates[reservation.gate_id]
-            intervals = sorted(set(gate.reservations) | {reservation.gate_interval})
-            gates[gate.gate_id] = gate.model_copy(update={"reservations": intervals})
+        gate = gates[reservation.gate_id]
+        intervals = sorted(set(gate.reservations) | {reservation.gate_interval})
+        gates[gate.gate_id] = gate.model_copy(update={"reservations": intervals})
     if committed:
         for section, values in (("movements", movements.values()), ("gates", gates.values())):
             fact_id = f"overlay.{section}"
@@ -89,6 +104,9 @@ def review_plan(run: RunRecord, resource: ResourceState, request: ReviewRequest)
         raise ServiceError("NOT_REVIEWABLE")
     if resource.revision != run.snapshot.resource_revision:
         raise ServiceError("RESOURCE_VERSION_MISMATCH")
+    booked = reservations(resource)
+    if any(reservation.run_id == run.run_id for reservation in booked):
+        raise ServiceError("ALREADY_APPLIED")
     snapshot = current_snapshot(run.snapshot, resource)
     checks = check_plan(snapshot, plan)
     require_passing_checks(snapshot, plan, checks)
@@ -99,6 +117,8 @@ def review_plan(run: RunRecord, resource: ResourceState, request: ReviewRequest)
     buffer = overlay.service.gate_buffer_s
     reservation = Reservation(
         run_id=run.run_id,
+        plan_hash=plan.plan_hash,
+        candidate_id=plan.candidate_id,
         runway_id=plan.runway_id,
         movement=Movement(
             movement_id=f"APPLIED-{run.run_id}",
@@ -109,11 +129,11 @@ def review_plan(run: RunRecord, resource: ResourceState, request: ReviewRequest)
         gate_id=plan.gate_id,
         gate_interval=(max(0, plan.gate_in_time_s - buffer), plan.gate_release_s + buffer),
     )
-    booked = reservations(resource) + [reservation]
+    booked.append(reservation)
     return ReviewEffect(
         checks=checks,
         resource_data={
             **resource.data,
-            "reservations": cast(JsonValue, [item.model_dump(mode="json") for item in booked]),
+            APPLIED_KEY: cast(JsonValue, [item.model_dump(mode="json") for item in booked]),
         },
     )

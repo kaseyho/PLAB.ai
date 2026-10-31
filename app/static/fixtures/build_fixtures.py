@@ -1,4 +1,4 @@
-"""Regenerate six labelled dashboard samples through the shared backend.
+"""Regenerate seven labelled dashboard samples through the shared backend.
 
 Run: uv run python -m app.static.fixtures.build_fixtures
 The samples are view projections, not full trace exports or evaluation results.
@@ -29,7 +29,15 @@ from examples.backend_fixture import FixtureProvider
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
-NAMES = ("consensus", "fallback", "no-feasible", "insufficient-data", "applied", "stale")
+NAMES = (
+    "consensus",
+    "fallback",
+    "no-feasible",
+    "insufficient-data",
+    "applied",
+    "stale",
+    "rejected",
+)
 
 
 async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[str, JsonValue]:
@@ -66,17 +74,17 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
         provider,
     )
     run = await coordinator.run(run.run_id)
-    if name == "applied":
+    if name in ("applied", "rejected"):
         assert run.candidate is not None and run.expires_at is not None
         request = ReviewRequest(
-            decision="APPROVE",
+            decision="APPROVE" if name == "applied" else "REJECT",
             plan_hash=run.candidate.plan_hash,
             scenario_revision=snapshot.revision,
             resource_revision=snapshot.resource_revision,
             ruleset_version=snapshot.ruleset_version,
             policy_version=snapshot.policy_version,
             expires_at=run.expires_at,
-            reason="Applied only to the generated sample database",
+            reason="Decision recorded only in the generated sample database",
         )
         run = store.review(run.run_id, request, "sample-approval", "sample-operator", review_plan)
     elif name == "stale":
@@ -99,6 +107,9 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
         if run.candidate:
             ids.add(run.candidate.candidate_id)
         payload["catalog_total_count"] = len(catalog.candidates)
+        payload["catalog_feasible_count"] = sum(
+            all(check.status == "PASS" for check in entry.checks) for entry in catalog.candidates
+        )
         payload["catalog"] = catalog.model_copy(
             update={
                 "candidates": tuple(e for e in catalog.candidates if e.plan.candidate_id in ids),
@@ -123,7 +134,18 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
             "payload": {
                 key: value
                 for key, value in event.payload.items()
-                if key in ("state", "reason_code", "resource_revision", "decision", "role")
+                if key
+                in (
+                    "state",
+                    "reason_code",
+                    "resource_revision",
+                    "decision",
+                    "reason",
+                    "role",
+                    "round",
+                    "candidate_id",
+                    "outcome",
+                )
             },
         }
         for event in store.events(run.run_id)

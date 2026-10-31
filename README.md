@@ -79,16 +79,20 @@ a review also require `Idempotency-Key`. Poll run status and incremental events.
 The API serves the duty desk at `/`. Select a scenario, enter the configured
 operator token, and start a run. The token remains in that tab's memory. The
 dashboard shows actual provider/planner modes, events, deterministic impacts,
-checks and review expiry. Explicit `?fixture=consensus` (or `fallback`,
-`no-feasible`, `insufficient-data`, `stale`, `applied`) opens a labelled sample
-with actions disabled.
+checks and review expiry. Both approval and rejection require a reason. Explicit
+`?sample=consensus` (or `fallback`, `no-feasible`, `insufficient-data`, `stale`,
+`applied`, `rejected`) opens a labelled sample with actions disabled.
+The `?fixture=` alias is also supported.
 
 The default service uses the integrated checker and D01 scenario. A missing CSV
 appears in `/health` as `SOURCE_FILE_NOT_FOUND`; it never fabricates a historical
 row. Human approval rechecks the current runway/gate reservations inside the
 SQLite transaction before applying the simulated plan. Refreshing a scenario
-retains committed reservations and invalidates old recommendations. Negotiation
-does not apply a plan. See [the integration handoff](docs/backend_handoff.md) for
+retains committed reservations and invalidates old recommendations. Applied
+bookings include the run ID, candidate ID and plan hash. This prototype reserves
+runway and gate occupancy; crew and equipment checks use the scenario's availability
+and do not yet create persistent reservations. Negotiation does not apply a plan.
+See [the integration handoff](docs/backend_handoff.md) for
 exact signatures, payloads, and acceptance evidence.
 
 ## Verify
