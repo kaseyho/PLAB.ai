@@ -9,14 +9,49 @@ booking validation and dashboard evidence from [PR #4](https://github.com/kaseyh
 The frozen evaluation suite remains with its owner in the
 [work plan](developer_work_plan.md).
 
+## Organizer clarification and current input status
+
+The [organizer update](organizer_updates.md) defines a turn as one structured
+message from each of the three independent agents. Consensus is allowed within
+three turns, otherwise deterministic fallback decides: at most nine agent
+messages/generation requests and zero fallback model calls. This service currently
+uses the shorter two-turn/six-request profile. Existing `round`/`round_count`
+fields count those agent turns. All two-round/six-call verification below describes
+the implemented profile and remains historical development evidence.
+
+The newly announced `flights.csv` contains 358,774 rows from 2015 satisfying
+`WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20`, according to the organizers.
+The local file remains the earlier full release. D01 record 71 and the retained
+smokes bind to that legacy input; their locators must be re-extracted and checked
+against natural identity and the new hash before switching files. The matching
+358,774 legacy lookup-resolved count does not prove release identity.
+
+DOT data has no gates, runways, fuel or crew. The new
+`challenge2_operational_constraints.xlsx` supplies synthetic per-airport gates,
+runways, movements/hour and turnaround, plus wake separation, fuel and crew rules.
+Cited real figures are also accepted. The workbook was unavailable for inspection;
+no exact sheet/cell mapping or figure is verified here. The loader accepts JSON
+scenarios and has no XLSX importer. Current D01 constants remain illustrative.
+
+Developer C owns inspecting the workbook/new CSV, normalizing units and rule
+applicability, recording sheet/cell or real-citation references, rebinding rows,
+validating the modeled airport subset, and rerunning boundaries/B0/B1/evaluations.
+Developer B carries the resulting versioned evidence through shared facts, prompts
+and exports; Developer A exposes it during review. The filtered cohort cannot
+supply complete movement schedules or aircraft rotations. Unavailable required
+operational evidence must remain unknown. Updating source/rule mappings must
+invalidate previous approval bindings and preserve the old traces.
+
 ## Specification decisions
 
 The [technical PRD](technical_prd.md) and challenge requirements govern this
-implementation. The high-level guide contributes the simple functional design,
-deterministic safety boundary, and hash-chained log. Its illustrative single-LLM,
-third-turn, no-database examples conflict with the explicit PRD. This service
-therefore uses three independent calls per round, two rounds, a checked
-deterministic fallback, SQLite, and human approval. There is one service process;
+implementation. The high-level guide uses the same functional design,
+deterministic safety boundary and hash-chained log. This service uses three independent calls per
+turn, a declared two-turn profile inside the organizer’s three-turn ceiling, a
+checked deterministic fallback, SQLite and human approval. Any optional third-turn
+profile needs coordinated contract/store/coordinator/prompt/UI/test changes as
+described in PRD Section 9; a documentation change does not enable it.
+There is one service process;
 no agent framework, message broker, recursive tool loop, or separate microservice.
 
 ## Module ownership
@@ -58,7 +93,9 @@ and costs before accepting a plan.
   files directly under `scenarios/`. The service imports them at startup without
   overwriting existing revisions. For overlay definitions, the loader reads the
   exact CSV record from `PLAB_DATA_DIR` (default `data/`), retains all original
-  fields, and computes the actual file hash. Missing source files are reported
+  fields, and computes the actual file hash. This locator is file-specific:
+  updated-release adoption needs identity/eligibility verification and a new
+  ordinal/hash. Missing source files are reported
   in `/health`; no placeholder record is substituted.
 - Facts carry domain scope, provenance, units, source/version references, and
   optional expiry. The adapter freezes each operational overlay section as a
@@ -85,8 +122,9 @@ and costs before accepting a plan.
   Python cannot forcibly stop a timed-out worker thread; purity prevents late
   computation from committing state.
 
-D01 produces 93 checked candidates, 14 feasible candidates, and a six-candidate
-shortlist. The procedural fallback is `L600-G2-route`; the worked compromise is
+The current legacy-input, illustrative D01 fixture produces 93 checked candidates,
+14 feasible candidates, and a six-candidate shortlist.
+The procedural fallback is `L600-G2-route`; the worked compromise is
 `L960-G1-long`, with costs `(ATC=0.2, PILOT=0.3, GROUND=0)`. The fallback enumerates
 and checks the full catalog again before selection, followed by a shared-plan
 recheck in the coordinator. Failed candidates retain their diagnostics, including
@@ -212,7 +250,9 @@ or fallback does not mean applied.
 - Round 2: three independent votes over the same complete plan hash, with all
   peer offers visible. Three current accepts and final passing checks are required.
 - Limits: two rounds, six started requests, 12 seconds per request, 45 seconds per
-  run, five seconds reserved for fallback, 500 output tokens, zero retries.
+  run, five seconds reserved for fallback, 500 output tokens, zero retries. These
+  are the actual profile limits; the organizer permits up to three turns/nine
+  requests. Each completed turn has one structured message from each role.
 - Agent failures, malformed JSON, invented IDs, wrong hashes, or dissent enter
   deterministic fallback. Stale inputs interrupt instead of falling back from an
   obsolete catalog. Non-executable outcomes have no reviewable candidate.
@@ -228,6 +268,11 @@ or fallback does not mean applied.
   reasoning, credentials, or exception messages are intentionally stored.
 
 ## Verification and remaining team gates
+
+The results below predate inspection/integration of the new workbook and filtered
+release. They validate the legacy-input, two-turn implementation only; they cannot
+be relabelled as workbook-backed benchmarks. Re-run affected source/rule checks and
+paired comparisons after migration, preserving these original outcomes.
 
 Automated tests cover fixture conflict/concession, matching final votes, refusal,
 invalid output/references, crossed versions, duplicate requests/messages, missing

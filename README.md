@@ -5,7 +5,15 @@ and Ground agents negotiate a checked plan, then a human reviews its simulated
 application. This is a prototype, not an operational aviation system.
 
 The requirements are in [the technical PRD](docs/technical_prd.md); ownership is in
-[the three-developer work plan](docs/developer_work_plan.md).
+[the three-developer work plan](docs/developer_work_plan.md). The
+[organizer clarification](docs/organizer_updates.md) records the new flight release,
+turn definition and operational workbook requirements.
+
+One turn is one structured message from each of ATC, Pilot and Ground. The challenge
+allows consensus within three turns (nine agent generation requests maximum), then
+deterministic fallback. The implemented profile uses two turns/six requests, with
+early fallback on failure or dissent. Fallback makes no model calls. Human approval
+is required before simulated application in either case.
 
 ## Backend setup
 
@@ -31,9 +39,20 @@ Configure `.env` locally. Never commit credentials:
 - `PLAB_REVIEWER_ID`, `PLAB_DB_PATH`, `PLAB_PUBLIC_ORIGIN`: local reviewer identity,
   SQLite location, and browser origin. Defaults bind the service to
   `http://127.0.0.1:8000`.
-- Put the supplied dataset at `data/flights.csv`, or set `PLAB_DATA_DIR` to its
-  containing directory. D01 loads record 71 and preserves its original fields
-  and the actual file hash.
+- Put the selected historical dataset at `data/flights.csv`, or set
+  `PLAB_DATA_DIR` to its containing directory. The organizer reports a new release
+  of **358,774 rows from 2015**, selected by `WEATHER_DELAY > 15 OR
+  LATE_AIRCRAFT_DELAY > 20`. Profile the actual file and preserve its hash.
+- The local CSV is still the earlier 592,406,591-byte full release. Current D01
+  loads its record 71 (AA1057 DFW–MIA, 2015-01-01). Before switching to the filtered
+  release, re-extract and verify that identity, its qualifying values, new ordinal
+  and file hash in the scenario. Old ordinals do not transfer across releases.
+- Obtain `challenge2_operational_constraints.xlsx` for synthetic airport gates,
+  runways, movements/hour and turnaround, plus wake separation, fuel and crew
+  rules; cited real figures are also accepted. Inspect exact cells, units and
+  applicability before producing normalized versioned JSON scenarios. The workbook
+  was not available for inspection during this documentation update. The service
+  does not automatically import XLSX; current D01 constants remain illustrative.
 
 Environment variables take precedence over `.env`. A configured SoCLaaS key takes
 precedence over OpenAI configuration. The adapter uses the OpenAI SDK, with Chat
@@ -84,7 +103,14 @@ checks and review expiry. Both approval and rejection require a reason. Explicit
 `applied`, `rejected`) opens a labelled sample with actions disabled.
 The `?fixture=` alias is also supported.
 
-The default service uses the integrated checker and D01 scenario. A missing CSV
+The default service uses the integrated checker and the existing illustrative D01
+scenario. DOT data has no gates, runways, fuel or crew; the filtered disrupted-flight
+cohort also does not establish a full traffic schedule or aircraft rotation. Use
+inspected workbook/cited limits and explicit scenario state, not inferred operational
+facts. The one-runway/two-gate slice must be declared as a subset of sourced airport
+totals. Updating source facts/rules requires new versions and invalidates old reviews.
+
+The default service loads the selected historical file. A missing CSV
 appears in `/health` as `SOURCE_FILE_NOT_FOUND`; it never fabricates a historical
 row. Human approval rechecks the current runway/gate reservations inside the
 SQLite transaction before applying the simulated plan. Refreshing a scenario
@@ -104,7 +130,9 @@ uv run mypy
 uv run pytest -q
 ```
 
-The tests make no live model calls. They cover the scenario hard rules, catalog
+The tests make no live model calls. The last merged code verification passed 176
+offline tests; this documentation update does not claim workbook-backed tests or
+new-release evaluation results. They cover the scenario hard rules, catalog
 and fallback integration, coordination, provider requests, failure recovery,
 persistence, authorization, and atomic approval. B0/B1 comparisons and the frozen
 evaluation suite remain separate team gates. `/api/evaluations/latest` returns

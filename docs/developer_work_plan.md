@@ -2,6 +2,19 @@
 
 This is the execution plan for [the technical PRD](technical_prd.md). Three developers work in parallel for four hours: approximately 12 developer-hours in total. Assign actual names to the three roles before starting.
 
+The [organizer clarification](organizer_updates.md) now requires one structured
+message per ATC/Pilot/Ground agent per turn, consensus within three turns and
+otherwise deterministic fallback. The ceiling is three turns/nine requests;
+the implemented profile uses two turns/six requests. The new historical release
+is organizer-reported as 358,774 rows from 2015. Operational limits come from
+`challenge2_operational_constraints.xlsx` (synthetic) or cited real figures.
+The workbook is not yet inspected locally and the new release has not been
+profiled here; these are explicit follow-up tasks, not completed integration.
+
+The original four-hour clock and checklists below describe delivery ownership,
+not a current completion inventory. See [the backend handoff](backend_handoff.md)
+for existing implementation and verification.
+
 The deliverable is one working flow: **qualifying flight → checked alternatives → three-agent negotiation → human review → simulated application → measured evaluation report**.
 
 ## 1. Assign these three owners
@@ -9,8 +22,8 @@ The deliverable is one working flow: **qualifying flight → checked alternative
 | Developer | Owns | Finished when |
 |---|---|---|
 | **Developer 1 / A: Interface and human control** | Browser dashboard, evidence display, approve/reject/cancel interactions, approval business logic, simulator application, demonstration | A reviewer can inspect a real recommendation, approve it exactly once, reject it, and see stale/unauthorized applications blocked |
-| **Developer 2 / B: Agents, backend, and integration** | Shared contracts, API, persistence, provider calls, all three role agents, two-round coordinator, trace, fallback integration | A run invokes independent ATC/Pilot/Ground agents, terminates within its budget, and exposes a persisted, truthful outcome through the API |
-| **Developer 3 / C: Data, deterministic planning, and evaluations** | Source extraction, scenarios, candidate enumeration, all domain checks, scoring, fallback selection, both baselines, evaluation runner/report | The same snapshot produces a reproducible checked catalog; measured results compare the system with B0/B1 and expose failures |
+| **Developer 2 / B: Agents, backend, and integration** | Shared contracts, API, persistence, provider calls, all three role agents, bounded coordinator (current two-turn profile), trace, fallback integration | A run invokes independent ATC/Pilot/Ground agents, terminates within its budget, and exposes a persisted, truthful outcome through the API |
+| **Developer 3 / C: Data, deterministic planning, and evaluations** | Updated CSV/workbook inspection, source extraction, scenarios, candidate enumeration, all domain checks, scoring, fallback selection, both baselines, evaluation runner/report | The same snapshot produces a reproducible checked catalog; measured results compare the system with B0/B1 and expose failures |
 
 **Developer 2 is the integration owner.** Each developer writes and tests their own implementation. Developer 3 runs the combined evaluation suite; they do not inherit everyone else's testing.
 
@@ -26,7 +39,7 @@ One developer owns each file. Request a change from its owner when a shared inte
 | Developer 2 | `app/main.py`, `app/contracts.py`, `app/agents.py`, `app/coordinator.py`, `app/store.py`, `tests/test_coordinator.py`, `tests/test_api.py`, dependency/configuration files, setup instructions |
 | Developer 3 | `app/data_adapter.py`, `app/scenarios.py`, `app/planning.py`, `app/constraints.py`, `scenarios/`, `policies/`, `evals/`, `tests/test_planning.py`, `tests/test_data.py` |
 
-Generated traces and reports go under `artifacts/`; they are outputs, not manually edited shared source. These paths are proposed implementation files and do not imply that the application already exists.
+Generated traces and reports go under `artifacts/`; they are outputs, not manually edited shared source. Some paths are target files rather than existing modules; core application code now exists. Workbook ingestion, new-release rebinding and frozen evaluations remain pending.
 
 ### Important boundary between Developers 1 and 2
 
@@ -45,10 +58,10 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 
 ### Build
 
-- [ ] A single dashboard with scenario selection, start/cancel, status, round count, and model-call count.
+- [ ] A single dashboard with scenario selection, start/cancel, status, actual turn count/limit, profile and model-call count; map existing `round_count` to agent turns.
 - [ ] Three agent cards showing independent offers, concessions, and final votes.
 - [ ] Candidate comparison with landing, gate-in, gate, route, fuel margin, overtime, and other available impact values.
-- [ ] Expandable constraint evidence, source references, and historical/synthetic labels.
+- [ ] Expandable constraint evidence with CSV release/hash, workbook sheet/cell or real citation, original/normalized units, applicability and historical/synthetic labels.
 - [ ] Clear states for consensus, fallback, insufficient data, no feasible option, stale, rejected, and applied.
 - [ ] Approve simulated plan, reject with reason, and revise-and-rerun actions.
 - [ ] Backend approval logic that uses the persisted plan, validates the trusted reviewer session, checks versions/expiry, reruns constraints, and applies resources atomically.
@@ -80,7 +93,7 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 - [ ] Round 1: run three independent calls concurrently; validate offers against known candidates and concession envelopes.
 - [ ] Reconcile offers deterministically using Developer 3's checked costs and the PRD selection policy.
 - [ ] Round 2: ask all three agents to accept/reject exactly the same plan hash; require three current accepts.
-- [ ] Enforce two rounds, six generation requests, per-call timeouts, and the overall deadline.
+- [ ] Enforce one structured message per role per turn and the declared profile: current two turns/six requests within the organizer ceiling of three turns/nine requests, plus per-call timeouts and the overall deadline. Any third-turn extension must update/test contracts, storage, coordinator, prompts and UI together.
 - [ ] Trigger Developer 3's fallback on dissent, timeout, or protocol failure; preserve the failure reason.
 - [ ] Stop a run if its scenario/resources/rules change; reject late responses and preserve terminal outcomes.
 - [ ] Persist source/version references, checks, messages, votes, counters, outcome, and review state; provide a readable export.
@@ -89,7 +102,7 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 
 - [ ] Three separate real model requests are visible; three role labels around one request do not satisfy this deliverable.
 - [ ] Wrong hashes, missing votes, malformed output, invented candidate IDs, and mismatched revisions cannot produce consensus.
-- [ ] Timeout or dissent terminates without a seventh model request; fallback makes zero model calls.
+- [ ] Timeout or dissent terminates within the declared profile: no seventh model request in the current profile and no tenth in a future three-turn profile; fallback makes zero model calls and adds no agent turn.
 - [ ] Duplicate/late messages cannot add votes or overwrite the outcome.
 - [ ] Model-supplied text cannot change hard rules, counters, reviewer identity, or application state.
 - [ ] A genuine conflict/concession scenario ends in three matching real accepts, with its trace retained.
@@ -104,9 +117,12 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 
 ### Build
 
-- [ ] Extract qualifying historical rows locally and preserve file hash, record ordinal, original source, and eligibility evidence.
+- [ ] Profile the updated organizer CSV independently: reported 358,774 rows, 2015, strict eligibility, actual schema/hash and exclusions. Retain the old full-file profile separately.
+- [ ] Re-extract qualifying rows, verify natural identity and new ordinals/hash, and preserve original fields/eligibility. Do not reuse legacy D01 record 71 blindly.
+- [ ] Inspect `challenge2_operational_constraints.xlsx`; record filename/hash, sheets/cells, airport/category keys, units and applicability. Cited real substitutions retain publisher/document/revision/section evidence.
+- [ ] Map airport gates/runways, movements/hour/turnaround, wake separation, fuel and crew rules into versioned scenarios. Missing critical values stay unknown; do not claim workbook compliance for unmapped fixture constants.
 - [ ] Preserve missingness, exclude unresolved airport identifiers, and keep historical outcomes outside agent decision inputs.
-- [ ] Create versioned synthetic overlays: one focal flight, one runway, two gates, fixed background traffic, and up to two routes per gate.
+- [ ] Create versioned operational overlays from workbook-synthetic or cited limits plus separate scenario state: one focal flight, one runway, two gates, fixed background traffic and up to two routes per gate. Validate subset counts against airport totals and declare capacity/background-load assumptions; the filtered cohort is not a full traffic/rotation history.
 - [ ] Enumerate the bounded landing/gate/route catalog: at most 124 raw combinations in the default scope.
 - [ ] Implement all required domain checks: runway/spacing/capacity, taxi availability, fuel/arrival permission, gate compatibility/occupancy, crew/equipment, and required-data validity.
 - [ ] Return `PASS/FAIL/UNKNOWN` with evidence IDs, units, and defined margins; failed/unknown candidates are not reviewable.
@@ -119,7 +135,7 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 
 ### Test and demonstrate
 
-- [ ] Independently hand-check separation, gate-interval, and fuel boundaries; have Developer 1 review the worked arithmetic.
+- [ ] Independently hand-check workbook/cited separation, gate-interval, capacity, fuel and crew boundaries; have Developer 1 review arithmetic and units. Changes to mappings/thresholds create new versions and invalidate old review bindings.
 - [ ] Missing fuel or rule applicability blocks a recommendation; no feasible plan produces a non-executable escalation.
 - [ ] Changing reference-only historical outcomes leaves catalogs, scores, and fallback unchanged.
 - [ ] Both baselines use the same snapshots, information boundaries, catalog, and hard checks as the full system.
@@ -152,13 +168,13 @@ Developer 2 publishes the schemas; each developer confirms their owned signature
 
 Minimum shared run fields: `run_id`, `scenario_revision`, `resource_revision`, `ruleset_version`, `policy_version`, `processing_state`, `negotiation_outcome`, `approval_state`, `round_count`, `model_call_count`, `plan_hash`, `candidate`, `checks`, `offers`, `votes`, and `fallback_reason` where applicable.
 
-Use seconds, kilograms, and explicit UTC simulation epochs consistently. Keep live, fixture, recorded-replay, and fallback modes visible in payloads and UI. Developers 1 and 2 use typed sample outputs while Developer 3 finishes planning; Developer 3 uses deterministic agent stubs while Developer 2 finishes provider wiring. Replace these at the live integration checkpoint.
+Carry workbook/citation evidence in versioned facts and retain the actual protocol profile/limits in run/evaluation evidence. A workbook or citation must not be invented by the model. Use seconds, kilograms and explicit UTC simulation epochs consistently. Keep live, fixture, recorded-replay, and fallback modes visible in payloads and UI. Developers 1 and 2 use typed sample outputs while Developer 3 finishes planning; Developer 3 uses deterministic agent stubs while Developer 2 finishes provider wiring. Replace these at the live integration checkpoint.
 
 ## 7. Shared clock and handoffs
 
 | Time | Developer 1 | Developer 2 | Developer 3 | Required checkpoint |
 |---|---|---|---|---|
-| **0–15 min** | Agree UI/review payload and transaction needs | Publish contracts, sample payload, API skeleton; verify model access | Agree units/rules; extract seed and create overlay | Everyone can build independently against the same contract |
+| **0–15 min** | Agree UI/review payload and transaction needs | Publish contracts, sample payload, API skeleton; verify model access | Inspect input availability, units/rules and workbook scope; rebind seed and create overlay | Everyone can build independently against the same contract |
 | **15–45 min** | Dashboard with sample data; approval skeleton | Store/events, agent wrappers, run API | Catalog, core checks, B0/B1; freeze scenario manifest | First real deterministic catalog integrated |
 | **45–90 min** | Live polling, agent cards, evidence | Real Round 1/reconciliation/Round 2/fallback | Complete checks and boundary fixtures | Live three-agent recommendation by **90 min** |
 | **90–135 min** | Atomic approve/reject/stale handling | Protocol guards, exports, cancellation; wire review handler | Runner and safety fixtures | One real run can be reviewed and applied by **135 min** |
@@ -173,7 +189,8 @@ Cross-review once the vertical slice works: Developer 2 reviews Developer 1's ap
 ## 8. Definition of done for the whole team
 
 - [ ] One real supplied row satisfies `WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20` and its allowed parameters reach all three agents.
-- [ ] Three independent agents exchange actual structured offers and commit to the same plan within two rounds/six requests in at least one genuine conflict case.
+- [ ] Three independent agents send one structured message each per turn and commit to one exact plan within three turns/nine requests in a genuine conflict case; also satisfy the actual profile limit (current two turns/six requests).
+- [ ] The updated historical source identity is hash-bound and workbook/cited operational mappings are inspected, unit/applicability checked and visible; legacy fixtures/results are labelled separately.
 - [ ] Deterministic checks protect all approval-ready plans; unknown essential facts block them.
 - [ ] Model failure produces deterministic fallback; an impossible or missing-data case produces a visible non-executable result.
 - [ ] A human can approve/reject; stale, unauthorized, duplicate, and competing applications are handled correctly.

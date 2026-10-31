@@ -1,5 +1,41 @@
 # Judging Rubrics
 
+## Application note: organizer clarification, 31 October 2026
+
+The source rubric and its six-criterion weighted table below are unchanged. The
+[new challenge clarification](organizer_updates.md) changes the evidence needed
+to demonstrate this project:
+
+- **Technical soundness (25%):** one structured message from each independent
+  ATC/Pilot/Ground agent per turn; consensus within three turns, otherwise
+  deterministic fallback. Show actual turn/message/request counts and the
+  configured profile. Current implementation uses two turns/six requests inside
+  the three-turn/nine-request ceiling. Fallback uses zero model calls.
+- **Problem realism (20%):** use a qualifying row from the organizer-reported
+  358,774-row 2015 release and disclose actual source/hash. DOT data contains no
+  gates, runways, fuel or crew; the filtered cohort cannot establish complete
+  airport traffic or aircraft rotations.
+- **Honest evaluation (20%):** freeze and compare identical CSV/scenario/workbook
+  or cited-rule versions across B0/B1/system. Label workbook figures synthetic,
+  retain failures and report actual denominators. Neither source row count nor
+  unit-test count is an agent benchmark or evidence of operational benefit.
+- **Trust and traceability (20%):** show workbook sheet/cell/hash or exact real
+  citation, units, applicability and extra scenario assumptions. Require three
+  current same-plan accepts and subsequent human approval with fresh checks;
+  fallback also requires human review.
+- **Impact (10%):** report paired modeled trade-offs against fair baselines;
+  synthetic operational figures do not establish real-world savings.
+- **Time discipline (5%):** record actual submission and keep the presentation
+  within three minutes; this is separate from the three agent-turn limit.
+
+The workbook, `challenge2_operational_constraints.xlsx`, is not yet available for
+local inspection and the updated CSV has not been independently profiled here.
+Existing D01 figures and development smokes
+must remain labelled legacy/illustrative. These notes apply the supplied rubric;
+they do not introduce a new judging criterion or change its weights.
+
+## Supplied rubric text
+
 Each criterion is scored from 1 to 5. Below, each one has a short explanation of what judges look for and
 what separates a strong entry from a weak one.
 Problem realism Specific user, credible pain, clear status quo
