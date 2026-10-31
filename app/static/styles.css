@@ -71,6 +71,37 @@ body {
 h1 { font-size: 28px; line-height: 1.2; margin: 0 0 10px; letter-spacing: -0.01em; }
 .intro p { margin: 0 0 10px; max-width: 70ch; color: var(--muted); }
 .intro b { color: var(--ink); font-weight: 600; }
+.intro .operator-line { font-size: 14px; margin-top: 14px; }
+.proof-nav { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0; font-size: 13px; }
+.proof-nav a, .text-link, .evidence-links a { color: var(--accent); text-underline-offset: 3px; }
+.proof-nav span { color: var(--muted); margin-left: 4px; }
+.workflow { padding: 10px 0 14px; border-block: 1px solid var(--line); font-size: 14px; }
+.workflow > summary, .input-evidence > summary, .what-if > summary, .method > summary, .evaluation-cases > summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+.workflow .guide-map, .method .guide-map { padding-top: 14px; }
+.input-evidence, .what-if { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.input-evidence .facts { margin-top: 12px; }
+.input-evidence .text-link { font-size: 13px; }
+.what-if-fields { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.unknown-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.method { margin-bottom: 14px; }
+.run-proof { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border-block: 1px solid var(--line); padding: 12px 0; margin: 0 0 16px; }
+.run-proof div { min-width: 0; }
+.run-proof dt { color: var(--muted); font-size: 12px; }
+.run-proof dd { font-size: 13px; font-weight: 600; margin: 2px 0 0; overflow-wrap: anywhere; }
+#baseline-comparison { margin: 18px 0; }
+#baseline-comparison h3 { margin: 0 0 10px; }
+#baseline-comparison p { font-size: 12px; line-height: 1.5; }
+.baseline-table tbody th { color: var(--ink); background: transparent; }
+.baseline-table tr.selected th { background: var(--accent-soft); }
+.evaluation-panel > .section-heading { margin-bottom: 12px; }
+.evaluation-finding { border-left: 3px solid var(--accent); padding-left: 12px; font-size: 14px; }
+.evaluation-failure { background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 12px 14px; margin: 16px 0; font-size: 14px; }
+.evaluation-failure h3 { margin: 0 0 8px; }
+.evaluation-failure p { margin: 0 0 8px; }
+.case-reason { display: block; font-size: 11px; color: var(--muted); margin-block: 3px; }
+.evaluation-cases .text-link { display: block; font-size: 12px; }
+.evidence-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 0; font-size: 13px; }
+.workflow, .method, .evaluation-panel, #baseline-comparison, #input-evidence { scroll-margin-top: 20px; }
 .note {
   background: var(--accent-soft); color: var(--ink) !important;
   border-radius: 8px; padding: 10px 12px; font-size: 14px;
@@ -127,7 +158,7 @@ h3 { font-size: 15px; margin: 22px 0 8px; }
 .field { display: flex; flex-direction: column; gap: 5px; font-size: 14px; color: var(--muted); min-width: 0; }
 .field.wide { margin-top: 14px; max-width: 560px; }
 #scenario-picker { flex: 1 1 260px; }
-input[type="text"], input[type="password"], select {
+input[type="text"], input[type="password"], input[type="number"], select {
   font: inherit; font-size: 15px; color: var(--ink);
   background: var(--card); border: 1px solid var(--line); border-radius: 8px;
   padding: 9px 11px; min-height: 42px; max-width: 100%;
@@ -279,6 +310,8 @@ button, select, input { transition: border-color 120ms, background-color 120ms; 
   .steps li { font-size: 12px; gap: 6px; line-height: 1.3; }
   .steps .num { width: 20px; height: 20px; font-size: 11px; }
   .desks { grid-template-columns: 1fr; }
+  .run-proof { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .what-if-fields { align-items: flex-start; flex-direction: column; }
   .field input, .field select { min-width: 0; }
   .form-row > * { flex: 1 1 100%; }
   .summary { font-size: 19px; }

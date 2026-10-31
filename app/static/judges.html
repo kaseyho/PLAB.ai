@@ -110,13 +110,17 @@
       <dl class="guide-map">
         <div><dt>Problem realism <span>20%</span></dt><dd>A named duty-manager workflow, a qualifying
           historical disruption and conflicting ATC/Pilot/Ground responsibilities. The prototype covers one
-          arrival at a time. <a href="#challenge">See the problem-to-feature mapping.</a></dd></div>
+          arrival at a time. The app names today's phone/manual-update process, costs and adoption boundary.
+          <a href="/#workflow">Inspect the user's workflow in the app.</a></dd></div>
         <div><dt>Technical soundness <span>25%</span></dt><dd>A working path from inputs to a persisted,
           approved simulation update. Independent LLM messages express preferences; Python owns arithmetic,
-          constraints, selection and application. <a href="/">Try a live run without API keys.</a></dd></div>
+          constraints, selection and application. Actual counts and B0/B1 impacts are shown in the main flow.
+          <a href="/#what-if">Change simulated fuel and try a new input</a> without API keys. Unknown fuel blocks a plan;
+          the existing reserve and workbook rules remain fixed.</dd></div>
         <div><dt>Honest evaluation <span>20%</span></dt><dd>A frozen suite, B0/B1 baselines, actual denominators
           and retained failures. Initial live consensus was <b>1/6</b>; passing the system's contract checks
-          does not mean the agents succeeded. <a href="#evaluation">Read the measured results.</a></dd></div>
+          does not mean the agents succeeded. The app reads the report directly and shows per-case deltas,
+          failure causes and next steps. <a href="/#evaluation-panel">Inspect the measured evidence in the app.</a></dd></div>
         <div><dt>Trust and traceability <span>20%</span></dt><dd>Checkable source cells, rule margins,
           same-plan votes, visible uncertainty and a mandatory human decision. Stale or unsupported plans
           cannot be applied. <a href="/?sample=applied#tech">Inspect the evidence and audit trail.</a></dd></div>
@@ -184,6 +188,10 @@
         over that baseline was demonstrated. The <a href="/?sample=third-turn#review-card">scripted D01 third-turn example</a>
         illustrates a different compromise: <b>2 extra minutes of holding for 35 fewer minutes of ground-crew
         overtime</b>. This is a synthetic trade-off, not a measured historical saving or proof that agents beat B1.</p>
+      <p>The review screen now compares the selected plan with B0 and B1 side by side, including
+        holding, fuel used, reserve margin and overtime. To test beyond a recording, change simulated
+        aircraft fuel in Step 1. A fresh version is planned under the same workbook rules; the historical
+        holdout numbers do not become results for that edited input.</p>
 
       <details class="raw">
         <summary>Scope limits and the next validation step</summary>

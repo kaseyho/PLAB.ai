@@ -8,6 +8,29 @@ For local use, follow [README](../README.md); credentials stay in `.env`.
 
 ## How the submission answers the rubric
 
+The app now links the three highlighted criteria directly to observable evidence:
+**Problem realism → the duty-manager workflow**, **Technical soundness → rules,
+agents and human authority**, and **Honest evaluation → the measured report**.
+The workflow includes actual request counts and an immediately visible B0/B1
+comparison of holding, fuel and overtime for the selected plan.
+
+For an unscripted input check, open **Change simulated fuel** in Step 1. Enter a
+different nonnegative quantity, or mark it unknown, and start a run. The browser
+submits a new scenario revision with explicit synthetic provenance through the
+existing API. Unknown fuel produces a non-executable missing-data result; fuel
+below the required reserve can produce no feasible option. Both paths execute the
+real deterministic planner and can stop before any model call. Pending plans are
+invalidated by the new revision, and committed reservations remain present.
+Changing fuel never changes the reserve, contingency or workbook policy.
+
+The evaluation panel reads `/api/evaluations/latest`; it does not invent or launch
+an evaluation. It shows the report's model/prompt/date, separate live and fixture
+denominators, measured latency, every case and its B0 deltas, a linked recorded
+failure, and a proposed next validation step. Unavailable comparisons stay
+unavailable. The recorded results do not evaluate browser fuel edits or establish
+performance for a changed prompt. No additional broad evaluation was run for
+these UI improvements.
+
 | Criterion | Weight | Concrete answer and evidence |
 |---|---:|---|
 | Problem realism | 20% | A duty manager coordinates one disrupted arrival across ATC, Pilot and Ground. D01 is the qualifying historical AA1057 flight; workbook limits and additional simulation inputs are explicitly distinguished. |

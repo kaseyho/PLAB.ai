@@ -11,6 +11,22 @@ The judge guide maps every challenge requirement and all six weighted criteria t
 observable features, saved examples and measured results. It separates live-model
 consensus from contract checks, and includes a three-minute presentation route.
 
+The app puts the three highlighted rubric strengths in the workflow itself:
+
+- **Problem realism (20%):** a named airport duty-manager job, the current
+  phone/manual-update process, its fuel/overtime/resource risks, and source limits.
+- **Technical soundness (25%):** an explicit Python/LLM/human responsibility
+  split, actual execution counts, and a same-input B0/B1 comparison before review.
+  Change the simulated fuel quantity in Step 1 to exercise a new versioned input;
+  an unknown quantity blocks planning and insufficient fuel can remove every option.
+- **Honest evaluation (20%):** report-derived denominators, latency, all retained
+  cases, baseline deltas and a recorded failure with a cause and next step. The
+  initial 1/6 live consensus result remains distinct from 12/12 contract cases.
+
+Fuel edits use the existing scenario-revision API and invalidate pending plans.
+They retain synthetic provenance and cannot edit workbook or reserve policy.
+Evaluation metrics describe the frozen report, not edited inputs or a new prompt.
+
 ## Public judge deployment
 
 The Render configuration in `render.yaml` runs the Python service on the free demo

@@ -52,8 +52,24 @@
       <h1>Re-plan a disrupted arrival</h1>
       <p>Choose a delayed flight. <b>ATC, Pilot and Ground agents</b> propose an arrival plan for you to review.
         Nothing is booked until you approve.</p>
+      <p class="operator-line"><b>For the airport operations duty manager:</b> coordinate one disrupted inbound flight across three teams.</p>
       <p class="note" id="mode-note" hidden></p>
     </section>
+
+    <nav class="proof-nav" aria-label="Rubric evidence">
+      <a href="#workflow">Problem realism <span>20%</span></a>
+      <a href="#method">Technical soundness <span>25%</span></a>
+      <a href="#evaluation-panel">Honest evaluation <span>20%</span></a>
+    </nav>
+    <details class="workflow" id="workflow">
+      <summary>The user's job, current process and cost</summary>
+      <dl class="guide-map">
+        <div><dt>One decision</dt><dd>Agree a landing time, taxi route and gate for a disrupted arrival, then review the evidence before booking simulated resources.</dd></div>
+        <div><dt>Today</dt><dd>The challenge describes phone calls and manual software updates between ATC, flight crew and ground staff. Each team has different information; a changed plan needs everyone to recheck.</dd></div>
+        <div><dt>Cost and risk</dt><dd>Extra holding consumes fuel; a different gate can increase crew overtime or miss turnaround targets. Conflicting or stale decisions can use unavailable resources. We show these modeled quantities for each plan; manual coordination time and real monetary savings have not been measured.</dd></div>
+        <div><dt>Prototype boundary</dt><dd>One arrival, a declared runway/gate subset and simulated current conditions. The reviewer represents a coordination lead; real deployment would retain each operational authority's decisions.</dd></div>
+      </dl>
+    </details>
 
     <ol class="steps" id="steps" aria-label="Progress">
       <li data-step="1"><span class="num">1</span><span>Choose flight</span></li>
@@ -83,6 +99,25 @@
       <p class="muted small" id="session-hint">Kept in this browser tab only. Needed to start, stop or decide.</p>
       <p class="muted small provenance" id="data-note">Historical flight: US DOT, 2015. Airport limits: organisers' workbook.
         Traffic, fuel and crew conditions are simulated.</p>
+      <details class="input-evidence" id="input-evidence">
+        <summary>Flight evidence and the operational limits used</summary>
+        <dl class="facts" id="input-facts"></dl>
+        <p class="muted small">The filtered DOT file is a disrupted-flight cohort, not a complete airport queue. Current traffic, gate occupancy, aircraft fuel and crew state are simulated.</p>
+        <a class="text-link" href="#scenario-facts">Inspect exact source facts and assumptions</a>
+      </details>
+      <details class="what-if" id="what-if" hidden>
+        <summary>Change simulated fuel · try a new input</summary>
+        <p class="small muted">Change the aircraft's fuel state and run the same planner again. The workbook reserve, contingency and other rules still apply.</p>
+        <div class="what-if-fields">
+          <label class="field">
+            <span>Fuel at earliest landing (kg)</span>
+            <input id="fuel-input" type="number" min="0" max="1000000" step="any" aria-describedby="fuel-hint">
+          </label>
+          <label class="unknown-toggle"><input type="checkbox" id="fuel-unknown"> Fuel quantity is unknown</label>
+          <button type="button" id="run-inputs-btn" class="ghost" hidden disabled>Run with these inputs</button>
+        </div>
+        <p class="small muted" id="fuel-hint">Applied on the next run as a versioned, synthetic input. A new revision invalidates any pending recommendation. Leave fuel unknown to see the system decline to produce a plan.</p>
+      </details>
     </section>
 
     <!-- Step 2 -->
@@ -92,6 +127,15 @@
         <span class="muted small">Up to 3 turns · 45-second limit</span>
       </div>
       <p class="lead" id="negotiation-status"></p>
+      <details class="method" id="method">
+        <summary>Who decides what · rules, agents and human authority</summary>
+        <dl class="guide-map">
+          <div><dt>Python rules</dt><dd>Enumerate landing, gate and taxi options; calculate fuel, timing and cost; check runway spacing, capacity, gate, crew, equipment and turnaround. Failed or unknown hard checks block review. Fixed rules also choose the fallback.</dd></div>
+          <div><dt>Three LLM agents</dt><dd>ATC, Pilot and Ground receive separate requests, express preferences and explain concessions using supplied evidence. Each sends one structured message per turn. Agreement requires three accepts of the identical plan; agents cannot change rules or authorize bookings.</dd></div>
+          <div><dt>You</dt><dd>Review the checks and baseline comparison, then approve or reject with a reason. Approval rechecks current state and atomically books the runway, gate, crew and equipment in the simulator.</dd></div>
+        </dl>
+      </details>
+      <dl class="run-proof" id="run-proof" aria-label="Actual execution evidence"></dl>
       <div id="consensus-explanation" hidden></div>
       <div class="desks" id="agent-cards"></div>
     </section>
@@ -101,6 +145,7 @@
       <h2 id="review-h"><span class="num">3</span> Review and decide</h2>
       <div class="banner" id="review-state" role="status"></div>
       <div id="plan-summary"></div>
+      <section id="baseline-comparison" aria-label="Comparison against deterministic baselines" hidden></section>
       <div id="safety-summary"></div>
       <div id="review-controls">
         <label class="check-row" id="ack-row" hidden>
@@ -120,6 +165,16 @@
         <p class="muted small" id="review-hint"></p>
       </div>
       <p class="result" id="review-result" role="alert" hidden></p>
+    </section>
+
+    <section class="card evaluation-panel" id="evaluation-panel" aria-labelledby="eval-h">
+      <div class="section-heading">
+        <h2 id="eval-h">Measured results and visible limits</h2>
+        <span class="muted small">Honest evaluation · 20%</span>
+      </div>
+      <div id="evaluation-results"><p class="muted small">Loading the retained evaluation report…</p></div>
+      <p class="evidence-links"><a href="/api/evaluations/latest">Download measured report (JSON)</a>
+        <a href="/static/judges.html#evaluation">Methods, versions and limitations</a></p>
     </section>
 
     <!-- Technical details for judges and engineers -->

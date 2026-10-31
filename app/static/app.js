@@ -43,6 +43,8 @@ let scenarioList = [];
 let reviewResult = null;
 let loadPromise = null;
 let evaluationReport = null;
+let evaluationLoaded = false;
+let fuelInputRevision = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -237,6 +239,7 @@ function render() {
   renderMode();
   renderSteps();
   renderFlight();
+  renderInputs();
   renderNegotiation();
   renderReview();
   renderControls();
@@ -245,6 +248,7 @@ function render() {
   renderChecks();
   renderScenario();
   renderEvidence();
+  renderEvaluation();
   for (const id of openDetails) if ($(id)) $(id).open = true;
   if (focusedDetail) $(focusedDetail)?.querySelector("summary")?.focus({preventScroll: true});
 }
@@ -329,7 +333,48 @@ function renderFlight() {
     el("span", reasons.length ? `Delayed ${reasons.join(" and ")}` : "", "delay"));
 }
 
+function snapshotFact(id) {
+  return run.snapshot.facts.find((item) => item.fact_id === id);
+}
+
+function renderInputs() {
+  const ops = snapshotFact("overlay.operations")?.value;
+  const list = $("input-facts");
+  list.replaceChildren();
+  fact(list, "Historical trigger · real", `${run.source.natural_identity} · row ${run.source.record_ordinal}`);
+  if (ops) {
+    const p = ops.policy;
+    fact(list, "Airport inventory · synthetic workbook", `${p.airport_code}: ${p.active_runways} runways, ${p.gates} gates`);
+    fact(list, "Capacity / turnaround", `${p.max_ops_per_hour} movements/h · ${p.min_turnaround_s / 60} min`);
+    fact(list, "Fuel reserve / contingency", `${p.reserve_hold_min} holding min + ${p.contingency_percent}% trip fuel`);
+    fact(list, "Flight duty / ground shift", `${p.flight_crew_duty_s / 3600} h / ${p.ground_shift_s / 3600} h`);
+    fact(list, "Modeled resource subset", `${ops.modeled_runway_ids.length} runway · ${snapshotFact("overlay.gates")?.value?.length ?? "unknown"} candidate gates`);
+    fact(list, "Workbook cells", `${p.source_cells.airport}; ${p.source_cells.wake}; fuel_and_crew!A1:C9`);
+  }
+  const fuel = snapshotFact("overlay.fuel")?.value;
+  fact(list, "Aircraft fuel state · simulated", fuel?.projected_fuel_at_earliest_kg == null
+    ? "Unknown — required before a plan can be verified" : `${fuel.projected_fuel_at_earliest_kg} kg at earliest landing`);
+  $("what-if").hidden = !LIVE || !fuel;
+  const revision = `${run.snapshot.scenario_id}:${run.snapshot.revision}`;
+  if (fuel && revision !== fuelInputRevision) {
+    $("fuel-input").value = fuel.projected_fuel_at_earliest_kg ?? "";
+    $("fuel-unknown").checked = fuel.projected_fuel_at_earliest_kg == null;
+    fuelInputRevision = revision;
+  }
+}
+
+function renderRunProof() {
+  const list = $("run-proof");
+  list.replaceChildren();
+  const total = run.catalog_total_count ?? run.catalog?.candidates?.length;
+  fact(list, "Rule-checked options", total == null ? "Calculated when the run starts" : `${run.catalog_feasible_count} feasible / ${total} checked`);
+  fact(list, "Agent execution", run.run_id ? `${run.round_count} / 3 turns · ${run.agent_invocation_count} / 9 requests` : "Three separate roles · up to nine requests");
+  fact(list, "Real model calls", run.run_id ? run.model_call_count : "Reported from started requests");
+  fact(list, "Execution time", run.elapsed_ms == null ? "45 s run limit · 12 s per request" : `${minutes(run.elapsed_ms / 1000)} s · 45 s limit`);
+}
+
 function renderNegotiation() {
+  renderRunProof();
   const status = $("negotiation-status");
   const n = run.round_count;
   const outcome = run.negotiation_outcome;
@@ -574,6 +619,7 @@ function renderReview() {
     if (reasons.children.length) box.append(el("p", "Why:", "muted small"), reasons);
   }
   renderSafety();
+  renderBaselines();
 
   const result = $("review-result");
   if (run.review_result) {
@@ -583,6 +629,53 @@ function renderReview() {
   } else {
     result.hidden = true;
   }
+}
+
+function renderBaselines() {
+  const box = $("baseline-comparison");
+  box.replaceChildren();
+  box.hidden = !run.candidate;
+  if (!run.candidate) return;
+  box.append(el("h3", "Compared with the same-input baselines"));
+  const wrap = el("div", null, "table-wrap");
+  wrap.tabIndex = 0;
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "Baseline comparison; scroll horizontally for all measures");
+  const table = el("table", null, "baseline-table");
+  const head = el("tr");
+  for (const label of ["Policy", "Landing / gate", "Extra hold", "Fuel used", "Fuel spare", "Crew overtime"]) {
+    const cell = el("th", label);
+    cell.scope = "col";
+    head.append(cell);
+  }
+  const thead = el("thead");
+  thead.append(head);
+  const tbody = el("tbody");
+  for (const [label, plan] of [
+    [run.negotiation_outcome === "FEASIBLE_CONSENSUS" ? "Selected · agent agreement" : "Selected · fallback", run.candidate],
+    ["B0 · earliest feasible", run.baseline_b0],
+    ["B1 · balanced cost", run.baseline_b1],
+  ]) {
+    const row = el("tr");
+    if (plan === run.candidate) row.className = "selected";
+    const name = el("th", label);
+    name.scope = "row";
+    row.append(name);
+    if (plan) {
+      for (const value of [`${simClock(plan.landing_time_s)} / ${plan.gate_id}`, `${minutes(plan.added_holding_min)} min`,
+        `${minutes(plan.impacts.modeled_fuel_used_kg)} kg`, `${minutes(plan.fuel_margin_kg)} kg`, `${minutes(plan.crew_overtime_min)} min`]) {
+        row.append(el("td", value));
+      }
+    } else {
+      const missing = el("td", "No comparable feasible result was retained.");
+      missing.colSpan = 5;
+      row.append(missing);
+    }
+    tbody.append(row);
+  }
+  table.append(thead, tbody);
+  wrap.append(table);
+  box.append(wrap, el("p", `All rows use scenario revision ${run.scenario_revision}, the same rules and full catalog. B1 minimises the highest role cost, then total cost. These are modeled impacts, not historical savings or measured coordination time.`, "small muted"));
 }
 
 function friendlyMargin(check) {
@@ -624,7 +717,14 @@ function renderControls() {
   const token = $("session-token").value.trim();
   const authorized = LIVE && sessionConfigured && (publicDemo || token);
   const running = LIVE && run.run_id && run.processing_state !== "TERMINAL";
-  $("start-btn").disabled = !authorized || busy || Boolean(running);
+  const fuelValid = !snapshotFact("overlay.fuel")?.value || $("fuel-unknown").checked || ($("fuel-input").value.trim() !== ""
+    && Number.isFinite(Number($("fuel-input").value)) && Number($("fuel-input").value) >= 0
+    && Number($("fuel-input").value) <= 1000000);
+  $("fuel-input").disabled = !authorized || busy || Boolean(running) || $("fuel-unknown").checked;
+  $("fuel-unknown").disabled = !authorized || busy || Boolean(running);
+  $("run-inputs-btn").hidden = !run.run_id;
+  $("run-inputs-btn").disabled = !authorized || busy || Boolean(running) || !fuelValid;
+  $("start-btn").disabled = !authorized || busy || Boolean(running) || !fuelValid;
   $("start-btn").hidden = Boolean(run.run_id) && !running;
   $("start-btn").textContent = running ? "Negotiating…" : busy ? "Starting…" : "Start negotiation";
   $("cancel-btn").disabled = !authorized || busy || !(running || (LIVE && run.approval_state === "PENDING"));
@@ -642,7 +742,7 @@ function renderControls() {
   $("reject-btn").disabled = !canAct || !hasReason;
   $("reason-input").disabled = !canAct;
   $("approve-btn").hidden = $("reject-btn").hidden = $("reason-input").parentElement.hidden = !reviewable;
-  $("rerun-btn").disabled = !authorized || busy;
+  $("rerun-btn").disabled = !authorized || busy || !fuelValid;
   $("rerun-btn").hidden = !LIVE || run.processing_state !== "TERMINAL" || reviewable;
   $("review-hint").textContent = !LIVE
     ? "Saved example · choose “Interactive demo” to start your own run."
@@ -782,6 +882,118 @@ function renderEvidence() {
       : `${evaluationReport.summary || "Measured report available below."} Report prompt: ${evaluationReport.provider?.prompt_version || "not recorded"}. See the results page for version limits.`;
 }
 
+const RECORDED_TRACES = {
+  "H01-2c9e299c-aa88-457e-b960-a23777a533d0.json": {sample: "live-H01", reason: "ATC timed out. Ground offered options; Pilot's pending request was cancelled. No shared proposal reached a vote."},
+  "H02-8ef9e2f3-7f7e-44ef-a8e1-8f74b6ef3c72.json": {sample: "live-H02", reason: "ATC timed out. Pilot and Ground offered options, but two offers could not replace three valid role messages."},
+  "H03-dabd713f-7a89-4405-9b71-1cf01e5bc39e.json": {sample: "live-H03", reason: "ATC and Ground accepted. Pilot requested CREW-G1 availability evidence instead of accepting. All 15 deterministic checks passed, but an information request could not count as consent."},
+  "H04-660feb8f-c0da-4df5-97c8-dc006bab9c64.json": {sample: "live-H04", reason: "Ground cited unknown evidence IDs, so its reply failed validation. This did not establish an operational gate conflict."},
+  "H05-a7bf87c5-f349-42ad-9eca-06e2c7153eb7.json": {sample: "live-H05", reason: "ATC offered an option outside its permitted initial preference set. Its offer failed validation before voting."},
+};
+const FAILURE_NEXT_STEPS = {
+  AGENT_TIMEOUT: "Investigate provider latency and response size against the declared deadline, then repeat the frozen evaluation after a fix.",
+  FINAL_VOTE_DISSENT: "Resolve the requested evidence with the reviewer, then start a new run. An information request must never become an implicit acceptance.",
+  UNKNOWN_AGENT_EVIDENCE: "Correct the agent's evidence references and re-evaluate validation behavior on a new run.",
+  INITIAL_POLICY_VIOLATION: "Correct the offered candidate set to match the supplied role policy, then re-evaluate. Keep the original failure in the report.",
+};
+
+function renderEvaluation() {
+  const box = $("evaluation-results");
+  box.replaceChildren();
+  const report = evaluationReport;
+  if (!report?.cases?.length) {
+    box.append(el("p", evaluationLoaded
+      ? "No measured report is available from this server. No performance rate can be claimed."
+      : "Loading the retained evaluation report…", "muted small"));
+    const link = el("a", "Inspect a recorded live failure and its reason", "text-link");
+    link.href = "/?sample=live-H03#step-2";
+    box.append(link);
+    return;
+  }
+  const cases = report.cases;
+  const live = cases.filter((item) => item.expected === "FEASIBLE" && item.provider?.mode === "LIVE");
+  const consensus = live.filter((item) => item.outcome === "FEASIBLE_CONSENSUS").length;
+  const passed = cases.filter((item) => item.passed).length;
+  const fixtureCount = cases.filter((item) => item.provider?.mode === "FIXTURE").length;
+  const latency = live.map((item) => item.elapsed_ms).filter(Number.isFinite).sort((a, b) => a - b);
+  const median = latency.length ? (latency[Math.floor((latency.length - 1) / 2)] + latency[Math.floor(latency.length / 2)]) / 2000 : null;
+  const calls = cases.reduce((sum, item) => sum + item.model_calls, 0);
+  const measured = el("dl", null, "guide-metrics");
+  for (const [label, value, note] of [
+    ["Live nominal consensus", live.length ? `${consensus} / ${live.length}` : "Not evaluated", `${live.length - consensus} did not reach agreement`],
+    ["Contract cases passed", `${passed} / ${cases.length}`, `${fixtureCount} fixture cases included; not AI accuracy`],
+    ["Median live run", median == null ? "Not measured" : `${minutes(median)} s`, `${calls} real requests across this report`],
+  ]) {
+    const cell = el("div");
+    cell.append(el("dt", label), el("dd", value), el("p", note));
+    measured.append(cell);
+  }
+  box.append(el("p", `${new Date(report.created_at).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})} · frozen ${report.split} · ${report.provider?.model} · ${report.provider?.prompt_version}. ${live.length} nominal live cases and ${fixtureCount} labelled fixture cases.`, "small muted"), measured);
+  const comparable = live.filter((item) => Object.keys(item.comparison?.vs_B0 || {}).length);
+  const unchanged = comparable.filter((item) => Object.values(item.comparison.vs_B0).every((value) => Number(value) === 0));
+  box.append(el("p", comparable.length
+    ? `${unchanged.length} of ${comparable.length} comparable live cases matched B0 on every recorded impact. ${unchanged.length === comparable.length ? "No live impact improvement over B0 was demonstrated." : "Inspect the per-case deltas below for each trade-off."}`
+    : "No comparable live impact results were retained; no benefit over B0 can be claimed.", "evaluation-finding"));
+  const version = run.provider?.prompt_version;
+  box.append(el("p", `Historical evidence for ${report.provider?.prompt_version}. ${version && version !== report.provider?.prompt_version ? `This run uses ${version}. ` : ""}It does not evaluate new fuel edits or establish a result for a changed prompt. Gate, runway, fuel and crew inputs are synthetic; the small shared-template suite is not a generalization benchmark.`, "small muted"));
+
+  const failure = live.find((item) => item.fallback_reason === "FINAL_VOTE_DISSENT" && RECORDED_TRACES[item.trace])
+    || live.find((item) => item.fallback_reason && RECORDED_TRACES[item.trace]);
+  if (failure) {
+    const example = el("aside", null, "evaluation-failure");
+    example.append(el("h3", `Visible live failure · ${failure.case_id}`),
+      el("p", "A checked, reviewable plan satisfied the system contract; the agents still failed to reach agreement and used fallback."),
+      el("p", RECORDED_TRACES[failure.trace].reason),
+      el("p", FAILURE_NEXT_STEPS[failure.fallback_reason] || "Inspect the recorded cause and correct it before a new evaluation.", "small muted"));
+    const link = el("a", "Inspect each agent's status and recorded reason", "text-link");
+    link.href = `/?sample=${RECORDED_TRACES[failure.trace].sample}#step-2`;
+    example.append(link);
+    box.append(example);
+  }
+  const details = el("details", null, "evaluation-cases");
+  details.id = "evaluation-cases";
+  details.append(el("summary", `Inspect all ${cases.length} cases, baselines and failure reasons`));
+  details.append(el("p", "B0 = earliest feasible; B1 = minimum highest role cost, then total cost. Both search the same full catalog under identical source/rule versions. Deltas are selected plan minus B0; positive holding/fuel/overtime means more, negative means less. A missing comparison stays unavailable.", "small muted"));
+  const wrap = el("div", null, "table-wrap");
+  wrap.tabIndex = 0;
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "Evaluation cases; scroll horizontally for all measures");
+  const table = el("table");
+  const thead = el("thead");
+  const headings = el("tr");
+  for (const title of ["Case / input", "Mode", "Outcome / reason", "Contract", "Time", "Δ hold", "Δ fuel", "Δ overtime"]) {
+    const cell = el("th", title);
+    cell.scope = "col";
+    headings.append(cell);
+  }
+  thead.append(headings);
+  const body = el("tbody");
+  const delta = (value, unit, divisor = 1) => value == null ? "Unavailable" : `${Number(value) > 0 ? "+" : ""}${minutes(Number(value) / divisor)} ${unit}`;
+  for (const item of cases) {
+    const row = el("tr");
+    const name = el("th", `${item.case_id} · ${item.variant.replaceAll("_", " ")}`);
+    name.scope = "row";
+    const outcome = ({FEASIBLE_CONSENSUS: "Consensus", FEASIBLE_FALLBACK: "Fallback",
+      INSUFFICIENT_DATA: "Missing data", NO_FEASIBLE_OPTION_IN_SEARCH_SPACE: "No feasible plan"})[item.outcome] || item.outcome;
+    const result = el("td", item.stale_approval_blocked ? `${outcome}; stale approval blocked` : outcome);
+    if (item.fallback_reason) result.append(el("span", item.fallback_reason, "case-reason"));
+    if (RECORDED_TRACES[item.trace]) {
+      const link = el("a", "Inspect recording", "text-link");
+      link.href = `/?sample=${RECORDED_TRACES[item.trace].sample}#step-2`;
+      result.append(link);
+    }
+    const d = item.comparison?.vs_B0;
+    row.append(name, el("td", item.provider.mode === "LIVE" ? "Live model" : "Fixture"), result,
+      el("td", item.passed ? "Passed" : "Failed"), el("td", item.elapsed_ms == null ? "Unavailable" : `${minutes(item.elapsed_ms / 1000)} s`),
+      el("td", delta(d?.additional_landing_delay_s, "min", 60)), el("td", delta(d?.modeled_fuel_used_kg, "kg")), el("td", delta(d?.crew_overtime_min, "min")));
+    body.append(row);
+  }
+  table.append(thead, body);
+  wrap.append(table);
+  details.append(wrap);
+  for (const limitation of report.limitations || []) details.append(el("p", limitation, "small muted"));
+  box.append(details);
+}
+
 async function post(path, body) {
   const fingerprint = path + JSON.stringify(body);
   if (pendingKey?.fingerprint !== fingerprint) pendingKey = {fingerprint, key: crypto.randomUUID()};
@@ -835,13 +1047,29 @@ async function startRun(refresh = false) {
   const response = await fetch(`/api/scenarios/${encodeURIComponent(id)}`);
   if (!response.ok) throw new Error("Scenario is unavailable");
   let snapshot = await response.json();
+  const fuel = snapshot.facts.find((item) => item.fact_id === "overlay.fuel");
+  let fuelChanged = false;
+  if (fuel?.value) {
+    const value = $("fuel-unknown").checked ? null : Number($("fuel-input").value);
+    if (value !== null && ($("fuel-input").value.trim() === "" || !Number.isFinite(value) || value < 0 || value > 1000000)) {
+      throw new Error("Enter a fuel quantity from 0 to 1,000,000 kg, or mark it unknown.");
+    }
+    fuelChanged = value !== fuel.value.projected_fuel_at_earliest_kg;
+    if (fuelChanged) {
+      fuel.value = {...fuel.value, projected_fuel_at_earliest_kg: value};
+      fuel.provenance = "synthetic_scenario";
+      fuel.source_reference = "browser-input: fuel quantity at earliest landing; explicitly simulated";
+      fuel.source_version = `browser-fuel-revision-${snapshot.revision + 1}`;
+    }
+  }
   const resourceResponse = await fetch(`/api/resources/${encodeURIComponent(snapshot.resource_id)}`);
   if (!resourceResponse.ok) throw new Error("Current resources are unavailable");
   const resource = await resourceResponse.json();
-  if (refresh || resource.revision !== snapshot.resource_revision) {
+  if (refresh || fuelChanged || resource.revision !== snapshot.resource_revision) {
     snapshot = await post(`/api/scenarios/${encodeURIComponent(id)}/revisions`,
       {...snapshot, revision: snapshot.revision + 1, resource_revision: resource.revision + 1});
   }
+  scenarioList = scenarioList.map((item) => item.scenario_id === id ? snapshot : item);
   const created = await post("/api/runs", {
     scenario_id: id, scenario_revision: snapshot.revision,
     parent_run_id: run?.snapshot.resource_id === snapshot.resource_id ? run.run_id : null,
@@ -877,6 +1105,9 @@ $("scenario-select").addEventListener("change", async () => {
   load().catch(showError);
 });
 $("session-token").addEventListener("input", () => { if (run) render(); });
+$("fuel-input").addEventListener("input", renderControls);
+$("fuel-unknown").addEventListener("change", renderControls);
+$("run-inputs-btn").addEventListener("click", () => operate(() => startRun(true)));
 $("ack-box").addEventListener("change", () => renderControls());
 $("reason-input").addEventListener("input", () => renderControls());
 $("approve-btn").addEventListener("click", () => operate(() => decide("APPROVE")));
@@ -895,6 +1126,8 @@ $("start-btn").addEventListener("click", () => operate(() => startRun()));
 $("rerun-btn").addEventListener("click", () => operate(() => startRun(true)));
 
 async function init() {
+  const reportPromise = fetch("/api/evaluations/latest", {signal: AbortSignal.timeout(8000)})
+    .then((response) => response.ok ? response.json() : null).catch(() => null);
   if (LIVE) {
     const sessionResponse = await fetch("/api/session", {credentials: "same-origin"});
     if (!sessionResponse.ok) throw new Error("Could not open a judge session. Please try again shortly.");
@@ -910,12 +1143,18 @@ async function init() {
       option.value = snapshot.scenario_id;
       $("scenario-select").append(option);
     }
-    const reportResponse = await fetch("/api/evaluations/latest");
-    if (reportResponse.ok) evaluationReport = await reportResponse.json();
   }
   await load();
   if (runParam) $("scenario-select").value = run.snapshot.scenario_id;
+  evaluationReport = await reportPromise;
+  evaluationLoaded = true;
+  renderEvaluation();
+  renderEvidence();
   // Judge-guide links open the relevant evidence after the run has rendered.
+  revealAnchor();
+}
+
+function revealAnchor() {
   const target = $(location.hash.slice(1));
   if (target) {
     for (let node = target; node; node = node.parentElement) {
@@ -924,4 +1163,5 @@ async function init() {
     target.scrollIntoView({block: "start"});
   }
 }
+window.addEventListener("hashchange", revealAnchor);
 init().catch(showError);
