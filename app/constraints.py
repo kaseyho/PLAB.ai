@@ -167,6 +167,10 @@ def check_freshness(snapshot: ScenarioSnapshot, supplied: CandidatePlan, canonic
         return _result("SYSTEM-FRESH-01", "SYSTEM", supplied, "FAIL", **fields, reason_code="VERSION_MISMATCH")
     if supplied.plan_hash != canonical.plan_hash or supplied != canonical:
         return _result("SYSTEM-FRESH-01", "SYSTEM", supplied, "FAIL", **fields, reason_code="PLAN_NOT_CANONICAL")
+    # Scenario facts (traffic, reservations, crews) are only modelled inside the search window.
+    search = snapshot.overlay.search
+    if not search.earliest_landing_s <= supplied.landing_time_s <= search.earliest_landing_s + search.horizon_s:
+        return _result("SYSTEM-FRESH-01", "SYSTEM", supplied, "FAIL", **fields, reason_code="OUTSIDE_SEARCH_WINDOW")
     return _result("SYSTEM-FRESH-01", "SYSTEM", supplied, "PASS", **fields)
 
 
@@ -189,6 +193,12 @@ def check_runway(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> ConstraintR
 
 
 def check_separation(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> ConstraintResult:
+    """Nearest movement each side, plus any movement closer than the largest table entry.
+
+    A movement at least that far away cannot violate any listed pair, so it is not relevant.
+    Checking beyond the immediate neighbour is deliberately conservative (e.g. a heavy two
+    places ahead).
+    """
     overlay = snapshot.overlay
     focal = overlay.aircraft.wake_category
     landing = plan.landing_time_s
@@ -197,13 +207,19 @@ def check_separation(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> Constra
         return _result("ATC-SEP-01", "ATC", plan, "UNKNOWN", evidence_ids=evidence, reason_code="MISSING_WAKE_CATEGORY")
     preceding = [m for m in overlay.movements if m.time_s <= landing]
     following = [m for m in overlay.movements if m.time_s > landing]
-    neighbours = []
+    reach = max(overlay.separation_s.values(), default=0)
+    relevant = {m.movement_id: m for m in overlay.movements if abs(m.time_s - landing) < reach}
     if preceding:
         lead = max(preceding, key=lambda m: (m.time_s, m.movement_id))
-        neighbours.append((lead, lead.wake_category, focal, landing - lead.time_s))
+        relevant[lead.movement_id] = lead
     if following:
         follow = min(following, key=lambda m: (m.time_s, m.movement_id))
-        neighbours.append((follow, focal, follow.wake_category, follow.time_s - landing))
+        relevant[follow.movement_id] = follow
+    neighbours = [
+        (m, m.wake_category, focal, landing - m.time_s) if m.time_s <= landing
+        else (m, focal, m.wake_category, m.time_s - landing)
+        for m in sorted(relevant.values(), key=lambda m: (m.time_s, m.movement_id))
+    ]
 
     actual, required, margins = {}, {}, []
     for movement, leader, follower, spacing in neighbours:
@@ -244,11 +260,18 @@ def check_taxi(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> ConstraintRes
 
 
 def check_capacity(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> ConstraintResult:
-    """Aligned windows [k*W, (k+1)*W) from the epoch; the focal movement counts as one."""
+    """Busiest sliding window [s, s+W) that contains the focal landing; the focal flight counts as one.
+
+    The busiest such window always starts at the focal landing or at a movement inside
+    (landing - W, landing], so only those starts need checking.
+    """
     capacity = snapshot.overlay.capacity
-    window = plan.landing_time_s // capacity.window_s
-    count = 1 + sum(1 for m in snapshot.overlay.movements if m.time_s // capacity.window_s == window)
-    fields = {"actual": count, "operator": "<=", "required": capacity.max_movements, "units": "movements",
+    landing, width = plan.landing_time_s, capacity.window_s
+    times = [m.time_s for m in snapshot.overlay.movements]
+    starts = {landing} | {t for t in times if landing - width < t <= landing}
+    count, start = max((1 + sum(1 for t in times if s <= t < s + width), s) for s in sorted(starts))
+    fields = {"actual": {"movements": count, "window": [start, start + width]}, "operator": "<=",
+              "required": capacity.max_movements, "units": "movements",
               "margin": capacity.max_movements - count,
               "evidence_ids": ["overlay.capacity", "overlay.movements"]}
     if count > capacity.max_movements:
