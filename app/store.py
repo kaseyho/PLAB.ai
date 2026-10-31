@@ -225,10 +225,12 @@ class Store:
                 (resource.resource_id, canonical_json(resource)),
             )
 
-    def list_scenarios(self) -> list[ScenarioSnapshot]:
+    def list_scenarios(self, prefix: str = "") -> list[ScenarioSnapshot]:
         with self.transaction() as db:
             ids = db.execute(
-                "SELECT DISTINCT scenario_id FROM scenario_revisions ORDER BY scenario_id"
+                "SELECT DISTINCT scenario_id FROM scenario_revisions "
+                "WHERE scenario_id LIKE ? ORDER BY scenario_id",
+                (prefix + "%",),
             )
             return [self._scenario(db, row[0]) for row in ids.fetchall()]
 

@@ -19,9 +19,10 @@ from typing import cast
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import JsonValue, ValidationError
+from starlette.middleware.base import RequestResponseEndpoint
 
 from app.agents import AgentProvider, OpenAIProvider, UnavailableProvider
 from app.contracts import (
@@ -36,6 +37,7 @@ from app.contracts import (
     StartRunRequest,
 )
 from app.coordinator import Coordinator, Limits
+from app.judge_access import COOKIE_NAME, SESSION_SECONDS, JudgeAccess
 from app.store import Store
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,8 @@ class Settings:
     model: str = ""
     base_url: str = "https://api.openai.com/v1"
     api_mode: ApiMode = "responses"
+    public_demo: bool = False
+    daily_run_limit: int = 100
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -73,13 +77,18 @@ class Settings:
         return cls(
             db_path=Path(os.getenv("PLAB_DB_PATH", "artifacts/organizer.sqlite3")),
             data_dir=Path(os.getenv("PLAB_DATA_DIR", "data")),
-            public_origin=os.getenv("PLAB_PUBLIC_ORIGIN", "http://127.0.0.1:8000").rstrip("/"),
+            evaluation_path=Path(os.getenv("PLAB_EVALUATION_PATH", "artifacts/evals/latest.json")),
+            public_origin=os.getenv(
+                "PLAB_PUBLIC_ORIGIN", os.getenv("RENDER_EXTERNAL_URL", "http://127.0.0.1:8000")
+            ).rstrip("/"),
             reviewer_id=os.getenv("PLAB_REVIEWER_ID", "local-duty-manager"),
             session_token=os.getenv("PLAB_SESSION_TOKEN", ""),
             api_key=os.getenv(f"{provider}_API_KEY", ""),
             model=os.getenv(f"{provider}_MODEL", ""),
             base_url=os.getenv(f"{provider}_BASE_URL", default_base),
             api_mode=cast(ApiMode, api_mode),
+            public_demo=os.getenv("PLAB_PUBLIC_DEMO", "false").lower() == "true",
+            daily_run_limit=int(os.getenv("PLAB_DAILY_RUN_LIMIT", "100")),
         )
 
 
@@ -114,6 +123,11 @@ def create_app(
 ) -> FastAPI:
     config = settings or Settings.from_env()
     database = store or Store(config.db_path)
+    judges = (
+        JudgeAccess(database, config.session_token, config.daily_run_limit)
+        if config.public_demo
+        else None
+    )
     planning = planner or discover_planner()
     review_hook = reviewer or discover_reviewer()
     agent_provider: AgentProvider = provider or (
@@ -127,6 +141,7 @@ def create_app(
     coordinator = Coordinator(database, planning, agent_provider, budgets) if planning else None
     tasks: dict[str, asyncio.Task[RunRecord]] = {}
     scenario_errors: list[JsonValue] = []
+    templates: list[ScenarioSnapshot] = []
 
     def task_finished(run_id: str, task: asyncio.Task[RunRecord]) -> None:
         tasks.pop(run_id, None)
@@ -144,6 +159,7 @@ def create_app(
             except ServiceError as error:
                 scenario_errors.append({"file": path.name, "code": error.code})
                 continue
+            templates.append(snapshot)
             database.register_scenario(
                 snapshot,
                 ResourceState(
@@ -160,6 +176,15 @@ def create_app(
     application = FastAPI(title="PLAB coordination API", version="0.1.0", lifespan=lifespan)
     application.state.store = database
     application.state.coordinator = coordinator
+
+    @application.middleware("http")
+    async def private_api_responses(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @application.exception_handler(ServiceError)
     async def service_error(request: Request, error: ServiceError) -> JSONResponse:
@@ -188,6 +213,11 @@ def create_app(
         origin = request.headers.get("origin")
         if origin is not None and origin != config.public_origin:
             raise ServiceError("ORIGIN_NOT_ALLOWED", 403)
+        if judges:
+            if origin != config.public_origin:
+                raise ServiceError("ORIGIN_NOT_ALLOWED", 403)
+            judges.owner(request.cookies.get(COOKIE_NAME))
+            return
         supplied = request.headers.get("authorization", "")
         if len(config.session_token) < 16 or not hmac.compare_digest(
             supplied,
@@ -199,7 +229,19 @@ def create_app(
         key = request.headers.get("idempotency-key", "")
         if not 1 <= len(key) <= 128:
             raise ServiceError("IDEMPOTENCY_KEY_REQUIRED", 422)
-        return key
+        return f"{guest_owner(request)}:{key}" if judges else key
+
+    def guest_owner(request: Request) -> str:
+        return judges.owner(request.cookies.get(COOKIE_NAME)) if judges else ""
+
+    def require_scope(request: Request, identifier: str) -> None:
+        if judges:
+            judges.require_scope(guest_owner(request), identifier)
+
+    def owned_run(request: Request, run_id: str) -> RunRecord:
+        record = database.get_run(run_id)
+        require_scope(request, record.snapshot.scenario_id)
+        return record
 
     def run_response(run: RunRecord) -> dict[str, JsonValue]:
         payload = cast(dict[str, JsonValue], run.model_dump(mode="json"))
@@ -234,18 +276,46 @@ def create_app(
             "provider_mode": agent_provider.info.mode,
             "model": agent_provider.info.model,
             "session_configured": len(config.session_token) >= 16,
+            "public_demo": config.public_demo,
         }
 
+    @application.get("/api/session")
+    async def session(request: Request) -> JSONResponse:
+        response = JSONResponse(
+            {"public_demo": config.public_demo}, headers={"Cache-Control": "no-store"}
+        )
+        if judges:
+            if request.headers.get("sec-fetch-site") == "cross-site":
+                raise ServiceError("ORIGIN_NOT_ALLOWED", 403)
+            _, cookie = judges.open(
+                request.cookies.get(COOKIE_NAME),
+                request.client.host if request.client else "unknown",
+                templates,
+            )
+            response.set_cookie(
+                COOKIE_NAME,
+                cookie,
+                httponly=True,
+                secure=config.public_origin.startswith("https://"),
+                samesite="strict",
+                max_age=SESSION_SECONDS,
+            )
+        return response
+
     @application.get("/api/scenarios", response_model=list[ScenarioSnapshot])
-    async def scenarios() -> list[ScenarioSnapshot]:
-        return database.list_scenarios()
+    async def scenarios(request: Request) -> list[ScenarioSnapshot]:
+        return database.list_scenarios(guest_owner(request) + ":" if judges else "")
 
     @application.get("/api/scenarios/{scenario_id}", response_model=ScenarioSnapshot)
-    async def scenario(scenario_id: str, revision: int | None = None) -> ScenarioSnapshot:
+    async def scenario(
+        scenario_id: str, request: Request, revision: int | None = None
+    ) -> ScenarioSnapshot:
+        require_scope(request, scenario_id)
         return database.get_scenario(scenario_id, revision)
 
     @application.get("/api/resources/{resource_id}", response_model=ResourceState)
-    async def resource(resource_id: str) -> ResourceState:
+    async def resource(resource_id: str, request: Request) -> ResourceState:
+        require_scope(request, resource_id)
         return database.get_resource(resource_id)
 
     @application.post(
@@ -254,7 +324,10 @@ def create_app(
         response_model=ScenarioSnapshot,
         status_code=201,
     )
-    async def revise(scenario_id: str, snapshot: ScenarioSnapshot) -> ScenarioSnapshot:
+    async def revise(
+        scenario_id: str, snapshot: ScenarioSnapshot, request: Request
+    ) -> ScenarioSnapshot:
+        require_scope(request, scenario_id)
         if scenario_id != snapshot.scenario_id:
             raise ServiceError("SCENARIO_ID_MISMATCH", 422)
         previous = database.get_scenario(scenario_id)
@@ -291,10 +364,15 @@ def create_app(
         accepted_at = time.monotonic()
         if coordinator is None or planning is None:
             raise ServiceError("PLANNING_NOT_CONNECTED", 503)
+        require_scope(request, body.scenario_id)
+        if body.parent_run_id:
+            owned_run(request, body.parent_run_id)
         key = idempotency_key(request)
         if existing := database.existing_run(body, key):
             return run_response(existing)
         require_sources(database.get_scenario(body.scenario_id, body.scenario_revision))
+        if judges:
+            judges.check_run_budget(guest_owner(request))
         run, created = database.create_run(
             body, key, agent_provider.info, planning.mode, budgets.deadline_s
         )
@@ -305,11 +383,14 @@ def create_app(
         return run_response(run)
 
     @application.get("/api/runs/{run_id}")
-    async def run(run_id: str) -> dict[str, JsonValue]:
-        return run_response(database.get_run(run_id))
+    async def run(run_id: str, request: Request) -> dict[str, JsonValue]:
+        return run_response(owned_run(request, run_id))
 
     @application.get("/api/runs/{run_id}/events")
-    async def events(run_id: str, after_seq: int = 0) -> list[dict[str, JsonValue]]:
+    async def events(
+        run_id: str, request: Request, after_seq: int = 0
+    ) -> list[dict[str, JsonValue]]:
+        owned_run(request, run_id)
         if after_seq < 0:
             raise ServiceError("INVALID_EVENT_SEQUENCE", 422)
         return [
@@ -318,7 +399,8 @@ def create_app(
         ]
 
     @application.post("/api/runs/{run_id}/cancel", dependencies=mutations)
-    async def cancel(run_id: str) -> dict[str, JsonValue]:
+    async def cancel(run_id: str, request: Request) -> dict[str, JsonValue]:
+        owned_run(request, run_id)
         result = database.cancel(run_id)
         if task := tasks.get(run_id):
             task.cancel()
@@ -326,18 +408,23 @@ def create_app(
 
     @application.post("/api/runs/{run_id}/decision", dependencies=mutations)
     async def decision(run_id: str, body: ReviewRequest, request: Request) -> dict[str, JsonValue]:
+        owned_run(request, run_id)
         if review_hook is None:
             raise ServiceError("REVIEW_NOT_CONNECTED", 503)
         if body.decision == "APPROVE":
             require_sources(database.get_run(run_id).snapshot)
         result = database.review(
-            run_id, body, idempotency_key(request), config.reviewer_id, review_hook
+            run_id,
+            body,
+            idempotency_key(request),
+            guest_owner(request) if judges else config.reviewer_id,
+            review_hook,
         )
         return run_response(result)
 
     @application.get("/api/runs/{run_id}/export")
-    async def export(run_id: str) -> JSONResponse:
-        filename = f"run-{database.get_run(run_id).run_id}.json"
+    async def export(run_id: str, request: Request) -> JSONResponse:
+        filename = f"run-{owned_run(request, run_id).run_id}.json"
         return JSONResponse(
             database.export(run_id),
             headers={

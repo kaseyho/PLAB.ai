@@ -4,6 +4,19 @@ A working airport coordination simulator: independent ATC, Pilot and Ground agen
 negotiate a checked arrival plan, and a duty manager approves its application.
 The organizer's workbook supplies synthetic operational limits.
 
+## Public judge deployment
+
+The Render configuration in `render.yaml` runs the Python service with a persistent
+SQLite disk. Provider credentials are configured only in Render's environment.
+Judges receive an anonymous browser session automatically: no API key or access
+code is required, and each visitor has separate scenario/resource copies.
+Human approval remains mandatory. Live-model failures still use the checked fallback.
+
+Public mode permits ten runs per visitor per UTC day, 100 runs across the service
+per UTC day, and two simultaneous negotiations. Saved examples remain available.
+The service downloads the organizer CSV from the repository's data release and
+verifies its SHA-256 before startup. See [deployment instructions](docs/deployment.md).
+
 ## Start the MVP
 
 Requires Python 3.12 and uv. Keep the organizer's filtered flights.csv in data/.

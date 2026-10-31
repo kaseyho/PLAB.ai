@@ -13,6 +13,10 @@ const TERMINAL_APPROVAL = ["APPLIED_SIMULATION", "REJECTED", "STALE", "EXPIRED",
 const ROLES = ["ATC", "PILOT", "GROUND"];
 const ICON = { PASS: "✓ PASS", FAIL: "✗ FAIL", UNKNOWN: "? UNKNOWN" };
 const ERRORS = {
+  JUDGE_SESSION_REQUIRED: "Reload this page to start your judge session.",
+  JUDGE_SESSION_EXPIRED: "Your judge session expired. Reload to start a new one.",
+  JUDGE_RUN_LIMIT: "The team's demo run budget has been reached. You can still inspect the saved examples.",
+  JUDGE_DESK_BUSY: "Other judges are running negotiations. Please try again in a minute.",
   REVIEWER_SESSION_REQUIRED: "Operator token missing or wrong.",
   ORIGIN_NOT_ALLOWED: "This page address is not the configured public origin.",
   REVIEW_BINDING_MISMATCH: "The plan on screen is out of date. Reload before deciding.",
@@ -34,6 +38,7 @@ let pollTimer = null;
 let pendingKey = null; // reused if the same decision is retried, so the backend applies it once
 let busy = false;
 let sessionConfigured = false;
+let publicDemo = false;
 let scenarioList = [];
 let reviewResult = null;
 let loadPromise = null;
@@ -248,8 +253,11 @@ function renderMode() {
   $("fixture-select").value = fixtureName || "";
   $("start-row").hidden = !LIVE;
   $("session-hint").hidden = !LIVE;
+  $("session-row").hidden = publicDemo;
   $("scenario-select").disabled = busy;
-  if (LIVE) $("session-hint").textContent = sessionConfigured
+  if (LIVE) $("session-hint").textContent = publicDemo
+    ? "Ready to try: model access is provided by the team. Your simulation is separate from other visitors; no API key or access code is needed."
+    : sessionConfigured
     ? "Kept in this browser tab only. Needed to start, stop or decide."
     : "No access code is set up on the server. Add PLAB_SESSION_TOKEN to .env and restart.";
 }
@@ -439,7 +447,7 @@ function renderSafety() {
 function renderControls() {
   const plan = run.candidate;
   const token = $("session-token").value.trim();
-  const authorized = LIVE && sessionConfigured && token;
+  const authorized = LIVE && sessionConfigured && (publicDemo || token);
   const running = LIVE && run.run_id && run.processing_state !== "TERMINAL";
   $("start-btn").disabled = !authorized || busy || Boolean(running);
   $("cancel-btn").disabled = !authorized || busy || !(running || (LIVE && run.approval_state === "PENDING"));
@@ -462,7 +470,7 @@ function renderControls() {
   $("review-hint").textContent = !reviewable
     ? (closed || run.processing_state === "TERMINAL" ? "This plan is closed. Start over to get a new one." : "")
     : !LIVE ? "This is a saved example, so the buttons are off."
-      : !token ? "Enter the access code in step 1 to decide."
+      : !publicDemo && !token ? "Enter the access code in step 1 to decide."
         : !hasReason ? "Write a short reason, then approve or reject. The server re-checks every safety rule before anything is booked."
           : "The server re-checks every safety rule against the current airport before anything is booked.";
 }
@@ -595,7 +603,7 @@ async function post(path, body) {
   const response = await fetch(path, {
     method: "POST", credentials: "same-origin",
     headers: {"Content-Type": "application/json",
-      "Authorization": "Bearer " + $("session-token").value.trim(),
+      ...(!publicDemo ? {"Authorization": "Bearer " + $("session-token").value.trim()} : {}),
       "Idempotency-Key": pendingKey.key},
     body: JSON.stringify(body),
   });
@@ -702,6 +710,9 @@ $("rerun-btn").addEventListener("click", () => operate(() => startRun(true)));
 
 async function init() {
   if (LIVE) {
+    const sessionResponse = await fetch("/api/session", {credentials: "same-origin"});
+    if (!sessionResponse.ok) throw new Error("Could not open a judge session. Please try again shortly.");
+    publicDemo = (await sessionResponse.json()).public_demo;
     const [healthResponse, scenariosResponse] = await Promise.all([fetch("/health"), fetch("/api/scenarios")]);
     if (!healthResponse.ok || !scenariosResponse.ok) throw new Error("Backend is unavailable");
     const health = await healthResponse.json();
@@ -709,7 +720,7 @@ async function init() {
     scenarioList = await scenariosResponse.json();
     for (const snapshot of scenarioList) {
       const f = snapshot.source.original_fields;
-      const option = el("option", `${f.AIRLINE}${f.FLIGHT_NUMBER} ${f.ORIGIN_AIRPORT}→${f.DESTINATION_AIRPORT} · ${snapshot.scenario_id}`);
+      const option = el("option", `${f.AIRLINE}${f.FLIGHT_NUMBER} ${f.ORIGIN_AIRPORT}→${f.DESTINATION_AIRPORT} · ${snapshot.scenario_id.split(":").at(-1)}`);
       option.value = snapshot.scenario_id;
       $("scenario-select").append(option);
     }

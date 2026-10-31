@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: plab-ai
+    runtime: python
+    region: singapore
+    plan: starter
+    buildCommand: uv sync --locked --no-dev && uv run python -m app.download_data
+    startCommand: uv run python -m app.serve
+    healthCheckPath: /health
+    disk:
+      name: plab-state
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.13"
+      - key: PLAB_PUBLIC_DEMO
+        value: "true"
+      - key: PLAB_SESSION_TOKEN
+        generateValue: true
+      - key: PLAB_DAILY_RUN_LIMIT
+        value: "100"
+      - key: PLAB_DB_PATH
+        value: /var/data/plab.sqlite3
+      - key: PLAB_EVALUATION_PATH
+        value: evals/results/initial-live-holdout.json
+      - key: SOCLAAS_API_KEY
+        sync: false
+      - key: SOCLAAS_MODEL
+        value: qwen3.8:27b
+      - key: SOCLAAS_BASE_URL
+        value: https://soclaas-api.comp.nus.edu.sg/v1
+      - key: SOCLAAS_API_MODE
+        value: chat_completions
