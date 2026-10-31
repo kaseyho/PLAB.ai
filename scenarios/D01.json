@@ -1,0 +1,66 @@
+{
+  "scenario_id": "D01",
+  "scenario_revision": 1,
+  "resource_revision": 1,
+  "ruleset_version": "toy-rules-v1",
+  "policy_version": "balanced-v1",
+  "simulation_epoch_utc": "2026-10-31T00:00:00Z",
+  "description": "PRD Appendix A worked fixture: G2 is free early but its crew is on overtime; G1 frees at t=1500. Illustrative values only.",
+  "source": {"dataset_file": "flights.csv", "record_ordinal": 71},
+  "provenance": {
+    "search": "synthetic_scenario",
+    "aircraft": "synthetic_scenario",
+    "runway": "synthetic_scenario",
+    "movements": "synthetic_scenario",
+    "separation_s": "policy",
+    "capacity": "policy",
+    "routes": "synthetic_scenario",
+    "taxi_blockages": "synthetic_scenario",
+    "gates": "synthetic_scenario",
+    "crews": "synthetic_scenario",
+    "equipment": "synthetic_scenario",
+    "fuel": "synthetic_scenario",
+    "arrival_options": "synthetic_scenario",
+    "service": "synthetic_scenario",
+    "connections": "synthetic_scenario"
+  },
+  "overlay": {
+    "search": {"earliest_landing_s": 600, "horizon_s": 1800, "step_s": 60},
+    "aircraft": {"aircraft_class": "C", "wake_category": "M"},
+    "runway": {"runway_id": "R1", "available_intervals": [[540, 86400]], "focal_occupancy_s": 60},
+    "movements": [
+      {"movement_id": "BG1", "time_s": 300, "wake_category": "M", "occupancy_s": 60},
+      {"movement_id": "BG2", "time_s": 780, "wake_category": "M", "occupancy_s": 60}
+    ],
+    "separation_s": {"M>M": 180},
+    "capacity": {"window_s": 3600, "max_movements": 10},
+    "routes": [
+      {"route_id": "G1-short", "gate_id": "G1", "edges": [{"edge_id": "TWY-A", "duration_s": 300}]},
+      {"route_id": "G1-long", "gate_id": "G1", "edges": [{"edge_id": "TWY-B1", "duration_s": 240}, {"edge_id": "TWY-B2", "duration_s": 300}]},
+      {"route_id": "G2-route", "gate_id": "G2", "edges": [{"edge_id": "TWY-C", "duration_s": 480}]}
+    ],
+    "taxi_blockages": {},
+    "gates": [
+      {"gate_id": "G1", "compatible_classes": ["C"], "reservations": [[0, 1500]], "crew_id": "CREW-G1", "required_equipment": ["GPU-1"]},
+      {"gate_id": "G2", "compatible_classes": ["C"], "reservations": [[0, 1080]], "crew_id": "CREW-G2", "required_equipment": ["GPU-2"]}
+    ],
+    "crews": [
+      {"crew_id": "CREW-G1", "available_from_s": 0, "regular_shift_end_s": 2700, "max_duty_end_s": 3000},
+      {"crew_id": "CREW-G2", "available_from_s": 0, "regular_shift_end_s": 1080, "max_duty_end_s": 3600}
+    ],
+    "equipment": [
+      {"equipment_id": "GPU-1", "available_intervals": [[0, 86400]]},
+      {"equipment_id": "GPU-2", "available_intervals": [[0, 86400]]}
+    ],
+    "fuel": {
+      "projected_fuel_at_earliest_kg": 3000,
+      "hold_burn_kg_per_min": 50,
+      "taxi_burn_kg_per_min": 20,
+      "reserve_floor_kg": 2200,
+      "uncertainty_allowance_kg": 100
+    },
+    "arrival_options": [{"arrival_option_id": "ARR-STD", "landing_window": [0, 86400], "permitted": true}],
+    "service": {"duration_s": 1200, "pre_service_buffer_s": 0, "release_buffer_s": 0, "gate_buffer_s": 0, "target_service_end_s": 2700},
+    "connections": [{"group_id": "CONN-1", "passengers": 12, "transfer_time_s": 1200, "deadline_s": 6000}]
+  }
+}
