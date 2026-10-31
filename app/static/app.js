@@ -139,7 +139,7 @@ function load() {
 async function loadRun() {
   if (LIVE && runParam) {
     const response = await fetch(`/api/runs/${encodeURIComponent(runParam)}`, {
-      credentials: "same-origin", signal: AbortSignal.timeout(12000),
+      credentials: "same-origin", signal: AbortSignal.timeout(30000),
     });
     if (response.status === 404 && publicDemo) {
       runParam = null;
@@ -152,7 +152,7 @@ async function loadRun() {
     const fresh = await response.json();
     const events = await fetch(
       `/api/runs/${encodeURIComponent(runParam)}/events?after_seq=${lastSeq}`, {
-        credentials: "same-origin", signal: AbortSignal.timeout(12000),
+        credentials: "same-origin", signal: AbortSignal.timeout(30000),
       });
     const newEvents = events.ok ? await events.json() : [];
     if (!events.ok) throw new Error(`Event request failed (${events.status})`);
@@ -1196,11 +1196,12 @@ async function startRun(refresh = false) {
     parent_run_id: run?.snapshot.resource_id === snapshot.resource_id ? run.run_id : null,
   });
   runParam = created.run_id;
-  run = null;
+  run = view(created);
   lastSeq = 0;
   $("ack-box").checked = false;
   $("reason-input").value = "";
   history.replaceState(null, "", `?run=${encodeURIComponent(runParam)}`);
+  render();
 }
 
 function showError(error) {
