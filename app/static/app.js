@@ -597,7 +597,7 @@ function renderRunMotion() {
     setMotionText(`signal-status-${role}`, label);
   }
   if (mayAnimate && motionWasActive && !active) {
-    $("plan-hub").animate([{opacity: .35}, {opacity: 1}], {duration: 450, easing: "ease-out"});
+    $("plan-hub").querySelector(".hub-readout").animate([{opacity: .35}, {opacity: 1}], {duration: 450, easing: "ease-out"});
   }
   motionRunId = run.run_id;
   motionWasActive = active;

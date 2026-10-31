@@ -145,35 +145,33 @@
             title="Pause the animation. The run keeps going.">Pause motion</button>
         </div>
         <div class="run-map" id="run-map" aria-hidden="true">
-          <svg class="signal-paths" viewBox="0 0 600 216" preserveAspectRatio="none" fill="none">
-            <g id="signal-path-ATC" data-state="idle">
-              <path class="signal-track" d="M84 54 C196 54 184 156 300 156"/>
-              <path class="signal-flow" d="M84 54 C196 54 184 156 300 156" pathLength="100"/>
-            </g>
-            <g id="signal-path-PILOT" data-state="idle">
-              <path class="signal-track" d="M300 34 V156"/>
-              <path class="signal-flow" d="M300 34 V156" pathLength="100"/>
-            </g>
-            <g id="signal-path-GROUND" data-state="idle">
-              <path class="signal-track" d="M516 54 C404 54 416 156 300 156"/>
-              <path class="signal-flow" d="M516 54 C404 54 416 156 300 156" pathLength="100"/>
-            </g>
-          </svg>
-          <div class="signal-node signal-atc" id="signal-ATC" data-state="idle">
-            <div class="signal-icon"><span class="signal-halo"></span><svg viewBox="0 0 24 24"><use href="/static/roles.svg#atc"/></svg></div>
-            <span class="signal-name">ATC</span><span class="signal-status" id="signal-status-ATC">Ready</span>
-          </div>
-          <div class="signal-node signal-pilot" id="signal-PILOT" data-state="idle">
-            <div class="signal-icon"><span class="signal-halo"></span><svg viewBox="0 0 24 24"><use href="/static/roles.svg#pilot"/></svg></div>
-            <span class="signal-name">Pilot</span><span class="signal-status" id="signal-status-PILOT">Ready</span>
-          </div>
-          <div class="signal-node signal-ground" id="signal-GROUND" data-state="idle">
-            <div class="signal-icon"><span class="signal-halo"></span><svg viewBox="0 0 24 24"><use href="/static/roles.svg#ground"/></svg></div>
-            <span class="signal-name">Ground</span><span class="signal-status" id="signal-status-GROUND">Ready</span>
-          </div>
-          <div class="plan-hub" id="plan-hub">
-            <span class="hub-orbit"></span><span class="hub-ring"></span>
-            <span class="hub-label" id="hub-label">Plan</span><strong id="hub-state">Ready</strong>
+          <div class="run-world">
+            <div class="scene-slab"><i class="slab-top"></i><i class="slab-front"></i><i class="slab-right"></i></div>
+            <svg class="signal-paths" viewBox="0 0 600 260" preserveAspectRatio="none" fill="none">
+              <g id="signal-path-ATC" data-state="idle"><path class="signal-track" d="M108 76 C180 76 192 164 276 164"/><path class="signal-flow" d="M108 76 C180 76 192 164 276 164" pathLength="100"/></g>
+              <g id="signal-path-PILOT" data-state="idle"><path class="signal-track" d="M468 52 C375 52 348 164 276 164"/><path class="signal-flow" d="M468 52 C375 52 348 164 276 164" pathLength="100"/></g>
+              <g id="signal-path-GROUND" data-state="idle"><path class="signal-track" d="M468 218 C375 218 348 164 276 164"/><path class="signal-flow" d="M468 218 C375 218 348 164 276 164" pathLength="100"/></g>
+            </svg>
+            <div class="signal-node signal-atc" id="signal-ATC" data-state="idle">
+              <span class="signal-halo"></span>
+              <div class="signal-icon"><div class="model-lift"><div class="model-cuboid tower-base" style="--w:34px;--h:32px;--d:10px;--z:0px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid tower-shaft" style="--w:12px;--h:12px;--d:42px;--z:10px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid tower-cab" style="--w:34px;--h:28px;--d:14px;--z:52px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid tower-roof" style="--w:40px;--h:34px;--d:3px;--z:66px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid tower-aerial" style="--w:2px;--h:2px;--d:14px;--z:69px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div></div></div>
+              <div class="signal-copy"><span class="signal-name">ATC</span><span class="signal-status" id="signal-status-ATC">Ready</span></div>
+            </div>
+            <div class="signal-node signal-pilot" id="signal-PILOT" data-state="idle">
+              <span class="signal-halo"></span>
+              <div class="signal-icon"><div class="model-lift"><div class="model-cuboid aircraft-body" style="--w:12px;--h:64px;--d:8px;--z:26px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid engine engine-left" style="--w:7px;--h:19px;--d:7px;--z:21px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid engine engine-right" style="--w:7px;--h:19px;--d:7px;--z:21px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><i class="aircraft-wing wing-left"></i><i class="aircraft-wing wing-right"></i><i class="aircraft-tail tail-left"></i><i class="aircraft-tail tail-right"></i><i class="aircraft-fin"></i></div></div>
+              <div class="signal-copy"><span class="signal-name">Pilot</span><span class="signal-status" id="signal-status-PILOT">Ready</span></div>
+            </div>
+            <div class="signal-node signal-ground" id="signal-GROUND" data-state="idle">
+              <span class="signal-halo"></span>
+              <div class="signal-icon"><div class="model-lift"><div class="model-cuboid terminal-body" style="--w:68px;--h:34px;--d:24px;--z:0px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid terminal-roof roof-left" style="--w:14px;--h:12px;--d:5px;--z:24px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid terminal-roof roof-right" style="--w:14px;--h:12px;--d:5px;--z:24px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div><div class="model-cuboid terminal-bridge" style="--w:24px;--h:9px;--d:9px;--z:10px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div></div></div>
+              <div class="signal-copy"><span class="signal-name">Ground</span><span class="signal-status" id="signal-status-GROUND">Ready</span></div>
+            </div>
+            <div class="plan-hub" id="plan-hub">
+              <div class="model-cuboid hub-base" style="--w:74px;--h:74px;--d:14px;--z:0px"><i class="model-face face-top"></i><i class="model-face face-front"></i><i class="model-face face-back"></i><i class="model-face face-left"></i><i class="model-face face-right"></i></div>
+              <div class="hub-platform"><span class="hub-ring"></span><span class="hub-orbit"></span></div>
+              <div class="hub-readout"><span class="hub-label" id="hub-label">Plan</span><strong id="hub-state">Ready</strong></div>
+            </div>
           </div>
         </div>
         <div class="run-visual-caption" role="status" aria-live="polite" aria-atomic="true">
