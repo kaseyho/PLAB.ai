@@ -1,15 +1,20 @@
 # Four-hour work plan for three developers
 
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
 This is the execution plan for [the technical PRD](technical_prd.md). Three developers work in parallel for four hours: approximately 12 developer-hours in total. Assign actual names to the three roles before starting.
 
 The [organizer clarification](organizer_updates.md) now requires one structured
 message per ATC/Pilot/Ground agent per turn, consensus within three turns and
 otherwise deterministic fallback. The ceiling is three turns/nine requests;
-the implemented profile uses two turns/six requests. The new historical release
+the implemented profile supports three turns/nine requests. The new historical release
 is organizer-reported as 358,774 rows from 2015. Operational limits come from
 `challenge2_operational_constraints.xlsx` (synthetic) or cited real figures.
-The workbook is not yet inspected locally and the new release has not been
-profiled here; these are explicit follow-up tasks, not completed integration.
+The workbook and filtered release are imported. The immediate team priority is the demo and submission.
 
 The original four-hour clock and checklists below describe delivery ownership,
 not a current completion inventory. See [the backend handoff](backend_handoff.md)
@@ -22,7 +27,7 @@ The deliverable is one working flow: **qualifying flight → checked alternative
 | Developer | Owns | Finished when |
 |---|---|---|
 | **Developer 1 / A: Interface and human control** | Browser dashboard, evidence display, approve/reject/cancel interactions, approval business logic, simulator application, demonstration | A reviewer can inspect a real recommendation, approve it exactly once, reject it, and see stale/unauthorized applications blocked |
-| **Developer 2 / B: Agents, backend, and integration** | Shared contracts, API, persistence, provider calls, all three role agents, bounded coordinator (current two-turn profile), trace, fallback integration | A run invokes independent ATC/Pilot/Ground agents, terminates within its budget, and exposes a persisted, truthful outcome through the API |
+| **Developer 2 / B: Agents, backend, and integration** | Shared contracts, API, persistence, provider calls, all three role agents, bounded coordinator (current three-turn profile), trace, fallback integration | A run invokes independent ATC/Pilot/Ground agents, terminates within its budget, and exposes a persisted, truthful outcome through the API |
 | **Developer 3 / C: Data, deterministic planning, and evaluations** | Updated CSV/workbook inspection, source extraction, scenarios, candidate enumeration, all domain checks, scoring, fallback selection, both baselines, evaluation runner/report | The same snapshot produces a reproducible checked catalog; measured results compare the system with B0/B1 and expose failures |
 
 **Developer 2 is the integration owner.** Each developer writes and tests their own implementation. Developer 3 runs the combined evaluation suite; they do not inherit everyone else's testing.
@@ -39,7 +44,7 @@ One developer owns each file. Request a change from its owner when a shared inte
 | Developer 2 | `app/main.py`, `app/contracts.py`, `app/agents.py`, `app/coordinator.py`, `app/store.py`, `tests/test_coordinator.py`, `tests/test_api.py`, dependency/configuration files, setup instructions |
 | Developer 3 | `app/data_adapter.py`, `app/scenarios.py`, `app/planning.py`, `app/constraints.py`, `scenarios/`, `policies/`, `evals/`, `tests/test_planning.py`, `tests/test_data.py` |
 
-Generated traces and reports go under `artifacts/`; they are outputs, not manually edited shared source. Some paths are target files rather than existing modules; core application code now exists. Workbook ingestion, new-release rebinding and frozen evaluations remain pending.
+Generated traces and reports go under `artifacts/`; they are outputs, not manually edited shared source. Some paths are target files rather than existing modules; core application code now exists. Workbook ingestion, source rebinding, B0/B1 and retained evaluations are implemented.
 
 ### Important boundary between Developers 1 and 2
 
@@ -93,7 +98,7 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 - [ ] Round 1: run three independent calls concurrently; validate offers against known candidates and concession envelopes.
 - [ ] Reconcile offers deterministically using Developer 3's checked costs and the PRD selection policy.
 - [ ] Round 2: ask all three agents to accept/reject exactly the same plan hash; require three current accepts.
-- [ ] Enforce one structured message per role per turn and the declared profile: current two turns/six requests within the organizer ceiling of three turns/nine requests, plus per-call timeouts and the overall deadline. Any third-turn extension must update/test contracts, storage, coordinator, prompts and UI together.
+- [ ] Enforce one structured message per role per turn and the declared profile: current three turns/nine requests within the organizer ceiling of three turns/nine requests, plus per-call timeouts and the overall deadline. Any third-turn extension must update/test contracts, storage, coordinator, prompts and UI together.
 - [ ] Trigger Developer 3's fallback on dissent, timeout, or protocol failure; preserve the failure reason.
 - [ ] Stop a run if its scenario/resources/rules change; reject late responses and preserve terminal outcomes.
 - [ ] Persist source/version references, checks, messages, votes, counters, outcome, and review state; provide a readable export.
@@ -102,7 +107,7 @@ Generated traces and reports go under `artifacts/`; they are outputs, not manual
 
 - [ ] Three separate real model requests are visible; three role labels around one request do not satisfy this deliverable.
 - [ ] Wrong hashes, missing votes, malformed output, invented candidate IDs, and mismatched revisions cannot produce consensus.
-- [ ] Timeout or dissent terminates within the declared profile: no seventh model request in the current profile and no tenth in a future three-turn profile; fallback makes zero model calls and adds no agent turn.
+- [ ] Timeout or dissent terminates within the declared profile: no tenth model request; fallback makes zero model calls and adds no agent turn.
 - [ ] Duplicate/late messages cannot add votes or overwrite the outcome.
 - [ ] Model-supplied text cannot change hard rules, counters, reviewer identity, or application state.
 - [ ] A genuine conflict/concession scenario ends in three matching real accepts, with its trace retained.
@@ -189,7 +194,7 @@ Cross-review once the vertical slice works: Developer 2 reviews Developer 1's ap
 ## 8. Definition of done for the whole team
 
 - [ ] One real supplied row satisfies `WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20` and its allowed parameters reach all three agents.
-- [ ] Three independent agents send one structured message each per turn and commit to one exact plan within three turns/nine requests in a genuine conflict case; also satisfy the actual profile limit (current two turns/six requests).
+- [ ] Three independent agents send one structured message each per turn and commit to one exact plan within three turns/nine requests in a genuine conflict case; also satisfy the actual profile limit (current three turns/nine requests).
 - [ ] The updated historical source identity is hash-bound and workbook/cited operational mappings are inspected, unit/applicability checked and visible; legacy fixtures/results are labelled separately.
 - [ ] Deterministic checks protect all approval-ready plans; unknown essential facts block them.
 - [ ] Model failure produces deterministic fallback; an impossible or missing-data case produces a visible non-executable result.

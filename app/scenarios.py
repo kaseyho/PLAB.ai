@@ -41,6 +41,7 @@ class Movement(_Frozen):
     time_s: int = Field(ge=0)
     wake_category: str | None
     occupancy_s: int = Field(gt=0)
+    runway_id: str | None = None
 
 
 class Runway(_Frozen):
@@ -92,6 +93,13 @@ class Crew(_Frozen):
     available_from_s: int = Field(ge=0)
     regular_shift_end_s: int = Field(ge=0)
     max_duty_end_s: int = Field(ge=0)
+    report_time_s: int | None = None
+    reservations: list[tuple[int, int]] = Field(default_factory=list)
+
+    @field_validator("reservations")
+    @classmethod
+    def _intervals(cls, value: list[tuple[int, int]]) -> list[tuple[int, int]]:
+        return [_check_interval(i) for i in value]
 
     @model_validator(mode="after")
     def _ordered(self) -> Self:
@@ -159,6 +167,45 @@ class Aircraft(_Frozen):
     wake_category: str | None
 
 
+class WorkbookPolicy(_Frozen):
+    """Normalized organizer cells. Airport capacity is aggregate, never per runway."""
+
+    workbook_file: str
+    workbook_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    airport_code: str
+    active_runways: int = Field(gt=0)
+    gates: int = Field(gt=0)
+    spare_gates: int = Field(ge=0)
+    max_ops_per_hour: int = Field(gt=0)
+    min_turnaround_s: int = Field(gt=0)
+    separation_s: dict[str, int]
+    separation_nm: dict[str, int]
+    reserve_hold_min: int = Field(gt=0)
+    contingency_percent: int = Field(ge=0)
+    narrowbody_hold_kg_per_hour: int = Field(gt=0)
+    widebody_hold_kg_per_hour: int = Field(gt=0)
+    spare_hold_min: int = Field(gt=0)
+    flight_crew_duty_s: int = Field(gt=0)
+    ground_shift_s: int = Field(gt=0)
+    overtime_multiplier: float = Field(ge=1)
+    gate_notice_s: int = Field(ge=0)
+    source_cells: dict[str, str]
+
+
+class Operations(_Frozen):
+    """Workbook policy plus explicitly synthetic facts absent from the DOT release."""
+
+    policy: WorkbookPolicy
+    aircraft_kind: Literal["narrowbody", "widebody"]
+    trip_fuel_kg: float | None = Field(ge=0)
+    flight_crew_report_s: int | None
+    assigned_gate_id: str
+    gate_decision_s: int = Field(ge=0)
+    modeled_runway_ids: list[str] = Field(min_length=1)
+    wake_application: Literal["departure_time_proxy_for_arrivals"]
+    assumptions: list[str] = Field(min_length=1)
+
+
 class Overlay(_Frozen):
     """The synthetic operational facts the historical CSV does not contain."""
 
@@ -177,6 +224,7 @@ class Overlay(_Frozen):
     arrival_options: list[ArrivalOption]
     service: Service
     connections: list[ConnectionGroup] | None
+    operations: Operations | None = None
 
     @field_validator("separation_s")
     @classmethod
@@ -200,6 +248,15 @@ class Overlay(_Frozen):
         gate_ids = {gate.gate_id for gate in self.gates}
         crew_ids = {crew.crew_id for crew in self.crews}
         equipment_ids = {item.equipment_id for item in self.equipment}
+        for items, ids in (
+            (self.gates, gate_ids),
+            (self.crews, crew_ids),
+            (self.equipment, equipment_ids),
+        ):
+            if len(items) != len(ids):
+                raise ValueError("Resource IDs must be unique")
+        if len({m.movement_id for m in self.movements}) != len(self.movements):
+            raise ValueError("Movement IDs must be unique")
         for route in self.routes:
             if route.gate_id not in gate_ids:
                 raise ValueError(f"route {route.route_id} ends at unknown gate {route.gate_id}")
@@ -228,6 +285,8 @@ class SourceLocator(_Frozen):
 
     dataset_file: str
     record_ordinal: int = Field(gt=0)
+    dataset_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    identity_fields: dict[str, str] = Field(default_factory=dict)
 
 
 class ScenarioSnapshot(_Frozen):
@@ -245,6 +304,7 @@ class ScenarioSnapshot(_Frozen):
 
 
 RULESET_VERSION = "toy-rules-v1"
+ORGANIZER_RULESET = "organizer-v1"
 
 
 def canonical_hash(payload: object) -> str:
@@ -269,9 +329,11 @@ def snapshot_from_dict(raw: dict[str, Any]) -> ScenarioSnapshot:
         }
     except (KeyError, ValueError) as error:
         raise ScenarioValidationError(f"scenario {raw.get('scenario_id')}: {error}") from error
-    if body["ruleset_version"] != RULESET_VERSION:
+    if body["ruleset_version"] not in (RULESET_VERSION, ORGANIZER_RULESET):
         raise ScenarioValidationError(f"unsupported ruleset {body['ruleset_version']}")
-    missing_provenance = set(Overlay.model_fields) - set(body["provenance"])
+    if body["ruleset_version"] == ORGANIZER_RULESET and body["overlay"].operations is None:
+        raise ScenarioValidationError("Organizer scenarios require workbook operational policy")
+    missing_provenance = set(raw["overlay"]) - set(body["provenance"])
     if missing_provenance:
         raise ScenarioValidationError(
             f"overlay sections without provenance: {sorted(missing_provenance)}"

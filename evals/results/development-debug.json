@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "status": "COMPLETED",
+  "created_at": "2026-10-31T06:13:24.840636+00:00",
+  "split": "development",
+  "manifest_sha256": "728d87ace5ba4b1b39cd8e837c18e7b20d1f293be59a3726ee18590c03f1b7d8",
+  "dataset": {
+    "file": "flights.csv",
+    "sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+    "rows": 358774,
+    "invalid_year_or_filter": 0,
+    "cancelled": 0,
+    "diverted": 0
+  },
+  "workbook": {
+    "file": "challenge2_operational_constraints.xlsx",
+    "sha256": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211"
+  },
+  "provider_mode": "LIVE",
+  "provider": {
+    "mode": "LIVE",
+    "model": "qwen3.8:27b",
+    "api_base": "https://soclaas-api.comp.nus.edu.sg/v1",
+    "api_mode": "chat_completions",
+    "reasoning_effort": "none",
+    "prompt_version": "roles-v7",
+    "max_output_tokens": 500,
+    "retries": 0
+  },
+  "summary": "6/6 frozen development contract cases passed. Live nominal consensus: 0/4. 12 real model requests. Fault injections use labelled fixtures.",
+  "counts": {
+    "passed": 6,
+    "total": 6,
+    "nominal": 4,
+    "live_nominal": 4,
+    "live_consensus": 0,
+    "model_calls": 12
+  },
+  "outcomes": {
+    "FEASIBLE_FALLBACK": 4,
+    "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE": 1,
+    "INSUFFICIENT_DATA": 1
+  },
+  "nominal_latency_ms": {
+    "n": 4,
+    "median": 8098.5,
+    "p95": 8550
+  },
+  "limitations": [
+    "Fixed airport/trigger first-match sampling; distinct flight identities and disjoint development/holdout airports. Synthetic templates share infrastructure; this suite is not a generalization benchmark.",
+    "Expected outcome classes are frozen; boundary tests independently check numeric rules. This is not an aviation safety certification.",
+    "Only nominal LIVE rows measure model coordination. Fault fixtures are not model performance. No optional repeated-case stability experiment was run.",
+    "Timeout case injects a 50ms request deadline. All other cases use the 12s/request, 45s/run and 5s fallback reserve profile.",
+    "B0 and B1 use the identical full catalog. Comparisons are simulated effects, not measured historical savings."
+  ],
+  "cases": [
+    {
+      "case_id": "D01",
+      "variant": "tradeoff",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "8aa51cb5-8b17-45f9-a54d-6b70c41b4f50",
+      "outcome": "FEASIBLE_FALLBACK",
+      "fallback_reason": "PROVIDER_ERROR",
+      "provider": {
+        "mode": "LIVE",
+        "model": "qwen3.8:27b",
+        "api_base": "https://soclaas-api.comp.nus.edu.sg/v1",
+        "api_mode": "chat_completions",
+        "reasoning_effort": "none",
+        "prompt_version": "roles-v7",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 1,
+      "agent_invocations": 3,
+      "model_calls": 3,
+      "elapsed_ms": 7048,
+      "snapshot_hash": "2a7d06e9f0aa933094a104c1710f7a6a77c83c4b83048afc2931dc78ed42612a",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1200-G2-route",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.3125"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "35",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "1.1750"
+      },
+      "input_tokens_reported": 10568,
+      "output_tokens_reported": 256,
+      "requests_without_token_usage": 2,
+      "trace": "D01-8aa51cb5-8b17-45f9-a54d-6b70c41b4f50.json"
+    },
+    {
+      "case_id": "D02",
+      "variant": "fixed_gate",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "8486e58d-4197-401e-aedc-1ec3af1736ea",
+      "outcome": "FEASIBLE_FALLBACK",
+      "fallback_reason": "PROVIDER_ERROR",
+      "provider": {
+        "mode": "LIVE",
+        "model": "qwen3.8:27b",
+        "api_base": "https://soclaas-api.comp.nus.edu.sg/v1",
+        "api_mode": "chat_completions",
+        "reasoning_effort": "none",
+        "prompt_version": "roles-v7",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 1,
+      "agent_invocations": 3,
+      "model_calls": 3,
+      "elapsed_ms": 7652,
+      "snapshot_hash": "5becff1de3b22ed65322385fb6efaf7e89dec9ca3dccc41b5254b60a343419c6",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 10689,
+      "output_tokens_reported": 272,
+      "requests_without_token_usage": 2,
+      "trace": "D02-8486e58d-4197-401e-aedc-1ec3af1736ea.json"
+    },
+    {
+      "case_id": "D03",
+      "variant": "tradeoff",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "c7b3e3b6-a2c9-4a83-a6f8-c1b675f532a2",
+      "outcome": "FEASIBLE_FALLBACK",
+      "fallback_reason": "PROVIDER_ERROR",
+      "provider": {
+        "mode": "LIVE",
+        "model": "qwen3.8:27b",
+        "api_base": "https://soclaas-api.comp.nus.edu.sg/v1",
+        "api_mode": "chat_completions",
+        "reasoning_effort": "none",
+        "prompt_version": "roles-v7",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 1,
+      "agent_invocations": 3,
+      "model_calls": 3,
+      "elapsed_ms": 8550,
+      "snapshot_hash": "b82d1c84bb16a9d576713d6b763a1b7b3b91fae3cf7c74371e7fb2d5d56e21b5",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1200-G2-route",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.3125"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "35",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "1.1750"
+      },
+      "input_tokens_reported": 12190,
+      "output_tokens_reported": 307,
+      "requests_without_token_usage": 2,
+      "trace": "D03-c7b3e3b6-a2c9-4a83-a6f8-c1b675f532a2.json"
+    },
+    {
+      "case_id": "D04",
+      "variant": "heavy",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "470ba38c-508f-4dc4-8f7a-96324bf16ca7",
+      "outcome": "FEASIBLE_FALLBACK",
+      "fallback_reason": "CONCESSION_POLICY_VIOLATION",
+      "provider": {
+        "mode": "LIVE",
+        "model": "qwen3.8:27b",
+        "api_base": "https://soclaas-api.comp.nus.edu.sg/v1",
+        "api_mode": "chat_completions",
+        "reasoning_effort": "none",
+        "prompt_version": "roles-v7",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 1,
+      "agent_invocations": 3,
+      "model_calls": 3,
+      "elapsed_ms": 8545,
+      "snapshot_hash": "d4dd934a9246f8a3a9a20e66774bd29aa13d4bb2c3a035966894d2c346d896ff",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1200-G2-route",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.3125"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "35",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "1.1750"
+      },
+      "input_tokens_reported": 12204,
+      "output_tokens_reported": 323,
+      "requests_without_token_usage": 2,
+      "trace": "D04-470ba38c-508f-4dc4-8f7a-96324bf16ca7.json"
+    },
+    {
+      "case_id": "D05",
+      "variant": "blocked_gates",
+      "expected": "NO_PLAN",
+      "passed": true,
+      "run_id": "7efdce52-ed2b-4f47-8cb1-b6ca1548cbe3",
+      "outcome": "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE",
+      "fallback_reason": "EMPTY_FEASIBLE_SHORTLIST",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v7",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 0,
+      "agent_invocations": 0,
+      "model_calls": 0,
+      "elapsed_ms": 137,
+      "snapshot_hash": "643c544c982b6f66678b1e6db831f5e26ba597c6584d7ed38609034ee9c35a4a",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": null,
+      "baselines": {
+        "B0": null,
+        "B1": null
+      },
+      "comparison": {},
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 0,
+      "trace": "D05-7efdce52-ed2b-4f47-8cb1-b6ca1548cbe3.json"
+    },
+    {
+      "case_id": "D06",
+      "variant": "missing_fuel",
+      "expected": "INSUFFICIENT",
+      "passed": true,
+      "run_id": "955a5fa6-ff2b-419d-80cc-c6845c84df4d",
+      "outcome": "INSUFFICIENT_DATA",
+      "fallback_reason": "EMPTY_FEASIBLE_SHORTLIST",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v7",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 0,
+      "agent_invocations": 0,
+      "model_calls": 0,
+      "elapsed_ms": 8,
+      "snapshot_hash": "27550db9e3311291adf4a79a34322bc3ce60f4ce2864ca84c4ee9fd42b693e8a",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": null,
+      "baselines": {
+        "B0": null,
+        "B1": null
+      },
+      "comparison": {},
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 0,
+      "trace": "D06-955a5fa6-ff2b-419d-80cc-c6845c84df4d.json"
+    }
+  ]
+}

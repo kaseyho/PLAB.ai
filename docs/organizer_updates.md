@@ -1,5 +1,11 @@
 # Organizer clarification: Challenge #2 — Air traffic decisions
 
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
 Recorded on 31 October 2026 from the organizer update supplied by the project owner. This clarification supersedes earlier wording about missing data and “under three turns.” The judging weights remain unchanged.
 
 ## Authoritative changes
@@ -16,11 +22,14 @@ The release size and workbook coverage above are organizer-reported. They are no
 
 ## Actual repository status
 
-The local `data/flights.csv` is still the earlier 592,406,591-byte, 5,819,079-row file, identified by SHA-256 `afa4e42188b113dd69427a3fbd00a4b6979c6235c866f963c2899d18a3403a83` in the previous inspection. Its 376,125 delay-eligible rows and 358,774 lookup-resolved eligible rows describe that older file. A matching count does not prove it is byte-identical to the new organizer release.
+The delivered CSV contains 358,774 eligible 2015 rows (38,616,129 bytes), hash
+bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e.
+The workbook hash is f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211.
+Its airport_capacity, wake_separation, fuel_and_crew and rules_of_play sheets were
+inspected. Normalized cases retain exact cells and natural flight identities.
 
-The workbook was not available in the repository or Downloads during this documentation update. Its sheets, cells, exact values, units and hash have not been inspected. The current service loads JSON scenarios; it has no workbook importer. Existing D01 values remain explicitly illustrative and are not attributed to the workbook.
-
-The implemented protocol uses two turns: three offers followed by three votes, with at most six started model requests. This is a stricter execution profile within the clarified three-turn ceiling. It falls back early on disagreement or failure and does not exercise a third turn. Supporting an optional third turn requires coordinated changes to contracts, storage guards, coordinator, prompts, UI and tests; changing prose or a display label does not enable it.
+All three turns are implemented. Previous two-turn smokes remain historical
+evidence. File hashes are checked before new operational runs and approvals.
 
 ## Turn accounting and human control
 
@@ -47,7 +56,7 @@ The agents negotiate autonomously. A human then approves or rejects simulated ap
 | Owner | Required follow-up |
 |---|---|
 | Developer 1 / A | Show actual turn limit/count, operational evidence and source labels; preserve reasoned approval, fallback acknowledgement and stale-plan guards |
-| Developer 2 / B | Enforce one message per role per turn and truthful counters; retain the tested two-turn profile unless a fully tested three-turn profile is introduced; carry versioned evidence into prompts and exports |
+| Developer 2 / B | Enforce one message per role per turn and truthful counters; enforce fresh votes in the implemented third-turn protocol; carry versioned evidence into prompts and exports |
 | Developer 3 / C | Inspect and profile the new CSV/workbook, rebind source rows, map constraints and units, validate the resource subset, and rerun the frozen suite and both baselines |
 
-This update changes documentation. It does not claim a new dataset import, workbook integration, third-turn implementation or completed evaluation report. See [the PRD](technical_prd.md), [work plan](developer_work_plan.md) and [backend handoff](backend_handoff.md).
+The runtime implements the clarified rules; see the submission guide for commands and scope limits.

@@ -33,6 +33,9 @@ Historical trigger fields select the scenario; they are not live observations or
 Numerical values are rendered from evidence by the application. Cite IDs in a brief rationale
 instead of restating numbers. Give a decision summary, never hidden chain-of-thought.
 Keep the rationale under 40 words and cite at most three evidence IDs.
+Stay within your assigned domain. Other domains' shared_validation certificates are supplied
+by the deterministic checker; a flight-crew duty check is distinct from ground-crew service.
+Do not infer missing facts merely because another domain's raw inputs are scoped away.
 For an OFFER, these field mappings are mandatory:
 - acceptable_candidate_ids must be a subset of allowed_initial_ids, not all feasible plans.
 - concession_candidate_ids must be a subset of allowed_concession_ids.
@@ -46,10 +49,12 @@ Feasibility does not enlarge either allowed set. You may offer empty sets. Consi
 concession that addresses other domains' needs; do not offer outside the stated envelope.
 Your goal is a jointly workable plan within your role's allowed budget, not merely reporting
 your cheapest candidate. Assess the published cross-domain impacts of each allowed concession.
-Offer compromises you are willing to discuss in round 2. An empty concession set declines all
+Offer compromises you are willing to discuss in turns 2 and 3. An empty concession set declines all
 permitted compromises; explain that choice in your rationale. The final vote remains independent.
 For a VOTE: inspect the selected complete plan, checks, and all peer offers. Explicitly
 ACCEPT, REJECT, or NEEDS_INFORMATION. Echo exactly the proposed plan_hash.
+Turn 3 is the final vote on a different plan after dissent. Read the prior votes as evidence,
+then make a fresh decision on the current proposal; prior acceptance does not carry over.
 An offer is not a final commitment. Refuse unsupported commitments; do not fake consensus.
 Return exactly one JSON object matching the required output schema below. Include every
 required field, including empty arrays and a null preferred ID when appropriate. Do not
@@ -232,7 +237,12 @@ def build_prompt(run: RunRecord, role: Role, round_number: int) -> dict[str, Jso
     ]
     evidence_ids = sorted(
         {f.fact_id for f in facts}
-        | {c.check_id for c in checks}
+        | {
+            c.check_id
+            for entry in run.catalog.candidates
+            if entry.plan.candidate_id in selected
+            for c in entry.checks
+        }
         | {f"impact:{p.candidate_id}:{role}" for p in shortlist(run)}
     )
     context: dict[str, JsonValue] = {
@@ -246,9 +256,37 @@ def build_prompt(run: RunRecord, role: Role, round_number: int) -> dict[str, Jso
         "candidate_set_hash": run.catalog.catalog_hash,
         "historical_source": cast(JsonValue, run.snapshot.source.prompt_seed()),
         "source_label": "Historical retrospective trigger; operational state is simulated",
-        "facts": [f.model_dump(mode="json") for f in facts],
-        "checks": [c.model_dump(mode="json") for c in checks],
-        "candidates": [p.model_dump(mode="json") for p in shortlist(run)],
+        "facts": [
+            f.model_dump(mode="json", include={"fact_id", "value", "units", "provenance"})
+            for f in facts
+            if f.fact_id != "policy.operational_limits"
+        ],
+        "checks": [c.model_dump(mode="json", exclude={"rule_version"}) for c in checks],
+        "shared_validation": [
+            {
+                "candidate_id": entry.plan.candidate_id,
+                "checks": {c.check_id: c.status for c in entry.checks},
+            }
+            for entry in run.catalog.candidates
+            if entry.plan.candidate_id in selected
+        ],
+        "candidates": [
+            p.model_dump(
+                mode="json",
+                include={
+                    "candidate_id",
+                    "runway_id",
+                    "landing_time_s",
+                    "gate_id",
+                    "gate_in_time_s",
+                    "taxi_route_id",
+                    "service_end_s",
+                    "crew_id",
+                    "costs",
+                },
+            )
+            for p in shortlist(run)
+        ],
         "impacts": cast(JsonValue, impacts),
         "allowed_evidence_ids": cast(JsonValue, evidence_ids),
         "domain_order": cast(JsonValue, ranked),
@@ -261,12 +299,16 @@ def build_prompt(run: RunRecord, role: Role, round_number: int) -> dict[str, Jso
         },
         "full_catalog_count": len(run.catalog.candidates),
     }
-    if round_number == 2:
+    if round_number in (2, 3):
         if run.candidate is None:
             raise ServiceError("PROPOSAL_MISSING")
         context["proposal"] = run.candidate.model_dump(mode="json")
         context["plan_hash"] = run.candidate.plan_hash
         context["peer_offers"] = {r.value: o.model_dump(mode="json") for r, o in run.offers.items()}
+        context["previous_votes"] = {
+            r.value: vote.model_dump(mode="json") for r, vote in run.previous_votes.items()
+        }
+        context["previous_candidate_id"] = run.previous_candidate_id
         context["concessions"] = {
             r.value: {
                 "initial_preference": o.preferred_candidate_id,

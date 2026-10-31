@@ -1,5 +1,11 @@
 # Airbus Challenge #2: Air traffic decisions
 
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
 “How might AI help air traffic controllers, pilots and ground operations staff make faster and better decisions?”
 
 This consolidated brief incorporates the organizer clarification supplied on 31 October 2026. See [the update record](organizer_updates.md) for provenance, implementation status and data migration requirements.
@@ -24,7 +30,7 @@ Agents exchange structured data, evaluate cross-domain constraints and negotiate
 
 **One turn means each of ATC, Pilot and Ground sends one structured message. Consensus must be reached within three turns; otherwise deterministic fallback decides.** The ceiling permits nine agent messages/generation requests, with no hidden repair calls or automatic model retries. Fallback is deterministic and is not a fourth agent turn. Earlier termination on invalid data, model failure or a declared shorter execution profile remains visible.
 
-The current implementation uses a two-turn/six-request profile inside that ceiling. A future third turn must still end with three current accepts of one exact checked plan. Human review occurs after negotiation and before simulated application, including fallback.
+The implementation supports all three turns. A revised third-turn plan requires three fresh accepts of its exact hash. Human review occurs after negotiation and before simulated application, including fallback.
 
 ## Supplied historical data
 
@@ -49,7 +55,7 @@ The DOT flight data has **no gates, runways, fuel or crew**. Use **`challenge2_o
 
 Record exact workbook sheet/cell references, units, applicability and file version/hash after inspection. Cited real substitutions need document/URL, revision and relevant section. Label workbook values as synthetic. Additional operational state absent from the source must be explicitly simulated or left unknown.
 
-The workbook has not yet been inspected in this repository; existing scenario values must not be described as workbook-derived.
+The workbook is inspected and imported. Additional synthetic state remains separately labelled.
 
 ## What to avoid
 

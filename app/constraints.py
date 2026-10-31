@@ -33,6 +33,7 @@ REQUIRED_RULES = (
     "GROUND-CREW-01",
     "GROUND-EQUIP-01",
 )
+OPERATIONAL_RULES = ("SYSTEM-OPS-01", "PILOT-DUTY-01", "GROUND-NOTICE-01", "GROUND-TURN-01")
 
 
 class _Frozen(BaseModel):
@@ -268,7 +269,8 @@ def check_runway(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> ConstraintR
     clashes = [
         m.movement_id
         for m in overlay.movements
-        if overlap(occupancy, (m.time_s, m.time_s + m.occupancy_s))
+        if m.runway_id in (None, plan.runway_id)
+        and overlap(occupancy, (m.time_s, m.time_s + m.occupancy_s))
     ]
     if clashes:
         fields["evidence_ids"] = evidence + [f"overlay.movements.{c}" for c in clashes]
@@ -304,10 +306,11 @@ def check_separation(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> Constra
             evidence_ids=evidence,
             reason_code="MISSING_WAKE_CATEGORY",
         )
-    preceding = [m for m in overlay.movements if m.time_s <= landing]
-    following = [m for m in overlay.movements if m.time_s > landing]
+    movements = [m for m in overlay.movements if m.runway_id in (None, plan.runway_id)]
+    preceding = [m for m in movements if m.time_s <= landing]
+    following = [m for m in movements if m.time_s > landing]
     reach = max(overlay.separation_s.values(), default=0)
-    relevant = {m.movement_id: m for m in overlay.movements if abs(m.time_s - landing) < reach}
+    relevant = {m.movement_id: m for m in movements if abs(m.time_s - landing) < reach}
     if preceding:
         lead = max(preceding, key=lambda m: (m.time_s, m.movement_id))
         relevant[lead.movement_id] = lead
@@ -541,6 +544,18 @@ def check_gate_occupancy(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> Con
 def check_crew(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> ConstraintResult:
     """Availability and maximum duty are hard limits; overtime within them is a cost."""
     crew = snapshot.overlay.crew(plan.crew_id)
+    if any(
+        overlap((plan.service_start_s, plan.service_end_s), interval)
+        for interval in crew.reservations
+    ):
+        return _result(
+            "GROUND-CREW-01",
+            "GROUND",
+            plan,
+            "FAIL",
+            evidence_ids=["overlay.crews"],
+            reason_code="CREW_ALREADY_RESERVED",
+        )
     fields = {
         "actual": [plan.service_start_s, plan.service_end_s],
         "operator": "within",
@@ -586,6 +601,120 @@ def check_equipment(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> Constrai
     return _result("GROUND-EQUIP-01", "GROUND", plan, "PASS", **fields)
 
 
+def check_operations(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> list[ConstraintResult]:
+    overlay = snapshot.overlay
+    ops = overlay.operations
+    if ops is None:
+        return []
+    policy = ops.policy
+    evidence = ["overlay.operations", "overlay.fuel", "overlay.crews", "overlay.service"]
+    burn = Fraction(
+        policy.narrowbody_hold_kg_per_hour
+        if ops.aircraft_kind == "narrowbody"
+        else policy.widebody_hold_kg_per_hour,
+        60,
+    )
+    reserve = burn * policy.reserve_hold_min
+    contingency = (
+        None
+        if ops.trip_fuel_kg is None
+        else _exact(ops.trip_fuel_kg) * policy.contingency_percent / 100
+    )
+    fuel = overlay.fuel
+    limits_match = (
+        len(overlay.gates) <= min(policy.gates, policy.spare_gates)
+        and len(set(ops.modeled_runway_ids)) == len(ops.modeled_runway_ids) <= policy.active_runways
+        and overlay.runway.runway_id in ops.modeled_runway_ids
+        and all(m.runway_id in ops.modeled_runway_ids for m in overlay.movements)
+        and ops.assigned_gate_id in {gate.gate_id for gate in overlay.gates}
+        and overlay.capacity.window_s == 3600
+        and overlay.capacity.max_movements == policy.max_ops_per_hour
+        and overlay.separation_s == policy.separation_s
+        and fuel.hold_burn_kg_per_min is not None
+        and abs(_exact(fuel.hold_burn_kg_per_min) - burn) <= Fraction(1, 10**9)
+        and fuel.reserve_floor_kg is not None
+        and contingency is not None
+        and abs(_exact(fuel.reserve_floor_kg) - reserve - contingency) <= Fraction(1, 10**9)
+        and all(
+            c.report_time_s is not None
+            and c.regular_shift_end_s - c.report_time_s == policy.ground_shift_s
+            for c in overlay.crews
+        )
+    )
+    duty_end = (
+        None
+        if ops.flight_crew_report_s is None
+        else ops.flight_crew_report_s + policy.flight_crew_duty_s
+    )
+    notice = plan.landing_time_s - ops.gate_decision_s
+    changed_gate = plan.gate_id != ops.assigned_gate_id
+    return [
+        _result(
+            "SYSTEM-OPS-01",
+            "SYSTEM",
+            plan,
+            "PASS" if limits_match else "FAIL",
+            actual=limits_match,
+            operator="workbook limits and declared subset",
+            required=True,
+            units="policy",
+            evidence_ids=evidence,
+            reason_code="OK" if limits_match else "WORKBOOK_POLICY_MISMATCH",
+        ),
+        _result(
+            "PILOT-DUTY-01",
+            "PILOT",
+            plan,
+            "UNKNOWN"
+            if duty_end is None
+            else "PASS"
+            if plan.gate_in_time_s <= duty_end
+            else "FAIL",
+            actual=plan.gate_in_time_s,
+            operator="<=",
+            required=duty_end,
+            units="s",
+            margin=None if duty_end is None else duty_end - plan.gate_in_time_s,
+            evidence_ids=["overlay.operations"],
+            reason_code="MISSING_FLIGHT_CREW_REPORT"
+            if duty_end is None
+            else "OK"
+            if plan.gate_in_time_s <= duty_end
+            else "FLIGHT_CREW_DUTY_EXCEEDED",
+        ),
+        _result(
+            "GROUND-NOTICE-01",
+            "GROUND",
+            plan,
+            "PASS" if not changed_gate or notice >= policy.gate_notice_s else "FAIL",
+            actual={"changed_gate": changed_gate, "notice_s": notice},
+            operator=">= if gate changed",
+            required=policy.gate_notice_s,
+            units="s",
+            margin=None if not changed_gate else notice - policy.gate_notice_s,
+            evidence_ids=["overlay.operations"],
+            reason_code="OK"
+            if not changed_gate or notice >= policy.gate_notice_s
+            else "GATE_CHANGE_NOTICE_TOO_SHORT",
+        ),
+        _result(
+            "GROUND-TURN-01",
+            "GROUND",
+            plan,
+            "PASS" if overlay.service.duration_s >= policy.min_turnaround_s else "FAIL",
+            actual=overlay.service.duration_s,
+            operator=">=",
+            required=policy.min_turnaround_s,
+            units="s",
+            margin=overlay.service.duration_s - policy.min_turnaround_s,
+            evidence_ids=["overlay.operations", "overlay.service"],
+            reason_code="OK"
+            if overlay.service.duration_s >= policy.min_turnaround_s
+            else "TURNAROUND_BELOW_MINIMUM",
+        ),
+    ]
+
+
 def check_plan(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> list[ConstraintResult]:
     """All required rule results, in REQUIRED_RULES order. Any FAIL/UNKNOWN blocks review."""
     try:
@@ -616,16 +745,22 @@ def check_plan(snapshot: ScenarioSnapshot, plan: CandidatePlan) -> list[Constrai
         check_crew,
         check_equipment,
     )
-    return [check_freshness(snapshot, plan, canonical)] + [
-        rule(snapshot, canonical) for rule in rules
+    results = (
+        [check_freshness(snapshot, plan, canonical)]
+        + [rule(snapshot, canonical) for rule in rules]
+        + check_operations(snapshot, canonical)
+    )
+    return [
+        result.model_copy(update={"rule_version": snapshot.ruleset_version}) for result in results
     ]
 
 
-def is_approval_ready(results: list[ConstraintResult]) -> bool:
+def is_approval_ready(results: list[ConstraintResult], *, operational: bool = False) -> bool:
     """True only when every required rule is present exactly once and every one passed."""
     statuses = {result.rule_id: result.status for result in results}
+    required = REQUIRED_RULES + (OPERATIONAL_RULES if operational else ())
     return (
-        len(results) == len(REQUIRED_RULES)
-        and set(statuses) == set(REQUIRED_RULES)
+        len(results) == len(required)
+        and set(statuses) == set(required)
         and all(status == "PASS" for status in statuses.values())
     )

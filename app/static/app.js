@@ -88,6 +88,18 @@ function view(raw, events = []) {
   const catalog = raw.catalog?.candidates || [];
   const feasible = catalog.filter((entry) => entry.checks.length && entry.checks.every((c) => c.status === "PASS"));
   const baseline = raw.baseline_b0 || feasible.sort(proceduralOrder)[0];
+  const jointOrder = (a, b) => {
+    const key = (entry) => {
+      const costs = ROLES.map((role) => Number(entry.plan.costs[role]));
+      return [Math.max(...costs), costs.reduce((sum, value) => sum + value, 0),
+        entry.plan.landing_time_s, entry.plan.gate_in_time_s, entry.plan.gate_id,
+        entry.plan.taxi_route_id, entry.plan.candidate_id];
+    };
+    const x = key(a), y = key(b);
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+    return 0;
+  };
+  const baselineB1 = raw.baseline_b1 || [...feasible].sort(jointOrder)[0];
   const ids = new Set([...(raw.catalog?.shortlist_ids || []), raw.candidate?.candidate_id]);
   const source = {natural_identity: snapshot.source.identity, dataset_file: snapshot.source.dataset_id,
     record_ordinal: snapshot.source.record_ordinal, fields,
@@ -105,6 +117,7 @@ function view(raw, events = []) {
     candidates: catalog.filter((entry) => ids.has(entry.plan.candidate_id)).map((entry) => planView(entry.plan, entry.checks)),
     catalog_feasible_count: raw.catalog_feasible_count ?? feasible.length,
     baseline_b0: baseline ? planView(baseline.plan, baseline.checks) : null,
+    baseline_b1: baselineB1 ? planView(baselineB1.plan, baselineB1.checks) : null,
     missing_facts: raw.catalog?.blocking_reasons || [], blockers,
     events, review_result: reviewResult,
     resource_revision_after: events.findLast((event) => event.event_type === "SIMULATION_APPLIED")?.payload.resource_revision};
@@ -190,6 +203,17 @@ function renderScenario() {
   fact(list, "Simulation epoch", run.scenario && run.scenario.simulation_epoch_utc, "synthetic");
   fact(list, "Rules / policy", `${run.ruleset_version} / ${run.policy_version}`, "illustrative");
   fact(list, "Resource revision", run.resource_revision);
+  const ops = run.snapshot.facts.find((f) => f.fact_id === "overlay.operations")?.value;
+  if (ops) {
+    const p = ops.policy;
+    fact(list, "Organizer workbook", `${p.airport_code} · ${p.workbook_sha256.slice(0, 12)}…`, "synthetic limits");
+    fact(list, "Airport limits", `${p.active_runways} runways · ${p.gates} gates · ${p.max_ops_per_hour} movements/hour`);
+    fact(list, "Modeled subset", `${ops.modeled_runway_ids.length} runway; up to ${p.spare_gates} spare gates`);
+    fact(list, "Turnaround / gate notice", `${p.min_turnaround_s / 60} / ${p.gate_notice_s / 60} min`);
+    fact(list, "Fuel policy", `${p.reserve_hold_min} min reserve + ${p.contingency_percent}% trip contingency`);
+    fact(list, "Crew policy", `${p.flight_crew_duty_s / 3600} h flight duty; ${p.ground_shift_s / 3600} h ground shift, ${p.overtime_multiplier}× overtime`);
+  }
+  $("operational-notes").textContent = ops ? ops.assumptions.join(" ") : "Legacy illustrative test scenario.";
   $("source-details").textContent = JSON.stringify({source: run.snapshot.source, facts: run.snapshot.facts}, null, 2);
 }
 
@@ -198,8 +222,8 @@ function renderRun() {
   list.replaceChildren();
   fact(list, "Processing", run.processing_state);
   fact(list, "Outcome", run.negotiation_outcome);
-  fact(list, "Rounds", `${run.round_count} of 2`);
-  fact(list, "Model calls", `${run.model_call_count} of 6`);
+  fact(list, "Turns", `${run.round_count} of 3`);
+  fact(list, "Model calls", `${run.model_call_count} of 9`);
   fact(list, "Agent invocations", run.agent_invocation_count);
   if (run.provider) fact(list, "Provider", `${run.provider.mode} · ${run.provider.model}`, run.provider.prompt_version);
   if (run.planning_mode) fact(list, "Planner", run.planning_mode);
@@ -228,7 +252,7 @@ function reviewState() {
   if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["state-bad", "No feasible option in the searched window", "Every candidate failed at least one hard check. Needs qualified review outside the simulator."];
   if (outcome === "INSUFFICIENT_DATA") return ["state-bad", "Input review required", "Required facts are missing, so no plan can be checked. Nothing is guessed."];
   if (outcome === "SYSTEM_ERROR") return ["state-bad", "System error", "Checks could not be completed reliably. No plan can be approved."];
-  if (run.processing_state && run.processing_state !== "TERMINAL") return ["state-info", "Negotiating", `Round ${run.round_count} of 2.`];
+  if (run.processing_state && run.processing_state !== "TERMINAL") return ["state-info", "Negotiating", `Turn ${run.round_count} of 3.`];
   return ["state-info", outcome || "Waiting", ""];
 }
 
@@ -307,7 +331,7 @@ function renderAgents() {
     const vote = (run.votes || {})[role];
     if (!offer && !vote) card.append(el("p", "No message", "label"));
     if (offer) {
-      card.append(el("p", "Round 1 offer", "label"));
+      card.append(el("p", "Turn 1 offer", "label"));
       card.append(el("p", `Prefers ${offer.preferred_candidate_id ?? "none (refused)"}`));
       if (offer.concession_candidate_ids && offer.concession_candidate_ids.length) {
         card.append(el("p", `Could concede to ${offer.concession_candidate_ids.join(", ")}`));
@@ -315,8 +339,13 @@ function renderAgents() {
       card.append(el("p", offer.rationale));
     }
     if (vote) {
+      const previous = run.previous_votes?.[role];
+      if (previous) {
+        card.append(el("p", `Turn 2: ${previous.decision} on ${run.previous_candidate_id}`, "label"));
+        card.append(el("p", previous.rationale));
+      }
       const matches = vote.plan_hash === run.plan_hash;
-      card.append(el("p", "Round 2 vote", "label"));
+      card.append(el("p", `Turn ${run.round_count} vote`, "label"));
       card.append(el("p", `${vote.decision} (${matches ? "same" : "different"} plan hash)`,
         `status status-${vote.decision === "ACCEPT" && matches ? "PASS" : "FAIL"}`));
       card.append(el("p", vote.rationale));
@@ -334,7 +363,8 @@ function renderCandidates() {
     if (c.candidate_id === selected) row.className = "selected";
     const cells = [
       c.candidate_id + (c.candidate_id === selected ? " (proposed)" : "") +
-        (run.baseline_b0 && c.candidate_id === run.baseline_b0.candidate_id ? " (B0)" : ""),
+        (run.baseline_b0 && c.candidate_id === run.baseline_b0.candidate_id ? " (B0)" : "") +
+        (run.baseline_b1 && c.candidate_id === run.baseline_b1.candidate_id ? " (B1)" : ""),
       clock(c.landing_time_s), clock(c.gate_in_time_s), `${c.gate_id} / ${c.taxi_route_id}`,
       num(c.added_holding_min, "min"), num(c.fuel_margin_kg, "kg"), num(c.crew_overtime_min, "min"),
       `${Number(c.costs.ATC).toFixed(3)} / ${Number(c.costs.PILOT).toFixed(3)} / ${Number(c.costs.GROUND).toFixed(3)}`,
@@ -345,7 +375,7 @@ function renderCandidates() {
     body.append(row);
   }
   $("cand-note").textContent = (run.candidates || []).length
-    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked candidates, ${run.catalog_feasible_count} feasible. B0 uses the full catalog. Costs are illustrative policy scores.` : "No candidates to compare.";
+    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked candidates, ${run.catalog_feasible_count} feasible. B0 is earliest feasible; B1 minimizes the joint cost tuple across the full catalog. Costs are simulation policy scores.` : "No candidates to compare.";
 }
 
 function renderChecks() {

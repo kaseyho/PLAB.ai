@@ -30,6 +30,7 @@ from app.contracts import (
     ScenarioSnapshot,
     ServiceError,
 )
+from app.operational_data import read_workbook
 
 DOMAINS: dict[str, Role | None] = {
     "search": None,
@@ -47,8 +48,10 @@ DOMAINS: dict[str, Role | None] = {
     "arrival_options": Role.PILOT,
     "service": Role.GROUND,
     "connections": Role.PILOT,
+    "operations": None,
 }
 POLICY_ID = "balanced-v1"
+WORKBOOK_POLICY_ID = "balanced-workbook-v1"
 
 
 def load_snapshot(path: Path, data_dir: Path) -> ScenarioSnapshot:
@@ -74,6 +77,19 @@ def load_snapshot(path: Path, data_dir: Path) -> ScenarioSnapshot:
         raise ServiceError("SOURCE_RECORD_NOT_FOUND", 422)
     with source_path.open("rb") as source_file:
         sha256 = hashlib.file_digest(source_file, "sha256").hexdigest()
+    if definition.source.dataset_sha256 and sha256 != definition.source.dataset_sha256:
+        raise ServiceError("SOURCE_FILE_HASH_MISMATCH", 422)
+    if any(row.get(key) != value for key, value in definition.source.identity_fields.items()):
+        raise ServiceError("SOURCE_RECORD_IDENTITY_MISMATCH", 422)
+    if definition.overlay.operations is not None:
+        policy = definition.overlay.operations.policy
+        workbook_path = (data_dir / policy.workbook_file).resolve()
+        if not workbook_path.is_relative_to(data_dir.resolve()):
+            raise ServiceError("SOURCE_PATH_OUTSIDE_DATA_DIRECTORY", 422)
+        if policy != read_workbook(workbook_path, row.get("DESTINATION_AIRPORT", "")):
+            raise ServiceError("WORKBOOK_VERSION_OR_POLICY_MISMATCH", 422)
+        if not definition.source.dataset_sha256 or not definition.source.identity_fields:
+            raise ServiceError("SOURCE_BINDING_REQUIRED", 422)
     source = HistoricalRecord(
         dataset_id=source_path.name,
         dataset_sha256=sha256,
@@ -88,7 +104,7 @@ def load_snapshot(path: Path, data_dir: Path) -> ScenarioSnapshot:
 def snapshot_from_definition(
     definition: scenarios.ScenarioSnapshot, source: HistoricalRecord
 ) -> ScenarioSnapshot:
-    if definition.policy_version != POLICY_ID:
+    if definition.policy_version not in (POLICY_ID, WORKBOOK_POLICY_ID):
         raise ServiceError("UNSUPPORTED_OBJECTIVE_POLICY", 422)
     overlay = definition.overlay.model_dump(mode="json")
     facts = [
@@ -102,7 +118,24 @@ def snapshot_from_definition(
             source_version=definition.snapshot_hash,
         )
         for section, domain in DOMAINS.items()
+        if section != "operations" or definition.overlay.operations is not None
     ]
+    if definition.overlay.operations is not None:
+        policy = definition.overlay.operations.policy
+        facts.append(
+            Fact(
+                fact_id="policy.operational_limits",
+                domain=None,
+                value=policy.model_dump(mode="json"),
+                units="seconds, kg/hour, percent, count, nautical miles",
+                provenance="policy",
+                source_reference=(
+                    f"{policy.workbook_file}: {policy.source_cells['airport']}; "
+                    "wake_separation!A3:D11; fuel_and_crew!A1:C9"
+                ),
+                source_version=policy.workbook_sha256,
+            )
+        )
     facts.extend(
         (
             Fact(
@@ -137,7 +170,7 @@ def snapshot_from_definition(
                 units="dimensionless",
                 provenance="policy",
                 source_reference="docs/technical_prd.md section 8.6",
-                source_version=POLICY_ID,
+                source_version=definition.policy_version,
                 value={
                     "delay_normalizer_s": 1800,
                     "fuel_normalizer_kg": 800,
@@ -145,6 +178,11 @@ def snapshot_from_definition(
                     "overtime_normalizer_min": 20,
                     "turnaround_normalizer_min": 30,
                     "paired_weight": "0.5",
+                    "overtime_multiplier": str(
+                        definition.overlay.operations.policy.overtime_multiplier
+                        if definition.overlay.operations
+                        else 1
+                    ),
                 },
             ),
         )
@@ -163,12 +201,14 @@ def snapshot_from_definition(
             "facts": facts,
             "required_fact_ids": [f.fact_id for f in facts],
             "concession_delta": {role: "0.25" for role in Role},
+            "required_rule_ids": list(constraints.REQUIRED_RULES)
+            + (list(constraints.OPERATIONAL_RULES) if definition.overlay.operations else []),
         }
     )
 
 
 def _definition(snapshot: ScenarioSnapshot) -> scenarios.ScenarioSnapshot:
-    if snapshot.policy_version != POLICY_ID:
+    if snapshot.policy_version not in (POLICY_ID, WORKBOOK_POLICY_ID):
         raise ServiceError("UNSUPPORTED_OBJECTIVE_POLICY")
     facts = {fact.fact_id: fact for fact in snapshot.facts}
     if facts["snapshot.versions"].value != {
@@ -190,10 +230,25 @@ def _definition(snapshot: ScenarioSnapshot) -> scenarios.ScenarioSnapshot:
             "dataset_file": snapshot.source.dataset_id,
             "record_ordinal": snapshot.source.record_ordinal,
         },
-        "overlay": {section: facts[f"overlay.{section}"].value for section in DOMAINS},
-        "provenance": {section: facts[f"overlay.{section}"].provenance for section in DOMAINS},
+        "overlay": {
+            section: facts[f"overlay.{section}"].value
+            for section in DOMAINS
+            if f"overlay.{section}" in facts
+        },
+        "provenance": {
+            section: facts[f"overlay.{section}"].provenance
+            for section in DOMAINS
+            if f"overlay.{section}" in facts
+        },
     }
     definition = scenarios.snapshot_from_dict(raw)
+    if definition.overlay.operations is not None:
+        policy_fact = facts.get("policy.operational_limits")
+        if (
+            policy_fact is None
+            or policy_fact.value != definition.overlay.operations.policy.model_dump(mode="json")
+        ):
+            raise ServiceError("WORKBOOK_POLICY_MISMATCH")
     fuel = definition.overlay.fuel
     if facts["policy.fuel_limits"].value != {
         "reserve_floor_kg": fuel.reserve_floor_kg,
@@ -261,9 +316,25 @@ def _plan(
             "costs": DomainCosts(
                 ATC=_decimal(Fraction(delay, 1800)),
                 PILOT=_decimal(used / 1600 + Fraction(missed, 40)),
-                GROUND=_decimal(overtime / 40 + lateness / 60),
+                GROUND=_decimal(
+                    overtime
+                    * Fraction(
+                        str(
+                            overlay.operations.policy.overtime_multiplier
+                            if overlay.operations
+                            else 1
+                        )
+                    )
+                    / 40
+                    + lateness / 60
+                ),
             ),
-            "evidence_ids": [f"overlay.{section}" for section in DOMAINS] + ["policy.scoring"],
+            "evidence_ids": [
+                f"overlay.{section}"
+                for section in DOMAINS
+                if section != "operations" or overlay.operations
+            ]
+            + ["policy.scoring"],
         }
     )
 
@@ -374,4 +445,13 @@ def select_fallback(snapshot: ScenarioSnapshot, catalog: CatalogResult) -> Fallb
         candidate_id=candidate_id,
         outcome=result.status,
         reason_code="PROCEDURAL_SELECTION" if candidate_id else result.status,
+    )
+
+
+def joint_baseline(catalog: CatalogResult) -> EvaluatedCandidate | None:
+    """B1: full-catalog deterministic joint optimum, on the same facts as the agents."""
+    return min(
+        (entry for entry in catalog.candidates if all(c.status == "PASS" for c in entry.checks)),
+        key=lambda entry: entry.plan.joint_order(),
+        default=None,
     )

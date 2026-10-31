@@ -1,4 +1,4 @@
-"""A finite two-round protocol. Rules and application authority remain outside agents."""
+"""At most three turns, one message per role per turn; deterministic fallback on failure."""
 
 from __future__ import annotations
 
@@ -149,9 +149,26 @@ class Coordinator:
             await self._round(run_id, 2, negotiation_deadline)
             run = self.store.require_active(run_id)
             if set(run.votes) != set(Role) or any(
-                v.decision != "ACCEPT" for v in run.votes.values()
+                v.decision == "NEEDS_INFORMATION" for v in run.votes.values()
             ):
                 raise ServiceError("FINAL_VOTE_DISSENT")
+            if any(v.decision == "REJECT" for v in run.votes.values()):
+                self.store.transition(run_id, State.REVISING)
+                revised = self._reconcile(run, {proposal.candidate_id})
+                if revised is None:
+                    raise ServiceError("NO_UNTRIED_MUTUAL_OFFER")
+                if negotiation_deadline - time.monotonic() < self.limits.request_timeout_s:
+                    raise ServiceError("INSUFFICIENT_TURN_BUDGET")
+                await self._check(run, revised)
+                self.store.select_proposal(run_id, revised)
+                self.store.transition(run_id, State.ROUND_3)
+                await self._round(run_id, 3, negotiation_deadline)
+                run = self.store.require_active(run_id)
+                proposal = revised
+                if set(run.votes) != set(Role) or any(
+                    v.decision != "ACCEPT" for v in run.votes.values()
+                ):
+                    raise ServiceError("THREE_TURN_NO_CONSENSUS")
             self.store.transition(run_id, State.FINAL_VALIDATION)
             checks = await self._check(run, proposal)
             self.store.complete(
@@ -167,11 +184,11 @@ class Coordinator:
             await self._fallback(run_id, error.code)
 
     @staticmethod
-    def _reconcile(run: RunRecord) -> CandidatePlan | None:
+    def _reconcile(run: RunRecord, excluded: set[str] | None = None) -> CandidatePlan | None:
         if set(run.offers) != set(Role):
             raise ServiceError("MISSING_ROLE_OFFER")
         plans = shortlist(run)
-        initial = {p.candidate_id for p in plans}
+        initial = {p.candidate_id for p in plans} - (excluded or set())
         flexible = initial.copy()
         for offer in run.offers.values():
             initial.intersection_update(offer.acceptable_candidate_ids)
@@ -309,7 +326,7 @@ class Coordinator:
                 message_id=request_id,
                 run_id=run_id,
                 sender_role=role,
-                round=1 if number == 1 else 2,
+                round=1 if number == 1 else 2 if number == 2 else 3,
                 message_type="OFFER" if number == 1 else "VOTE",
                 scenario_revision=run.snapshot.revision,
                 resource_revision=run.snapshot.resource_revision,

@@ -1,0 +1,328 @@
+{
+  "scenario_id": "D05",
+  "scenario_revision": 1,
+  "resource_revision": 1,
+  "ruleset_version": "organizer-v1",
+  "policy_version": "balanced-workbook-v1",
+  "simulation_epoch_utc": "2026-10-31T00:00:00Z",
+  "description": "Organizer workbook simulation: blocked_gates. Historical trigger only; operational state is synthetic.",
+  "source": {
+    "dataset_file": "flights.csv",
+    "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+    "record_ordinal": 91,
+    "identity_fields": {
+      "YEAR": "2015",
+      "MONTH": "1",
+      "DAY": "1",
+      "AIRLINE": "AA",
+      "FLIGHT_NUMBER": "1533",
+      "TAIL_NUMBER": "N5BVAA",
+      "ORIGIN_AIRPORT": "MIA",
+      "DESTINATION_AIRPORT": "BOS",
+      "SCHEDULED_DEPARTURE": "1305"
+    }
+  },
+  "provenance": {
+    "search": "synthetic_scenario",
+    "aircraft": "synthetic_scenario",
+    "runway": "synthetic_scenario",
+    "movements": "synthetic_scenario",
+    "separation_s": "policy",
+    "capacity": "policy",
+    "routes": "synthetic_scenario",
+    "taxi_blockages": "synthetic_scenario",
+    "gates": "synthetic_scenario",
+    "crews": "synthetic_scenario",
+    "equipment": "synthetic_scenario",
+    "fuel": "synthetic_scenario",
+    "arrival_options": "synthetic_scenario",
+    "service": "synthetic_scenario",
+    "connections": "synthetic_scenario",
+    "operations": "synthetic_scenario"
+  },
+  "overlay": {
+    "search": {
+      "earliest_landing_s": 1200,
+      "horizon_s": 1800,
+      "step_s": 60
+    },
+    "aircraft": {
+      "aircraft_class": "C",
+      "wake_category": "M"
+    },
+    "runway": {
+      "runway_id": "R1",
+      "available_intervals": [
+        [
+          0,
+          86400
+        ]
+      ],
+      "focal_occupancy_s": 60
+    },
+    "movements": [
+      {
+        "movement_id": "BG1",
+        "runway_id": "R1",
+        "time_s": 900,
+        "wake_category": "M",
+        "occupancy_s": 60
+      },
+      {
+        "movement_id": "BG2",
+        "runway_id": "R1",
+        "time_s": 1380,
+        "wake_category": "M",
+        "occupancy_s": 60
+      }
+    ],
+    "separation_s": {
+      "S>S": 60,
+      "S>H": 180,
+      "S>M": 180,
+      "S>L": 180,
+      "H>S": 60,
+      "H>H": 120,
+      "H>M": 120,
+      "H>L": 120,
+      "M>S": 60,
+      "M>H": 60,
+      "M>M": 60,
+      "M>L": 60,
+      "L>S": 60,
+      "L>H": 60,
+      "L>M": 60,
+      "L>L": 60
+    },
+    "capacity": {
+      "window_s": 3600,
+      "max_movements": 60
+    },
+    "routes": [
+      {
+        "route_id": "G1-short",
+        "gate_id": "G1",
+        "edges": [
+          {
+            "edge_id": "TWY-A",
+            "duration_s": 300
+          }
+        ]
+      },
+      {
+        "route_id": "G1-long",
+        "gate_id": "G1",
+        "edges": [
+          {
+            "edge_id": "TWY-B1",
+            "duration_s": 240
+          },
+          {
+            "edge_id": "TWY-B2",
+            "duration_s": 300
+          }
+        ]
+      },
+      {
+        "route_id": "G2-route",
+        "gate_id": "G2",
+        "edges": [
+          {
+            "edge_id": "TWY-C",
+            "duration_s": 480
+          }
+        ]
+      }
+    ],
+    "taxi_blockages": {},
+    "gates": [
+      {
+        "gate_id": "G1",
+        "compatible_classes": [
+          "C"
+        ],
+        "reservations": [
+          [
+            0,
+            86400
+          ]
+        ],
+        "crew_id": "CREW-G1",
+        "required_equipment": [
+          "GPU-1"
+        ]
+      },
+      {
+        "gate_id": "G2",
+        "compatible_classes": [
+          "C"
+        ],
+        "reservations": [
+          [
+            0,
+            86400
+          ]
+        ],
+        "crew_id": "CREW-G2",
+        "required_equipment": [
+          "GPU-2"
+        ]
+      }
+    ],
+    "crews": [
+      {
+        "crew_id": "CREW-G1",
+        "available_from_s": 0,
+        "regular_shift_end_s": 5400,
+        "max_duty_end_s": 7200,
+        "report_time_s": -23400
+      },
+      {
+        "crew_id": "CREW-G2",
+        "available_from_s": 0,
+        "regular_shift_end_s": 1680,
+        "max_duty_end_s": 7200,
+        "report_time_s": -27120
+      }
+    ],
+    "equipment": [
+      {
+        "equipment_id": "GPU-1",
+        "available_intervals": [
+          [
+            0,
+            86400
+          ]
+        ]
+      },
+      {
+        "equipment_id": "GPU-2",
+        "available_intervals": [
+          [
+            0,
+            86400
+          ]
+        ]
+      }
+    ],
+    "fuel": {
+      "projected_fuel_at_earliest_kg": 1800.0,
+      "hold_burn_kg_per_min": 40.0,
+      "taxi_burn_kg_per_min": 20,
+      "reserve_floor_kg": 1400.0,
+      "uncertainty_allowance_kg": 50
+    },
+    "arrival_options": [
+      {
+        "arrival_option_id": "ARR-STD",
+        "landing_window": [
+          0,
+          86400
+        ],
+        "permitted": true
+      }
+    ],
+    "service": {
+      "duration_s": 2100,
+      "pre_service_buffer_s": 0,
+      "release_buffer_s": 0,
+      "gate_buffer_s": 0,
+      "target_service_end_s": 3900
+    },
+    "connections": [
+      {
+        "group_id": "CONN-1",
+        "passengers": 12,
+        "transfer_time_s": 1200,
+        "deadline_s": 5400
+      }
+    ],
+    "operations": {
+      "policy": {
+        "workbook_file": "challenge2_operational_constraints.xlsx",
+        "workbook_sha256": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211",
+        "airport_code": "BOS",
+        "active_runways": 3,
+        "gates": 70,
+        "spare_gates": 3,
+        "max_ops_per_hour": 60,
+        "min_turnaround_s": 2100,
+        "separation_s": {
+          "S>S": 60,
+          "S>H": 180,
+          "S>M": 180,
+          "S>L": 180,
+          "H>S": 60,
+          "H>H": 120,
+          "H>M": 120,
+          "H>L": 120,
+          "M>S": 60,
+          "M>H": 60,
+          "M>M": 60,
+          "M>L": 60,
+          "L>S": 60,
+          "L>H": 60,
+          "L>M": 60,
+          "L>L": 60
+        },
+        "separation_nm": {
+          "S>S": 3,
+          "S>H": 6,
+          "S>M": 7,
+          "S>L": 8,
+          "H>S": 3,
+          "H>H": 4,
+          "H>M": 5,
+          "H>L": 6,
+          "M>S": 3,
+          "M>H": 3,
+          "M>M": 3,
+          "M>L": 4,
+          "L>S": 3,
+          "L>H": 3,
+          "L>M": 3,
+          "L>L": 3
+        },
+        "reserve_hold_min": 30,
+        "contingency_percent": 5,
+        "narrowbody_hold_kg_per_hour": 2400,
+        "widebody_hold_kg_per_hour": 6500,
+        "spare_hold_min": 45,
+        "flight_crew_duty_s": 46800,
+        "ground_shift_s": 28800,
+        "overtime_multiplier": 1.5,
+        "gate_notice_s": 1200,
+        "source_cells": {
+          "airport": "airport_capacity!A16:K16",
+          "wake": "wake_separation!A3:D11",
+          "Final fuel reserve": "fuel_and_crew!A2:C2",
+          "Contingency fuel": "fuel_and_crew!A3:C3",
+          "Holding fuel burn (narrowbody)": "fuel_and_crew!A4:C4",
+          "Holding fuel burn (widebody)": "fuel_and_crew!A5:C5",
+          "Assumed spare fuel on arrival": "fuel_and_crew!A6:C6",
+          "Flight crew max duty": "fuel_and_crew!A7:C7",
+          "Ground crew shift": "fuel_and_crew!A8:C8",
+          "Gate change notice": "fuel_and_crew!A9:C9"
+        }
+      },
+      "aircraft_kind": "narrowbody",
+      "trip_fuel_kg": 4000,
+      "flight_crew_report_s": -42000,
+      "assigned_gate_id": "G1",
+      "gate_decision_s": 0,
+      "modeled_runway_ids": [
+        "R1"
+      ],
+      "wake_application": "departure_time_proxy_for_arrivals",
+      "assumptions": [
+        "Workbook values are organizer-supplied synthetic planning limits, not actual airport data.",
+        "One runway and two candidate spare gates are a declared subset of the airport inventory. Other gates are unavailable to this decision.",
+        "Background movements are a complete synthetic traffic schedule within the planning and capacity windows; filtered DOT rows are not a queue.",
+        "M denotes Large; S/H/L denote Super/Heavy/Small. Same-runway departure time minima are an explicitly declared arrival simulation proxy; nautical-mile separation is not modeled.",
+        "Narrowbody class, 4000 kg trip fuel, 20 kg/min taxi burn and 50 kg uncertainty allowance are synthetic inputs. Arrival spare fuel includes the reserve and contingency, a conservative interpretation.",
+        "Flight duty ends at gate arrival. Report time and ground crew report times are synthetic; ground maximum duty ends at t=7200, an additional declared scenario cap.",
+        "Gate-change notice is measured from t=0 to landing, conservatively before gate arrival. Routes, service targets, connections, reservations and equipment availability are synthetic."
+      ]
+    }
+  }
+}

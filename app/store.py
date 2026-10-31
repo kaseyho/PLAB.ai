@@ -46,7 +46,9 @@ TRANSITIONS = {
     State.PREPARING: {State.ROUND_1, State.FALLBACK},
     State.ROUND_1: {State.RECONCILING, State.FALLBACK},
     State.RECONCILING: {State.ROUND_2, State.FALLBACK},
-    State.ROUND_2: {State.FINAL_VALIDATION, State.FALLBACK},
+    State.ROUND_2: {State.FINAL_VALIDATION, State.REVISING, State.FALLBACK},
+    State.REVISING: {State.ROUND_3, State.FALLBACK},
+    State.ROUND_3: {State.FINAL_VALIDATION, State.FALLBACK},
     State.FALLBACK: {State.FINAL_VALIDATION},
     State.FINAL_VALIDATION: {State.FALLBACK},
 }
@@ -230,6 +232,11 @@ class Store:
             )
             return [self._scenario(db, row[0]) for row in ids.fetchall()]
 
+    def invalidate_resource(self, resource_id: str) -> None:
+        """Retain history but close active/pending decisions on changed source files."""
+        with self.transaction() as db:
+            self._invalidate(db, resource_id)
+
     def get_scenario(self, scenario_id: str, revision: int | None = None) -> ScenarioSnapshot:
         with self.transaction() as db:
             return self._scenario(db, scenario_id, revision)
@@ -322,6 +329,16 @@ class Store:
             )
             return run, True
 
+    def existing_run(self, request: StartRunRequest, key: str) -> RunRecord | None:
+        """Resolve retries before checking mutable prerequisites for a new run."""
+        with self.transaction() as db:
+            old = db.execute("SELECT * FROM run_keys WHERE key=?", (key,)).fetchone()
+            if old is None:
+                return None
+            if old["body_hash"] != digest(request):
+                raise ServiceError("IDEMPOTENCY_CONFLICT")
+            return self._run(db, old["run_id"])
+
     def get_run(self, run_id: str) -> RunRecord:
         with self.transaction() as db:
             run = self._run(db, run_id)
@@ -349,8 +366,8 @@ class Store:
             self._require_current(db, run.snapshot)
             if state not in TRANSITIONS.get(run.processing_state, set()):
                 raise ServiceError("INVALID_STATE_TRANSITION")
-            count = (
-                1 if state == State.ROUND_1 else 2 if state == State.ROUND_2 else run.round_count
+            count = {State.ROUND_1: 1, State.ROUND_2: 2, State.ROUND_3: 3}.get(
+                state, run.round_count
             )
             run = updated(
                 run,
@@ -404,9 +421,30 @@ class Store:
         with self.transaction() as db:
             run = self._run(db, run_id)
             self._require_current(db, run.snapshot)
-            if run.processing_state != State.RECONCILING:
+            if run.processing_state not in (State.RECONCILING, State.REVISING):
                 raise ServiceError("INVALID_STATE_TRANSITION")
-            self._save(db, updated(run, candidate=plan))
+            if not run.catalog or plan not in [c.plan for c in run.catalog.candidates]:
+                raise ServiceError("PLAN_OUTSIDE_CATALOG")
+            revising = run.processing_state == State.REVISING
+            if revising and (
+                run.candidate == plan
+                or set(run.votes) != set(Role)
+                or not any(v.decision == "REJECT" for v in run.votes.values())
+                or any(v.decision == "NEEDS_INFORMATION" for v in run.votes.values())
+            ):
+                raise ServiceError("INVALID_REVISED_PROPOSAL")
+            self._save(
+                db,
+                updated(
+                    run,
+                    candidate=plan,
+                    votes={},
+                    previous_votes=run.votes if revising else {},
+                    previous_candidate_id=run.candidate.candidate_id
+                    if revising and run.candidate
+                    else None,
+                ),
+            )
             self._event(
                 db,
                 run_id,
@@ -414,6 +452,7 @@ class Store:
                 {
                     "candidate_id": plan.candidate_id,
                     "plan_hash": plan.plan_hash,
+                    "turn": 3 if revising else 2,
                 },
             )
 
@@ -423,11 +462,11 @@ class Store:
         with self.transaction() as db:
             run = self._run(db, run_id)
             self._require_current(db, run.snapshot)
-            expected = State.ROUND_1 if round_number == 1 else State.ROUND_2
+            expected = {1: State.ROUND_1, 2: State.ROUND_2, 3: State.ROUND_3}.get(round_number)
             if (
-                round_number not in (1, 2)
+                round_number not in (1, 2, 3)
                 or run.processing_state != expected
-                or run.agent_invocation_count >= 6
+                or run.agent_invocation_count >= 9
             ):
                 raise ServiceError("REQUEST_BUDGET_OR_STATE")
             request_id = str(uuid4())
@@ -542,10 +581,12 @@ class Store:
             ):
                 run = updated(run, offers={**run.offers, message.sender_role: message.payload})
             elif (
-                message.round == 2
+                message.round in (2, 3)
                 and isinstance(message.payload, AgentVote)
                 and message.message_type == "VOTE"
             ):
+                if message.payload.plan_hash != run.plan_hash:
+                    raise ServiceError("VOTE_PLAN_HASH_MISMATCH")
                 run = updated(run, votes={**run.votes, message.sender_role: message.payload})
             else:
                 raise ServiceError("MESSAGE_TYPE_MISMATCH")
@@ -556,8 +597,12 @@ class Store:
             self._event(
                 db,
                 run.run_id,
-                "VOTE_RECORDED" if message.round == 2 else "OFFER_RECORDED",
-                {"message_id": message.message_id, "role": message.sender_role},
+                "VOTE_RECORDED" if message.round > 1 else "OFFER_RECORDED",
+                {
+                    "message_id": message.message_id,
+                    "role": message.sender_role,
+                    "round": message.round,
+                },
             )
             return True
 
@@ -615,8 +660,8 @@ class Store:
                     ):
                         raise ServiceError("PLAN_OUTSIDE_CATALOG")
                     if outcome == Outcome.CONSENSUS and (
-                        run.round_count != 2
-                        or run.agent_invocation_count != 6
+                        run.round_count not in (2, 3)
+                        or run.agent_invocation_count != 3 * run.round_count
                         or set(run.votes) != set(Role)
                         or set(run.offers) != set(Role)
                         or any(

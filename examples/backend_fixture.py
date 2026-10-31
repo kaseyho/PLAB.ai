@@ -6,6 +6,7 @@ an evaluation baseline, or evidence of operational feasibility.
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
@@ -212,3 +213,21 @@ class FixtureProvider:
 
     async def close(self) -> None:
         pass
+
+
+class DissentFixtureProvider(FixtureProvider):
+    """One labelled test rejection to demonstrate fresh votes on a third-turn proposal."""
+
+    async def generate(
+        self, role: Role, round_number: int, prompt: dict[str, JsonValue], timeout_s: float
+    ) -> ProviderReply:
+        reply = await super().generate(role, round_number, prompt, timeout_s)
+        if role == Role.PILOT and round_number == 2:
+            body = json.loads(reply.text)
+            body.update(
+                decision="REJECT",
+                reason_codes=["FIXTURE_DISSENT"],
+                rationale="Injected dissent to demonstrate a fresh third-turn proposal.",
+            )
+            return ProviderReply(json.dumps(body))
+        return reply

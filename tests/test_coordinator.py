@@ -112,7 +112,7 @@ class FaultProvider(FixtureProvider):
         ("exception", 1, "PROVIDER_ERROR"),
         ("incomplete", 1, "PROVIDER_INCOMPLETE_OR_REFUSED"),
         ("wrong_hash", 2, "VOTE_PLAN_HASH_MISMATCH"),
-        ("REJECT", 2, "FINAL_VOTE_DISSENT"),
+        ("REJECT", 2, "NO_UNTRIED_MUTUAL_OFFER"),
         ("NEEDS_INFORMATION", 2, "FINAL_VOTE_DISSENT"),
     ],
 )

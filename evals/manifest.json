@@ -1,0 +1,378 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "file": "flights.csv",
+    "sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+    "rows": 358774,
+    "invalid_year_or_filter": 0,
+    "cancelled": 0,
+    "diverted": 0
+  },
+  "workbook": {
+    "file": "challenge2_operational_constraints.xlsx",
+    "sha256": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211"
+  },
+  "selection": "Fixed airport/trigger first-match sampling; distinct flight identities and disjoint development/holdout airports. Synthetic templates share infrastructure; this suite is not a generalization benchmark.",
+  "cases": [
+    {
+      "case_id": "D01",
+      "split": "development",
+      "path": "scenarios/organizer/D01.json",
+      "sha256": "05b52162fe057a039c11d54f8dd07ddab77d21762f44241bad663f94d0168368",
+      "variant": "tradeoff",
+      "expected": "FEASIBLE",
+      "trigger": "weather",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "1057",
+        "TAIL_NUMBER": "N3ASAA",
+        "ORIGIN_AIRPORT": "DFW",
+        "DESTINATION_AIRPORT": "MIA",
+        "SCHEDULED_DEPARTURE": "0515"
+      }
+    },
+    {
+      "case_id": "D02",
+      "split": "development",
+      "path": "scenarios/organizer/D02.json",
+      "sha256": "34203db416011ba3687f3b0d15a08ffc1c407ff2eca40488e397b692ff130b7a",
+      "variant": "fixed_gate",
+      "expected": "FEASIBLE",
+      "trigger": "late",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "5",
+        "TAIL_NUMBER": "N376AA",
+        "ORIGIN_AIRPORT": "DFW",
+        "DESTINATION_AIRPORT": "HNL",
+        "SCHEDULED_DEPARTURE": "1305"
+      }
+    },
+    {
+      "case_id": "D03",
+      "split": "development",
+      "path": "scenarios/organizer/D03.json",
+      "sha256": "2cd74934786d196c447e7ede0ee58c9f2b88935dad46c00aed5a54cf567baedc",
+      "variant": "tradeoff",
+      "expected": "FEASIBLE",
+      "trigger": "both",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "5",
+        "AIRLINE": "EV",
+        "FLIGHT_NUMBER": "4662",
+        "TAIL_NUMBER": "N33182",
+        "ORIGIN_AIRPORT": "ORD",
+        "DESTINATION_AIRPORT": "CLT",
+        "SCHEDULED_DEPARTURE": "0845"
+      }
+    },
+    {
+      "case_id": "D04",
+      "split": "development",
+      "path": "scenarios/organizer/D04.json",
+      "sha256": "49265f45847eb8a1d546d237f14c5a6f37cf7e242976f856ec9a7561effc3627",
+      "variant": "heavy",
+      "expected": "FEASIBLE",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "B6",
+        "FLIGHT_NUMBER": "398",
+        "TAIL_NUMBER": "N709JB",
+        "ORIGIN_AIRPORT": "MCO",
+        "DESTINATION_AIRPORT": "LGA",
+        "SCHEDULED_DEPARTURE": "1425"
+      }
+    },
+    {
+      "case_id": "D05",
+      "split": "development",
+      "path": "scenarios/organizer/D05.json",
+      "sha256": "6ad65d212bc44cee630bd63a0d00716223e80f660d88649cf249b68e508a701c",
+      "variant": "blocked_gates",
+      "expected": "NO_PLAN",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "1533",
+        "TAIL_NUMBER": "N5BVAA",
+        "ORIGIN_AIRPORT": "MIA",
+        "DESTINATION_AIRPORT": "BOS",
+        "SCHEDULED_DEPARTURE": "1305"
+      }
+    },
+    {
+      "case_id": "D06",
+      "split": "development",
+      "path": "scenarios/organizer/D06.json",
+      "sha256": "9dccb33f493bed011f6eb9635973e83c3c235ecb5ae2a38705ab99b7f2dcec6c",
+      "variant": "missing_fuel",
+      "expected": "INSUFFICIENT",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "1017",
+        "TAIL_NUMBER": "N5EKAA",
+        "ORIGIN_AIRPORT": "DFW",
+        "DESTINATION_AIRPORT": "SEA",
+        "SCHEDULED_DEPARTURE": "1755"
+      }
+    },
+    {
+      "case_id": "H01",
+      "split": "holdout",
+      "path": "evals/holdout/H01.json",
+      "sha256": "30e0fca42ed36ce95f6ad582b9caf64c3153456c741550608e72de0d9bb90a9a",
+      "variant": "fixed_gate",
+      "expected": "FEASIBLE",
+      "trigger": "weather",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "UA",
+        "FLIGHT_NUMBER": "656",
+        "TAIL_NUMBER": "N402UA",
+        "ORIGIN_AIRPORT": "PHX",
+        "DESTINATION_AIRPORT": "ORD",
+        "SCHEDULED_DEPARTURE": "0702"
+      }
+    },
+    {
+      "case_id": "H02",
+      "split": "holdout",
+      "path": "evals/holdout/H02.json",
+      "sha256": "570e9f48e5dfaf9177fe1cecb42d6daa601c8065f1dae8067529e73cf7b55c04",
+      "variant": "arrival_window",
+      "expected": "FEASIBLE",
+      "trigger": "late",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "1523",
+        "TAIL_NUMBER": "N434AA",
+        "ORIGIN_AIRPORT": "DFW",
+        "DESTINATION_AIRPORT": "DEN",
+        "SCHEDULED_DEPARTURE": "2110"
+      }
+    },
+    {
+      "case_id": "H03",
+      "split": "holdout",
+      "path": "evals/holdout/H03.json",
+      "sha256": "9417c18dce45e70e97f77ff2bb1d1e9c6b47ccba042e388898ce9af0e14450b0",
+      "variant": "heavy",
+      "expected": "FEASIBLE",
+      "trigger": "both",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "3",
+        "AIRLINE": "UA",
+        "FLIGHT_NUMBER": "1223",
+        "TAIL_NUMBER": "N73278",
+        "ORIGIN_AIRPORT": "MSP",
+        "DESTINATION_AIRPORT": "SFO",
+        "SCHEDULED_DEPARTURE": "1718"
+      }
+    },
+    {
+      "case_id": "H04",
+      "split": "holdout",
+      "path": "evals/holdout/H04.json",
+      "sha256": "fda0ca0357601b913f8a33b9e3c9744eddbf8b7af0d146a27ff0355914f10381",
+      "variant": "fixed_gate",
+      "expected": "FEASIBLE",
+      "trigger": "later_month",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "6",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "3",
+        "TAIL_NUMBER": "N795AA",
+        "ORIGIN_AIRPORT": "JFK",
+        "DESTINATION_AIRPORT": "LAX",
+        "SCHEDULED_DEPARTURE": "1245"
+      }
+    },
+    {
+      "case_id": "H05",
+      "split": "holdout",
+      "path": "evals/holdout/H05.json",
+      "sha256": "a45f6808dd92bd253246eed777b6d080309d62fd73d5b413ebb0eda8a9ecad2f",
+      "variant": "notice_conflict",
+      "expected": "FEASIBLE",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "151",
+        "TAIL_NUMBER": "N3KHAA",
+        "ORIGIN_AIRPORT": "DEN",
+        "DESTINATION_AIRPORT": "ORD",
+        "SCHEDULED_DEPARTURE": "1815"
+      }
+    },
+    {
+      "case_id": "H06",
+      "split": "holdout",
+      "path": "evals/holdout/H06.json",
+      "sha256": "da079edf927534553b91ee8d6b0a5566b68e9bb588c63c179fab193d0d43b553",
+      "variant": "taxi_conflict",
+      "expected": "FEASIBLE",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "EV",
+        "FLIGHT_NUMBER": "3267",
+        "TAIL_NUMBER": "N14186",
+        "ORIGIN_AIRPORT": "ISN",
+        "DESTINATION_AIRPORT": "DEN",
+        "SCHEDULED_DEPARTURE": "1315"
+      }
+    },
+    {
+      "case_id": "H07",
+      "split": "holdout",
+      "path": "evals/holdout/H07.json",
+      "sha256": "e58e8681933238d505b7584da28f0f2f0691ab6806cbaddaacb22797caf1f1ad",
+      "variant": "blocked_gates",
+      "expected": "NO_PLAN",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "305",
+        "TAIL_NUMBER": "N5EGAA",
+        "ORIGIN_AIRPORT": "MIA",
+        "DESTINATION_AIRPORT": "SFO",
+        "SCHEDULED_DEPARTURE": "1420"
+      }
+    },
+    {
+      "case_id": "H08",
+      "split": "holdout",
+      "path": "evals/holdout/H08.json",
+      "sha256": "95abf2de8a40e56d7ceb00cbf9a700eb7fd711281c241d104e9961d049f83aad",
+      "variant": "impossible_fuel",
+      "expected": "NO_PLAN",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "169",
+        "TAIL_NUMBER": "N854AA",
+        "ORIGIN_AIRPORT": "LAS",
+        "DESTINATION_AIRPORT": "LAX",
+        "SCHEDULED_DEPARTURE": "0930"
+      }
+    },
+    {
+      "case_id": "H09",
+      "split": "holdout",
+      "path": "evals/holdout/H09.json",
+      "sha256": "d6cc18116e32f9b0e7841c5c8258a29ebb572901f3eecf3b3b89effa67eff960",
+      "variant": "missing_fuel",
+      "expected": "INSUFFICIENT",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "395",
+        "TAIL_NUMBER": "N3MCAA",
+        "ORIGIN_AIRPORT": "SJU",
+        "DESTINATION_AIRPORT": "ORD",
+        "SCHEDULED_DEPARTURE": "1600"
+      }
+    },
+    {
+      "case_id": "H10",
+      "split": "holdout",
+      "path": "evals/holdout/H10.json",
+      "sha256": "5e18e6af52371da953beece4ec29a7e8e1d6dc325741784c6788aa9ee0c030a2",
+      "variant": "stale_approval",
+      "expected": "STALE_BLOCKED",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "EV",
+        "FLIGHT_NUMBER": "3946",
+        "TAIL_NUMBER": "N13124",
+        "ORIGIN_AIRPORT": "PIT",
+        "DESTINATION_AIRPORT": "DEN",
+        "SCHEDULED_DEPARTURE": "1202"
+      }
+    },
+    {
+      "case_id": "H11",
+      "split": "holdout",
+      "path": "evals/holdout/H11.json",
+      "sha256": "6db1d8e4083c8a682cd670d786e21a7724c86c082db6dc48040d93887e95e8a1",
+      "variant": "timeout",
+      "expected": "FALLBACK",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "2465",
+        "TAIL_NUMBER": "N3LRAA",
+        "ORIGIN_AIRPORT": "LAX",
+        "DESTINATION_AIRPORT": "SFO",
+        "SCHEDULED_DEPARTURE": "2020"
+      }
+    },
+    {
+      "case_id": "H12",
+      "split": "holdout",
+      "path": "evals/holdout/H12.json",
+      "sha256": "de0e57212f759d68bcf0a195351150106534698c3b5d1535ef3c881f69f9df57",
+      "variant": "malformed",
+      "expected": "FALLBACK",
+      "trigger": "any",
+      "identity": {
+        "YEAR": "2015",
+        "MONTH": "1",
+        "DAY": "1",
+        "AIRLINE": "AA",
+        "FLIGHT_NUMBER": "205",
+        "TAIL_NUMBER": "N3LFAA",
+        "ORIGIN_AIRPORT": "MCO",
+        "DESTINATION_AIRPORT": "LAX",
+        "SCHEDULED_DEPARTURE": "2015"
+      }
+    }
+  ]
+}

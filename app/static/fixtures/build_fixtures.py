@@ -1,4 +1,4 @@
-"""Regenerate seven labelled dashboard samples through the shared backend.
+"""Regenerate eight labelled dashboard samples through the shared backend.
 
 Run: uv run python -m app.static.fixtures.build_fixtures
 The samples are view projections, not full trace exports or evaluation results.
@@ -23,14 +23,15 @@ from app.contracts import (
     StartRunRequest,
 )
 from app.coordinator import Coordinator
-from app.planning import build_catalog, check_plan, load_snapshot, select_fallback
+from app.planning import build_catalog, check_plan, joint_baseline, load_snapshot, select_fallback
 from app.store import Store
-from examples.backend_fixture import FixtureProvider
+from examples.backend_fixture import DissentFixtureProvider, FixtureProvider
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
 NAMES = (
     "consensus",
+    "third-turn",
     "fallback",
     "no-feasible",
     "insufficient-data",
@@ -61,6 +62,8 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
     resource = ResourceState(resource_id=snapshot.resource_id, revision=snapshot.resource_revision)
     store.register_scenario(snapshot, resource)
     provider: AgentProvider = UnavailableProvider() if name == "fallback" else FixtureProvider()
+    if name == "third-turn":
+        provider = DissentFixtureProvider()
     run, _ = store.create_run(
         StartRunRequest(scenario_id=snapshot.scenario_id, scenario_revision=snapshot.revision),
         name,
@@ -126,6 +129,8 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
             (e for e in catalog.candidates if e.plan.candidate_id == fallback.candidate_id), None
         )
         payload["baseline_b0"] = baseline.model_dump(mode="json") if baseline else None
+        b1 = joint_baseline(catalog)
+        payload["baseline_b1"] = b1.model_dump(mode="json") if b1 else None
     payload["events"] = [
         {
             "sequence": event.sequence,
@@ -155,7 +160,7 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
 
 
 async def main() -> None:
-    snapshot = load_snapshot(ROOT / "scenarios" / "D01.json", ROOT / "data")
+    snapshot = load_snapshot(ROOT / "scenarios/organizer/D01.json", ROOT / "data")
     with TemporaryDirectory() as temporary:
         for name in NAMES:
             payload = await build(name, snapshot, Path(temporary) / f"{name}.sqlite3")

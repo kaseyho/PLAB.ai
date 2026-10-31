@@ -1,6 +1,12 @@
 # PLAB.ai technical product requirements
 
-**Status:** Requirements revised for the organizer clarification of 31 October 2026. The merged application implements the two-turn profile described below; workbook integration and the frozen agent evaluation report are not claimed complete. See [the update record](organizer_updates.md) and [implementation handoff](backend_handoff.md).
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
+**Status:** Implemented organizer MVP. See the submission guide for measured results and declared assumptions.
 
 **Prepared:** 31 October 2026, Asia/Singapore.
 
@@ -86,13 +92,13 @@ Weighted score is `sum((criterion_score / 5) × criterion_weight)`. Evaluation a
 
 **Within three turns.** The organizer now defines one turn as **one structured message from each of ATC, Pilot and Ground**. A completed turn therefore has three role messages, which may be generated concurrently. The challenge ceiling is **three agent turns and nine generation requests**, followed by deterministic fallback if consensus has not been reached. Fallback, reconciliation, checks and human review do not consume an agent turn. Log every started request and any incomplete/invalid turn; no hidden repair prompt, retry or automatic restart may bypass the ceiling.
 
-The implemented MVP deliberately uses a **two-turn/six-request execution profile**: offers, then exact-plan votes, with early fallback on failure or dissent. This profile stays within the clarified ceiling. Existing `round`/`round_count` fields count these agent turns, not individual messages. A third turn is permitted by the challenge but is not implemented merely by updating this specification. Section 9 defines the conditions for an optional versioned extension.
+The implemented MVP supports three turns/nine requests: offers, exact-plan votes, and one revised-plan vote after valid dissent. API round fields count turns. All final votes must be fresh and match one plan hash.
 
 ### 2.4 Updated data and operational evidence
 
 The organizer reports **358,774 records from 2015** in the newly supplied `flights.csv`, selected by `WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20`. DOT data has no gates, runways, fuel or crew. Use the new **`challenge2_operational_constraints.xlsx`** for synthetic per-airport gates, runways, movements/hour and turnaround, plus wake separation, fuel and crew rules. Cited real figures are also accepted.
 
-The local CSV remains the earlier full release. The workbook was unavailable for inspection during this documentation update. Its exact cells, values and units are unverified; existing D01 constants are not workbook-derived. Section 5 separates the old measured profile from new organizer-reported inputs and specifies the evidence mapping required before integration.
+The current CSV is verified at 358,774 eligible 2015 rows. The workbook is inspected and imported. Full-release figures below remain legacy evidence; current hashes and conversions are in the submission guide.
 
 ## 3. Problem analysis
 
@@ -147,7 +153,7 @@ The agents are **not the numerical optimizer or safety authority**. They interpr
 - A 30-minute search window after the earliest simulated landing time, on one-minute increments: at most `31 × 2 × 2 = 124` raw candidate combinations.
 - Background movements and gate reservations are fixed inputs. The MVP does not jointly reschedule all traffic.
 - Revised landing time, gate-in time, gate assignment, taxi-route selection, and derived handling completion.
-- Three independently invoked domain agents, at most three defined turns, a deterministic coordinator, and visible message records; current profile: two turns/six requests.
+- Three independently invoked domain agents, at most three defined turns, a deterministic coordinator, and visible message records; current profile: three turns/nine requests.
 - Versioned workbook-backed or explicitly cited operational limits, plus labelled scenario-specific runway, taxi, fuel, gate, crew and route-permission state. Existing illustrative fixtures remain legacy regression cases until remapped.
 - Deterministic feasible fallback, or non-executable escalation if no validated plan is available.
 - Human approval, rejection, and input revision followed by a separately identified run.
@@ -274,7 +280,7 @@ The workbook is an organizer-provided synthetic rule/input pack, not live airpor
 
 **DATA-10:** A new CSV, workbook mapping, citation, threshold or conversion creates a new scenario/ruleset version as appropriate, invalidates prior review bindings and requires boundary/evaluation reruns. Do not rewrite previous traces to make old results appear workbook-compliant.
 
-**Implementation status:** the current loader reads JSON scenarios and does not import XLSX. Developer C owns the inspected workbook-to-snapshot mapping and new-file profiling. Exact numeric mappings, source-row rebinding and workbook-backed evaluation remain pending until the files and conversions are verified.
+**Implementation status:** app/operational_data.py validates workbook labels, units, cells and hashes; app/prepare.py creates six development and twelve retained holdout cases. Scenarios bind the filtered CSV hash and natural identity. Missing or changed sources fail closed.
 
 ## 6. Functional requirements
 
@@ -286,7 +292,7 @@ The workbook is an organizer-provided synthetic rule/input pack, not live airpor
 | FR-04 | Evaluate required ATC, pilot, and ground rules with `PASS/FAIL/UNKNOWN` | Rule-level results, numeric margins, input references |
 | FR-05 | Invoke three separate role agents with separate prompts and message identities | Actual provider request records, not three UI labels |
 | FR-06 | Exchange structured offers and votes through a deterministic coordinator | Schema-valid messages and reconciliation event |
-| FR-07 | Finish within three agent turns/nine generation requests and the declared profile limit | One-message-per-role/turn assertions; current profile also enforces two turns/six requests |
+| FR-07 | Finish within three agent turns/nine generation requests and the declared profile limit | One-message-per-role/turn assertions; current profile enforces three turns/nine requests |
 | FR-08 | Declare consensus only when three current votes accept the same checked plan | Crossed-hash, dissent, and missing-vote tests |
 | FR-09 | Use non-AI fallback on negotiation failure; escalate when no checked option exists | Model-offline, no-plan, and missing-data cases |
 | FR-10 | Explain the recommendation, rejected alternatives, concessions, and evidence | Human inspection of trace and claim references |
@@ -299,7 +305,7 @@ The workbook is an organizer-provided synthetic rule/input pack, not live airpor
 
 ### 6.1 Nonfunctional requirements
 
-- **Boundedness:** Maximum 124 raw candidate combinations under the declared one-runway/two-gate scope; at most three agent turns/nine generation requests, and no recursive delegation. The implemented profile is stricter at two turns/six requests. Workbook airport totals do not silently expand the search.
+- **Boundedness:** Maximum 124 raw candidate combinations under the declared one-runway/two-gate scope; at most three agent turns/nine generation requests, and no recursive delegation. The implemented profile enforces three turns/nine requests. Workbook airport totals do not silently expand the search.
 - **Latency:** Proposed target below 30 seconds from accepted input to terminal recommendation on the demonstration machine; hard run deadline 45 seconds. Human review time is separate. These are targets pending measurement.
 - **Request limits:** Initial per-agent timeout 12 seconds, maximum output 500 tokens, no automatic SDK or application model retry. Tune only with recorded evidence and stay within the run deadline.
 - **Reproducibility:** Deterministic scenario generation, candidate order, checks, selection, and fallback for the same versioned inputs. Live LLM responses are not promised to be deterministic.
@@ -315,7 +321,7 @@ The workbook is an organizer-provided synthetic rule/input pack, not live airpor
 
 Use **Python, FastAPI, Pydantic, SQLite, and a small same-origin HTML/CSS/JavaScript dashboard**, with one model-provider adapter. Use `asyncio` to run the three role calls concurrently. Poll persisted run state approximately once per second; streaming infrastructure is unnecessary for this scope.
 
-This stack is now implemented in the merged application and dependencies are locked in `uv.lock`. Workbook ingestion and the frozen evaluation/B1 pipeline remain pending; consult the backend handoff for implemented interfaces and retained verification evidence. Use an available provider/model whose structured-response behavior is smoke-tested during the first 15 minutes; model name, version, settings, and prompt hashes must be recorded.
+This stack is now implemented in the merged application and dependencies are locked in `uv.lock`. Workbook ingestion and the evaluation/B1 pipeline are implemented; consult the backend handoff for implemented interfaces and retained verification evidence. Use an available provider/model whose structured-response behavior is smoke-tested during the first 15 minutes; model name, version, settings, and prompt hashes must be recorded.
 
 A plain deterministic state machine is the default. LangGraph is optional only if a collaborator already has a working starter. Its interrupt mechanism supports persisted pauses and resumes, but introducing an unfamiliar orchestration framework is unnecessary here. If used, resumed nodes can repeat pre-interrupt code, so approval side effects must remain idempotent. [LangGraph interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
 
@@ -362,13 +368,14 @@ The three roles may share one model, process, and codebase. Independence require
 
 For the MVP, domain tools are deterministic functions evaluated before model calls. Their structured results are injected into each role's context. The model need not invoke a tool recursively to demonstrate tool-assisted reasoning; this design keeps call budgets enforceable.
 
-### 7.4 Proposed implementation layout
+### 7.4 Implemented MVP layout
 
 ```text
 app/
   main.py                 API and static UI serving
   contracts.py            Pydantic schemas shared by all modules
-  data_adapter.py         Local row extraction and provenance
+  operational_data.py     Workbook import, CSV profile and source verification
+  prepare.py              Reproducible organizer scenario preparation
   scenarios.py            Overlay loading and snapshot validation
   planning.py             Candidate generation, scoring, baselines
   constraints.py          ATC, pilot, ground checks
@@ -376,15 +383,16 @@ app/
   coordinator.py          Bounded negotiation state machine
   approvals.py            Authorization, revalidation, application
   store.py                SQLite transactions and events
+  demo.py                 Isolated live or explicitly labelled offline demo
+  evaluate.py             Optional measured evaluation runner
   static/                 HTML, CSS, JavaScript dashboard
 scenarios/                Synthetic manifests and source locators
-policies/                 Illustrative rules and objective policies
-evals/                    Frozen manifest, runner, expected outcomes
+evals/                    Frozen manifest, holdout cases and result summaries
 tests/                    Boundary, protocol, and approval checks
 artifacts/                Generated local traces and measured reports
 ```
 
-Generated raw traces may contain historical rows or provider metadata. Keep them local/ignored by default; publish a reviewed evidence export. This is a target layout: the core service, planner and UI exist; proposed adapter, policy and evaluation paths are not all implemented. The workbook importer and measured report remain outstanding.
+Generated raw traces may contain historical rows or provider metadata. Keep them local/ignored by default; publish a reviewed evidence export. The workbook importer, service, planner, UI and measured reports are implemented. Rule policy values and source bindings live in the typed scenario snapshots rather than a separate policy service.
 
 ## 8. Deterministic planning and constraint model
 
@@ -476,7 +484,7 @@ crew_overtime_min = max(0, service_end_s
 turnaround_lateness_min = max(0, service_end_s - target_service_end_s) / 60
 ```
 
-This overtime measures the portion of this task performed after the regular shift ends; it does not charge idle time before service begins. Maximum duty end is a separate hard scenario limit. Overtime before that limit is a cost, not automatically a hard prohibition. No crew reassignment optimizer is required: use a declared compatible crew assignment per gate/route scenario.
+The workbook profile uses overtime_multiplier = 1.5; the legacy fixture uses 1.0. Flight-crew duty is a separate 13-hour limit through gate arrival. This overtime measures the portion of this task performed after the regular shift ends; it does not charge idle time before service begins. Maximum duty end is a separate hard scenario limit. Overtime before that limit is a cost, not automatically a hard prohibition. No crew reassignment optimizer is required: use a declared compatible crew assignment per gate/route scenario.
 
 A synthetic connection group is missed when `gate_in_s + transfer_time_s > connection_deadline_s`; sum the group passenger counts. This is a modeled deadline outcome, not a calibrated probability of missing a connection.
 
@@ -493,7 +501,7 @@ modeled_fuel_used_kg = F_e - fuel_at_gate_kg
 J_ATC = additional_landing_delay_s / 1800
 J_PILOT = 0.5 × modeled_fuel_used_kg / 800
           + 0.5 × missed_connection_passengers / 20
-J_GROUND = 0.5 × crew_overtime_min / 20
+J_GROUND = 0.5 × crew_overtime_min × overtime_multiplier / 20
            + 0.5 × turnaround_lateness_min / 30
 
 joint_order = (
@@ -528,9 +536,28 @@ Fallback must not pick a least-unsafe candidate. A search failure does not prove
 
 ## 9. Multi-agent coordination protocol
 
+### Implemented organizer mapping
+
+The submission profile is organizer-v1 / balanced-workbook-v1. Four additional
+checks are SYSTEM-OPS-01 (workbook/subset), PILOT-DUTY-01 (flight duty through gate
+arrival), GROUND-NOTICE-01 (20-minute gate-change notice to landing), and
+GROUND-TURN-01 (airport minimum turnaround). There are 15 required checks.
+
+Fuel includes 30 holding minutes of reserve plus 5% of supplied trip fuel and
+a separate scenario uncertainty allowance. Holding rates are 2400/6500 kg/hour
+for narrowbody/widebody; arrival spare fuel defaults to 45 holding minutes.
+Ground shifts are eight hours with 1.5 times overtime cost. Report times, fuel
+state and ground maximum-duty cap are declared scenario inputs.
+
+Departure wake-time minima are explicitly used as an arrival simulation proxy.
+Nautical-mile spacing is retained as evidence, not modeled. Airport hourly
+capacity counts all supplied movements; occupancy/wake checks use the selected
+runway. Exact source cells and workbook hashes accompany each policy. Unit
+conversion comparisons permit at most 1e-9 kg or kg/min numerical difference.
+
 ### 9.1 Preparation
 
-A turn is one structured message per role; use the terms `turn` and existing API `round` consistently. Persist the actual protocol profile with its configured limits in evaluation manifests. Current code supports only two turns/six requests. The organizer ceiling is three turns/nine requests, with deterministic fallback outside those turns.
+A turn is one structured message per role; use the terms `turn` and existing API `round` consistently. Persist the actual protocol profile with its configured limits in evaluation manifests. Current code supports three turns/nine requests. The organizer ceiling is three turns/nine requests, with deterministic fallback outside those turns.
 
 The server freezes the source row, scenario, resources, rules, objective policy, and candidate-set hashes. It validates required inputs and computes deterministic reports. Invalid input terminates before model calls. Every role receives the same run identity and historical seed, its scoped facts and reports, the shortlist, and the other domains' necessary published impact summaries.
 
@@ -577,15 +604,15 @@ Consensus requires all of the following:
 4. The final plan passes the deterministic checker again.
 5. The run has not expired, been cancelled, or exceeded either counter limit.
 
-The coordinator records `FEASIBLE_CONSENSUS` and makes the plan available for human review. In the implemented two-turn profile, any dissent, unknown, timeout, schema error or missing vote terminates negotiation and invokes fallback/escalation; stale inputs interrupt. No majority voting is permitted for consensus.
+The coordinator records `FEASIBLE_CONSENSUS` and makes the plan available for human review. Valid Turn 2 dissent may use Turn 3. Unknown information, timeout, schema error or a missing vote invokes fallback/escalation; stale inputs interrupt. No majority voting is permitted for consensus.
 
-**Optional Turn 3, not implemented:** a separately versioned three-turn profile may handle a valid Turn 2 rejection by selecting the next untried candidate from the same validated common offer/concession intersection, with the rejected candidate excluded and deterministic ordering unchanged. It must not relax a hard rule or concession envelope. If no alternative or adequate time remains, fall back immediately. All three roles receive the complete revised proposal/hash and peer dissent before sending exactly one fresh final vote each. Turn 2 accepts cannot be reused for the changed plan. Three current Turn 3 accepts and a fresh passing check establish consensus; otherwise fallback decides. No fourth turn or hidden confirmation is allowed. Missing critical information, malformed output, timeout or stale state remain early termination paths.
+**Turn 3, implemented:** the coordinator handles a valid Turn 2 rejection by selecting the next untried candidate from the same validated common offer/concession intersection, with the rejected candidate excluded and deterministic ordering unchanged. It must not relax a hard rule or concession envelope. If no alternative or adequate time remains, fall back immediately. All three roles receive the complete revised proposal/hash and peer dissent before sending exactly one fresh final vote each. Turn 2 accepts cannot be reused for the changed plan. Three current Turn 3 accepts and a fresh passing check establish consensus; otherwise fallback decides. No fourth turn or hidden confirmation is allowed. Missing critical information, malformed output, timeout or stale state remain early termination paths.
 
-Enabling this extension requires contracts, message/store uniqueness and request guards, state transitions, prompts, counters, UI and tests to support Turn 3 together. This documentation update does not change the runtime profile.
+Contracts, store guards, coordinator, prompts and UI implement Turn 3 together. Previous votes are retained as evidence and cleared from the active vote set.
 
 ### 9.5 Termination, retries, and recovery
 
-- Challenge ceiling: three turns/nine generation requests; implemented profile: two turns/six requests. Count every started request and permit at most one message per role per turn. Cancel pending calls on failure and use fallback; never spend an extra call to repair a message. A third-turn extension retains the existing 45-second deadline and five-second fallback reserve, rather than increasing them silently.
+- Challenge ceiling: three turns/nine generation requests; implemented profile: three turns/nine requests. Count every started request and permit at most one message per role per turn. Cancel pending calls on failure and use fallback; never spend an extra call to repair a message. The third turn retains the existing 45-second deadline and five-second fallback reserve, rather than increasing them silently.
 - Disable SDK retries. Invalid structured output is a protocol failure, not a prompt-repair opportunity.
 - Deterministic JSON parsing/validation is allowed; speculative extraction from arbitrary prose is not.
 - A late response is recorded as late and cannot overwrite a terminal result.
@@ -597,12 +624,13 @@ Enabling this extension requires contracts, message/store uniqueness and request
 
 ### 9.6 State and outcome model
 
-Keep negotiation outcome separate from approval lifecycle. The state path below is the implemented two-turn profile; optional Turn 3 requires an explicit additional state and migration/tested guards, and is not currently available:
+Keep negotiation outcome separate from approval lifecycle. The state path includes optional revision after valid dissent:
 
 ```text
 processing_state:
   CREATED → VALIDATING → PREPARING → ROUND_1 → RECONCILING
           → ROUND_2 → FINAL_VALIDATION → TERMINAL
+  valid dissent → REVISING → ROUND_3 → FINAL_VALIDATION → TERMINAL
   failure branches → FALLBACK → FINAL_VALIDATION → TERMINAL
 
 negotiation_outcome:
@@ -744,7 +772,7 @@ Display actual backend progress. Do not animate scripted negotiations or put a c
 
 - **Ready:** selected source qualifies and required simulated inputs are present.
 - **Input review required:** name missing/invalid facts and show why planning cannot proceed.
-- **Negotiating, turn N of the configured limit:** display actual role-message and started-call counts. Current UI uses “round 1 of 2 / round 2 of 2” for its two-turn profile. A tested third-turn profile must display its actual three-turn limit; never relabel a two-turn run as three.
+- **Negotiating, turn N of the configured limit:** display actual role-message and started-call counts. The UI shows actual turns out of three and model calls out of nine, separately from fixture invocations.
 - **Consensus awaiting review:** all three final votes accepted the displayed plan.
 - **Fallback awaiting review:** show why negotiation failed and that the plan comes from deterministic policy.
 - **No feasible option in the searched window:** display bounds and blocking constraints.
@@ -826,7 +854,7 @@ The following is a practical engineering target, not an achieved result:
 | Deterministic boundary/protocol/approval checks | 29 test groups listed in Section 14.7 | Mandatory invariants without LLM cost; groups may contain several assertions |
 | Optional stability subset | 3 holdout scenarios, 2 additional runs each | Observe repeat variability if time and API budget allow |
 
-Run the full-system pipeline once on each of the 12 frozen cases. Some cases should terminate before any model call. Run both deterministic baselines on every applicable case: up to 24 comparator executions. Preselect optional repeat cases H01, H05, and H06 in the frozen manifest before observing results. Repeating each twice more produces at most 18 full-system runs, not 18 independent scenarios, and at most 162 generation requests under a full three-turn profile, or 108 under the implemented two-turn profile. These are ceilings, not a request to spend the maximum; report the actual configured profile and all started calls. Primary headline rates use the first scheduled attempt for each case; report repeats separately as variability, never “success on any repeat.” Do not promise optional repeats if they threaten completion.
+Run the full-system pipeline once on each of the 12 frozen cases. Some cases should terminate before any model call. Run both deterministic baselines on every applicable case: up to 24 comparator executions. Preselect optional repeat cases H01, H05, and H06 in the frozen manifest before observing results. Repeating each twice more produces at most 18 full-system runs, not 18 independent scenarios, and at most 162 generation requests under a full three-turn profile, under the implemented three-turn profile. These are ceilings, not a request to spend the maximum; report the actual configured profile and all started calls. Primary headline rates use the first scheduled attempt for each case; report repeats separately as variability, never “success on any repeat.” Do not promise optional repeats if they threaten completion.
 
 Use the six development cases for one ordinary feasible path, one conflict/concession, one no-plan path, one missing-data path, one protocol fault, and one stale approval. All three collaborators contribute their module's deterministic tests.
 
@@ -879,7 +907,7 @@ Use identical snapshots, catalogs, rules, information cutoffs, and objective ver
 | Hard-invalid approval-ready plans | Plans with any required `FAIL/UNKNOWN` that enter pending review, divided by all pending-review plans | Gate: 0 violations; show numerator and denominator |
 | Invalid candidate blocking | Injected hard-invalid candidates prevented from review/application, divided by all injected invalid candidates | Gate: every injected case blocked |
 | False consensus | Consensus records missing three matching current accepts, divided by all consensus records | Gate: 0 |
-| Turn/call bound | Runs with turns ≤3 and started generation requests ≤9, also within their declared profile limits (currently ≤2/≤6), divided by all runs | Gate: 100% |
+| Turn/call bound | Runs with turns ≤3 and started generation requests ≤9, also within their declared profile limits (currently ≤3/≤9), divided by all runs | Gate: 100% |
 | Nominal feasible-case consensus | Oracle-feasible assessable cases without injected provider/protocol faults that reach valid consensus within budget, divided by all such nominal cases | Report `n/N`; aspiration ≥80%, not a release safety gate |
 | Overall feasible-case consensus | Feasible assessable cases reaching valid consensus, divided by all feasible assessable cases including injected provider/protocol faults | Report separately; deliberately forced fallback remains in this denominator |
 | Recommendation coverage | Assessable feasible cases with either valid consensus or valid fallback, divided by all assessable feasible cases | Report alongside refusals to prevent “refuse everything” success |
@@ -929,7 +957,7 @@ The minimum test set should cover these meaningful failure and boundary conditio
 12. No feasible catalog produces a non-executable escalation.
 13. Malformed, oversized, wrong-role, or invented-candidate agent payload is rejected.
 14. Wrong plan hash, mismatched rule revision, or missing role prevents consensus.
-15. Timeout or final-turn dissent uses fallback within the configured profile: no seventh call in the current two-turn profile and no tenth call in any permitted three-turn profile; fallback uses zero calls.
+15. Timeout or final-turn dissent uses fallback within the three-turn profile: at most nine started agent requests, with no tenth call; fallback uses zero calls.
 16. Duplicate/late agent responses do not add votes or overwrite a terminal outcome.
 17. Unapproved or unauthorized apply request cannot change resources.
 18. Reject and cancel leave the schedule unchanged; late responses cannot reverse them.
@@ -946,7 +974,7 @@ The minimum test set should cover these meaningful failure and boundary conditio
 28. Modeled gates/runways do not exceed sourced airport totals; subset/background-load assumptions remain visible.
 29. Changing a workbook mapping, citation or threshold creates new versions, invalidates prior approval bindings and requires paired comparison reruns.
 
-For any future three-turn profile, test exactly one message per role per turn, fresh unanimous votes on the revised hash, deadline exhaustion before Turn 3 and unconditional fallback after unsuccessful Turn 3. These cases are requirements, not claims of tests already run against the unavailable workbook.
+The implemented three-turn profile tests exactly one message per role per turn, fresh unanimous votes on the revised hash, deadline exhaustion before Turn 3 and unconditional fallback after unsuccessful Turn 3. Workbook-backed boundary and protocol checks are implemented.
 
 Add two inexpensive metamorphic checks if feasible: reducing available fuel must not add feasible candidates, and extending a gate occupation must not make a conflicting plan feasible. These complement, rather than replace, hand-checked expected outcomes.
 
@@ -978,7 +1006,7 @@ No benchmark numbers should be filled in before the runner produces them. The da
 |---|---|
 | G1 Source compliance | At least one updated supplied row passes the strict predicate and reaches all roles; hash/identity/ordinal are verified against the actual release. Legacy-input evidence alone leaves new-release validation incomplete |
 | G2 Independent agents | Three separate provider generations with distinct roles and trace records |
-| G3 Bounded real coordination | A real conflict/concession case ends with three current same-plan accepts within three turns/nine calls; one structured message per role per turn and stricter declared profile limits also hold (current ≤2 turns/≤6 calls) |
+| G3 Bounded real coordination | A real conflict/concession case ends with three current same-plan accepts within three turns/nine calls; one structured message per role per turn and stricter declared profile limits also hold (current ≤3 turns/≤9 calls) |
 | G4 Deterministic checks | No hard-invalid/unknown plan reaches review or application in the required tests |
 | G5 Fallback and refusal | Model-failure fallback and impossible/missing-data escalation are demonstrated |
 | G6 Human authority | Approval changes simulator state once; reject, unauthorized, stale, and duplicate requests behave correctly |
@@ -1023,7 +1051,7 @@ A live run that reaches fallback should be explained honestly. Keep a labelled p
 - A scenario manifest and provenance labels.
 - Measured evaluation report and representative machine-readable traces.
 - At least one visible failure/refusal and one human approval/rejection example.
-- Known limits: filtered historical coverage, synthetic workbook/scenario state, unverified/unavailable source mappings, cited-rule applicability, actual shorter protocol profile, finite search and no live operational validation.
+- Known limits: filtered historical coverage, synthetic workbook/scenario state, unverified/unavailable source mappings, cited-rule applicability, actual three-turn protocol profile, finite search and no live operational validation.
 - The actual submission confirmation/time from the organizer's system; do not invent the deadline or portal requirements.
 
 ## 17. Four-hour execution plan for three collaborators
@@ -1037,7 +1065,7 @@ Use roles A/B/C until collaborators assign names based on strengths. The project
 | Collaborator | Primary ownership | Deliverable contract |
 |---|---|---|
 | Developer 1 / A — Product interface and review | Dashboard, source/evidence display, human decision endpoint, simulator application, demo | A reviewer can inspect, approve/reject, and see protected state changes |
-| Developer 2 / B — Agents, backend, and integration | Shared schemas/API/store, provider adapter, all three role prompts, bounded state machine (current two-turn profile), messages, fallback wiring, trace persistence | `run(snapshot) → persisted terminal result` with honest counters; integrated service |
+| Developer 2 / B — Agents, backend, and integration | Shared schemas/API/store, provider adapter, all three role prompts, bounded state machine (current three-turn profile), messages, fallback wiring, trace persistence | `run(snapshot) → persisted terminal result` with honest counters; integrated service |
 | Developer 3 / C — Planning and evaluation | Updated CSV/workbook inspection, cited provenance, source extraction, scenario overlays, enumeration, constraints, scores, deterministic fallback selection, B0/B1, golden fixtures, runner/report | `evaluate(snapshot) → checked catalog`; paired measured results |
 
 Shared integration seam: B is the integration owner and owns run/event storage interfaces; A implements approval business logic using B's atomic transaction helper; C returns pure typed planning outputs. C owns deterministic fallback selection, while B owns its triggers and outcome handling. Agree these interfaces at the start to avoid three incompatible implementations. All three aviation agents belong to B; do not split the developers by aviation role.
@@ -1088,7 +1116,7 @@ These are conceptual signatures, not mandatory library APIs. Keep all state muta
 | Risk or uncertainty | Consequence | Mitigation / owner |
 |---|---|---|
 | Workbook/release missing or incorrectly mapped | Unsupported operational figures or wrong historical row | Inspect actual files, hash-bound locators, field-level units/citations and fail-closed required inputs; C |
-| Three-turn permission is mistaken for an implemented third turn | Inconsistent schema, counters or reused votes | Declare current two-turn profile; version/test every layer before optional extension; B/A |
+| Three-turn permission is mistaken for an implemented third turn | Inconsistent schema, counters or reused votes | Declare current three-turn profile; version/test every layer before optional extension; B/A |
 | Four hours is insufficient for broad architecture | Incomplete end-to-end demo | One process, one focal flight, fixed background, bounded enumerator; all |
 | Synthetic rules are mistaken for aviation compliance | Misleading safety claim | Persistent labels, rule provenance, no operational execution; A/C |
 | LLM invents facts or accepts bad plan | Incorrect recommendation narrative or vote | Strict schemas, known IDs, deterministic guards, sampled claim review; B/C |
@@ -1105,7 +1133,7 @@ These are conceptual signatures, not mandatory library APIs. Keep all state muta
 
 - Three collaborators and four hours, as specified by the project owner.
 - Repository-local technical PRD and a narrow arrival/gate workflow.
-- Organizer ceiling: one structured message from each independent role per turn, at most three turns/nine requests. Current implementation profile remains two turns/six requests with deterministic early fallback.
+- Organizer ceiling: one structured message from each independent role per turn, at most three turns/nine requests. The implementation supports three turns/nine requests with deterministic early fallback.
 - Bounded enumeration instead of introducing a general solver in the four-hour slice.
 - Organizer-reported updated historical release plus workbook-synthetic or cited operational limits and explicit scenario state; inspect and version the actual files before claiming integration.
 - Human approval of a checked plan before simulated application.
@@ -1187,7 +1215,7 @@ The reviewer sees C2's six minutes of additional modeled holding and the 20-minu
 | Independent ATC/Pilot/Ground agents | Section 7.3, FR-05 | Separate request IDs, prompts, role messages |
 | Structured communication | Sections 9–10, FR-06 | Validated offers and final votes |
 | Cross-domain constraints | Section 8, FR-04 | Domain check reports and invalid-case tests |
-| Consensus within three defined turns | Section 9, FR-07 | One message per role/turn; ≤3 turns/≤9 requests and declared profile bound (current ≤2/≤6) |
+| Consensus within three defined turns | Section 9, FR-07 | One message per role/turn; ≤3 turns/≤9 requests and declared profile bound (current ≤3/≤9) |
 | Traceable consensus | Sections 9–10, FR-08/10 | Matching plan hashes and three current accepts |
 | Deterministic non-AI fallback | Section 8.7, FR-09 | Model-offline replay with zero fallback model calls |
 | Human decides | Section 11, FR-11–13 | Review decision, stale/reject tests, one atomic application |
@@ -1199,7 +1227,7 @@ The reviewer sees C2's six minutes of additional modeled holding and the 20-minu
 
 Repository requirements and data inspection are the primary basis for this PRD. External sources support the specific concepts below; they do not validate the synthetic operating rules or claim the prototype is operationally safe.
 
-- [Organizer clarification](organizer_updates.md): 358,774-row release, exact turn definition and operational workbook coverage; owner-supplied update, not inspected workbook contents.
+- [Organizer clarification](organizer_updates.md): 358,774-row release, exact turn definition and operational workbook coverage; verified file hashes and source-cell mapping are recorded in the [submission guide](submission.md).
 - [Challenge problem statement](problem_statement.md): role responsibilities, qualifying data predicate, bounded negotiation, and fallback.
 - [Judging rubrics](judging_rubrics.md): weighted criteria and evidence expectations.
 - [Repository README](../README.md): local dataset handling context.

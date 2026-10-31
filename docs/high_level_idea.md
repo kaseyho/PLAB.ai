@@ -1,5 +1,11 @@
 # Practical implementation idea
 
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
 Updated for the [31 October organizer clarification](organizer_updates.md). Start with a small deterministic scenario and make the full path observable: historical trigger, sourced operational limits, independent agents, exact-plan agreement, human review and a recorded simulator update.
 
 ## 1. Keep the numerical and authority boundaries explicit
@@ -14,7 +20,7 @@ The organizer reports a new `flights.csv` with **358,774 records from 2015**, se
 
 Use `challenge2_operational_constraints.xlsx` for the synthetic per-airport gates, runways, movements/hour and turnaround, plus wake separation, fuel and crew rules. Cited real figures are also accepted. Preserve exact evidence locations, units, applicability and source versions. Treat any additional current state, routes, blockages, equipment or connections as separate declared scenario inputs unless sourced.
 
-The workbook has not been inspected locally and no workbook importer exists. Existing D01 values remain illustrative. The earlier full CSV still under `data/` has a different hash/profile: re-extract and verify row identities before changing the file used by a scenario.
+The workbook and filtered CSV are imported with source bindings. Legacy D01 remains a separate regression fixture.
 
 Do not confuse an airport's total resources with the one-runway/two-gate subset modeled by this prototype. Validate subset sizes and explain how background traffic and capacity windows are modeled.
 
@@ -22,7 +28,7 @@ Do not confuse an airport's total resources with the one-runway/two-gate subset 
 
 **One turn = one structured message from ATC, one from Pilot and one from Ground.** Calls may run concurrently. The organizer permits consensus within three turns, at most nine agent generation requests, then deterministic fallback. Fallback uses no LLM and consumes no agent turn. Log started calls and invalid/missing responses; a partial turn supplies no implicit vote.
 
-The implemented MVP uses a shorter two-turn/six-request profile:
+The implemented MVP supports three turns/nine requests:
 
 | Stage | Work | Agent messages |
 |---|---|---:|
@@ -30,14 +36,15 @@ The implemented MVP uses a shorter two-turn/six-request profile:
 | Turn 1 | Each role offers preferred and acceptable/concession candidate IDs with evidence | 3 |
 | Reconciliation | Deterministically select a common candidate using checked costs | 0 |
 | Turn 2 | Each role explicitly accepts/rejects the identical complete plan hash | 3 |
+| Turn 3, if needed | After valid dissent, select an untried common plan and collect three fresh votes | 3 |
 | Completion | Recheck consensus or use deterministic fallback/escalation | 0 |
 | Human review | Approve/reject the exact fresh plan, with reason | 0 |
 
-This profile ends within the clarified ceiling; it does not implement a third turn. Keep the current profile explicit in UI, exports and evaluations. An optional third turn must be introduced as a tested protocol version across contracts, storage, prompts, coordinator and display, with three fresh votes on one immutable revised proposal and no fourth-turn confirmation. See PRD Section 9.
+The third turn is implemented across contracts, storage, prompts, coordinator and display. It requires an untried common candidate and enough time for all three fresh votes on its immutable plan hash. Otherwise fallback decides. There is no fourth-turn confirmation. See PRD Section 9.
 
 ## 4. A simple conceptual control flow
 
-This pseudocode describes the existing two-turn execution profile, not a new callable API:
+This pseudocode shows the initial two turns. A valid dissent additionally permits one revised proposal and fresh votes from all roles; otherwise fallback decides:
 
 ```python
 snapshot = freeze_and_validate(source_row, operational_evidence, scenario_state)

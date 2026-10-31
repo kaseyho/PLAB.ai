@@ -1,0 +1,950 @@
+{
+  "schema_version": 1,
+  "status": "COMPLETED",
+  "created_at": "2026-10-31T06:08:27.773849+00:00",
+  "split": "holdout",
+  "manifest_sha256": "728d87ace5ba4b1b39cd8e837c18e7b20d1f293be59a3726ee18590c03f1b7d8",
+  "dataset": {
+    "file": "flights.csv",
+    "sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+    "rows": 358774,
+    "invalid_year_or_filter": 0,
+    "cancelled": 0,
+    "diverted": 0
+  },
+  "workbook": {
+    "file": "challenge2_operational_constraints.xlsx",
+    "sha256": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211"
+  },
+  "provider_mode": "FIXTURE",
+  "provider": {
+    "mode": "FIXTURE",
+    "model": "deterministic-test-double",
+    "api_base": null,
+    "api_mode": "responses",
+    "reasoning_effort": null,
+    "prompt_version": "roles-v6",
+    "max_output_tokens": 500,
+    "retries": 0
+  },
+  "summary": "12/12 frozen holdout contract cases passed. Live nominal consensus: 0/0. 0 real model requests. Fault injections use labelled fixtures.",
+  "counts": {
+    "passed": 12,
+    "total": 12,
+    "nominal": 6,
+    "live_nominal": 0,
+    "live_consensus": 0,
+    "model_calls": 0
+  },
+  "outcomes": {
+    "FEASIBLE_CONSENSUS": 7,
+    "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE": 2,
+    "INSUFFICIENT_DATA": 1,
+    "FEASIBLE_FALLBACK": 2
+  },
+  "nominal_latency_ms": {
+    "n": 6,
+    "median": 758.5,
+    "p95": 786
+  },
+  "limitations": [
+    "Fixed airport/trigger first-match sampling; distinct flight identities and disjoint development/holdout airports. Synthetic templates share infrastructure; this suite is not a generalization benchmark.",
+    "Expected outcome classes are frozen; boundary tests independently check numeric rules. This is not an aviation safety certification.",
+    "Only nominal LIVE rows measure model coordination. Fault fixtures are not model performance. No optional repeated-case stability experiment was run.",
+    "Timeout case injects a 50ms request deadline. All other cases use the 12s/request, 45s/run and 5s fallback reserve profile.",
+    "B0 and B1 use the identical full catalog. Comparisons are simulated effects, not measured historical savings."
+  ],
+  "cases": [
+    {
+      "case_id": "H01",
+      "variant": "fixed_gate",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "5e9d53ec-f772-44f3-aca7-a4b59a95bafd",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 513,
+      "snapshot_hash": "596a55f189d86c6536b46b7d28dcab3c42ba58d1e37bb11ef281dc36f0fbef5c",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H01-5e9d53ec-f772-44f3-aca7-a4b59a95bafd.json"
+    },
+    {
+      "case_id": "H02",
+      "variant": "arrival_window",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "fb32d524-5c99-470f-8ff9-9cd161be0132",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 761,
+      "snapshot_hash": "65ff4a2246361765e035b46da1b67a015d86dd763564c847563d9aa373780856",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1260-G2-route",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.125",
+            "GROUND": "1.6875"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "200",
+            "fuel_at_gate_kg": "1600",
+            "reserve_margin_kg": "150",
+            "crew_overtime_min": "45",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "20",
+          "fuel_at_gate_kg": "-20",
+          "reserve_margin_kg": "-20",
+          "crew_overtime_min": "-45",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H02-fb32d524-5c99-470f-8ff9-9cd161be0132.json"
+    },
+    {
+      "case_id": "H03",
+      "variant": "heavy",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "6aba410d-035b-4e33-82f2-3d34baab6ab6",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 756,
+      "snapshot_hash": "21a71af8c2585f5014c17b1872ad284c2492f95da0d0db320bb23de1bddb7258",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.3125"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "35",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "60",
+          "modeled_fuel_used_kg": "60",
+          "fuel_at_gate_kg": "-60",
+          "reserve_margin_kg": "-60",
+          "crew_overtime_min": "-35",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H03-6aba410d-035b-4e33-82f2-3d34baab6ab6.json"
+    },
+    {
+      "case_id": "H04",
+      "variant": "fixed_gate",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "4ece322a-1372-4a5b-b508-a93946616e0f",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 546,
+      "snapshot_hash": "befa3eedc3b4336f4c59a2dae9c921f44ad5b00a1a105d4d3e70b4539660d068",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H04-4ece322a-1372-4a5b-b508-a93946616e0f.json"
+    },
+    {
+      "case_id": "H05",
+      "variant": "notice_conflict",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "6d356ad1-aa37-4b6c-beed-55e92675ccca",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 786,
+      "snapshot_hash": "15c30499a7936716f38d11e90040be708fddebc55bd562a061708b2279b3a0f9",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H05-6d356ad1-aa37-4b6c-beed-55e92675ccca.json"
+    },
+    {
+      "case_id": "H06",
+      "variant": "taxi_conflict",
+      "expected": "FEASIBLE",
+      "passed": true,
+      "run_id": "bfd7ed30-f6d7-4f5f-b309-e58b6648545b",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 761,
+      "snapshot_hash": "a141cffa578a8fac0fe4e1df4477d4427dc698896c69e050bcaca919f14d025b",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H06-bfd7ed30-f6d7-4f5f-b309-e58b6648545b.json"
+    },
+    {
+      "case_id": "H07",
+      "variant": "blocked_gates",
+      "expected": "NO_PLAN",
+      "passed": true,
+      "run_id": "a699ff54-6032-4cbd-a12e-6d521467b4f2",
+      "outcome": "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE",
+      "fallback_reason": "EMPTY_FEASIBLE_SHORTLIST",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 0,
+      "agent_invocations": 0,
+      "model_calls": 0,
+      "elapsed_ms": 149,
+      "snapshot_hash": "6d0785333df71b22667e0000653c76863645ce923bc8d109e4324918e9461ca2",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": null,
+      "baselines": {
+        "B0": null,
+        "B1": null
+      },
+      "comparison": {},
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 0,
+      "trace": "H07-a699ff54-6032-4cbd-a12e-6d521467b4f2.json"
+    },
+    {
+      "case_id": "H08",
+      "variant": "impossible_fuel",
+      "expected": "NO_PLAN",
+      "passed": true,
+      "run_id": "ce1b2e0c-80c1-4402-a23e-39bb9a6cbd9f",
+      "outcome": "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE",
+      "fallback_reason": "EMPTY_FEASIBLE_SHORTLIST",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 0,
+      "agent_invocations": 0,
+      "model_calls": 0,
+      "elapsed_ms": 134,
+      "snapshot_hash": "482d72fc55baaf1989b9005092916ee9e02b9b4688130a0beddcdbc997bdf427",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": null,
+      "baselines": {
+        "B0": null,
+        "B1": null
+      },
+      "comparison": {},
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 0,
+      "trace": "H08-ce1b2e0c-80c1-4402-a23e-39bb9a6cbd9f.json"
+    },
+    {
+      "case_id": "H09",
+      "variant": "missing_fuel",
+      "expected": "INSUFFICIENT",
+      "passed": true,
+      "run_id": "8f2fd9b7-5d9d-42fb-990a-eb9e5192de34",
+      "outcome": "INSUFFICIENT_DATA",
+      "fallback_reason": "EMPTY_FEASIBLE_SHORTLIST",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 0,
+      "agent_invocations": 0,
+      "model_calls": 0,
+      "elapsed_ms": 9,
+      "snapshot_hash": "421992f78d401f4e96ee0bd9ff6448a22acbf378f910808109aa68035c13475b",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": null,
+      "baselines": {
+        "B0": null,
+        "B1": null
+      },
+      "comparison": {},
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 0,
+      "trace": "H09-8f2fd9b7-5d9d-42fb-990a-eb9e5192de34.json"
+    },
+    {
+      "case_id": "H10",
+      "variant": "stale_approval",
+      "expected": "STALE_BLOCKED",
+      "passed": true,
+      "run_id": "025a4b4e-723f-4bde-b4d8-af61dbdf0dd6",
+      "outcome": "FEASIBLE_CONSENSUS",
+      "fallback_reason": null,
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 2,
+      "agent_invocations": 6,
+      "model_calls": 0,
+      "elapsed_ms": 772,
+      "snapshot_hash": "b438ba8febef86969fd03291d0977c756add3d67519adfbf5a49c4a227ac3dfc",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": true,
+      "candidate_id": "L1260-G1-long",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.6875"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "45",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "60",
+          "modeled_fuel_used_kg": "60",
+          "fuel_at_gate_kg": "-60",
+          "reserve_margin_kg": "-60",
+          "crew_overtime_min": "-45",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "0.0000"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 6,
+      "trace": "H10-025a4b4e-723f-4bde-b4d8-af61dbdf0dd6.json"
+    },
+    {
+      "case_id": "H11",
+      "variant": "timeout",
+      "expected": "FALLBACK",
+      "passed": true,
+      "run_id": "77565d22-3642-46e2-b6b0-9bd36aba0f88",
+      "outcome": "FEASIBLE_FALLBACK",
+      "fallback_reason": "AGENT_TIMEOUT",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 1,
+      "agent_invocations": 3,
+      "model_calls": 0,
+      "elapsed_ms": 439,
+      "snapshot_hash": "1780634309e00a3c8967aaa83dd493d96878771ed37eaae10680dcdb76410b84",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1200-G2-route",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.3125"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "35",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "1.1750"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 3,
+      "trace": "H11-77565d22-3642-46e2-b6b0-9bd36aba0f88.json"
+    },
+    {
+      "case_id": "H12",
+      "variant": "malformed",
+      "expected": "FALLBACK",
+      "passed": true,
+      "run_id": "e84f7804-6ace-4bc3-a05e-4b6e0e26573e",
+      "outcome": "FEASIBLE_FALLBACK",
+      "fallback_reason": "INVALID_AGENT_SCHEMA",
+      "provider": {
+        "mode": "FIXTURE",
+        "model": "deterministic-test-double",
+        "api_base": null,
+        "api_mode": "responses",
+        "reasoning_effort": null,
+        "prompt_version": "roles-v6",
+        "max_output_tokens": 500,
+        "retries": 0
+      },
+      "turns": 1,
+      "agent_invocations": 3,
+      "model_calls": 0,
+      "elapsed_ms": 451,
+      "snapshot_hash": "89f4175a7a0ff8981222620236eee25297c06214b1e8a288399cf555e0d0a1ad",
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "checks_complete": true,
+      "unanimous_current_votes": true,
+      "bounded": true,
+      "fallback_has_no_calls": true,
+      "no_automatic_application": true,
+      "audit_chain_valid": true,
+      "stale_approval_blocked": false,
+      "candidate_id": "L1200-G2-route",
+      "baselines": {
+        "B0": {
+          "candidate_id": "L1200-G2-route",
+          "costs": {
+            "ATC": "0",
+            "PILOT": "0.1",
+            "GROUND": "1.6875"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 0,
+            "modeled_fuel_used_kg": "160",
+            "fuel_at_gate_kg": "1640",
+            "reserve_margin_kg": "190",
+            "crew_overtime_min": "45",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        },
+        "B1": {
+          "candidate_id": "L1260-G1-long",
+          "costs": {
+            "ATC": "0.03333333333333333333333333333",
+            "PILOT": "0.1375",
+            "GROUND": "0"
+          },
+          "impacts": {
+            "additional_landing_delay_s": 60,
+            "modeled_fuel_used_kg": "220",
+            "fuel_at_gate_kg": "1580",
+            "reserve_margin_kg": "130",
+            "crew_overtime_min": "0",
+            "turnaround_lateness_min": "0",
+            "missed_connection_passengers": 0
+          }
+        }
+      },
+      "comparison": {
+        "vs_B0": {
+          "additional_landing_delay_s": "0",
+          "modeled_fuel_used_kg": "0",
+          "fuel_at_gate_kg": "0",
+          "reserve_margin_kg": "0",
+          "crew_overtime_min": "0",
+          "turnaround_lateness_min": "0",
+          "missed_connection_passengers": "0"
+        },
+        "joint_max_cost_regret_vs_B1": "1.5500"
+      },
+      "input_tokens_reported": 0,
+      "output_tokens_reported": 0,
+      "requests_without_token_usage": 3,
+      "trace": "H12-e84f7804-6ace-4bc3-a05e-4b6e0e26573e.json"
+    }
+  ]
+}

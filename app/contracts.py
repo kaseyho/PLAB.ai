@@ -109,6 +109,8 @@ class State(StrEnum):
     ROUND_1 = "ROUND_1"
     RECONCILING = "RECONCILING"
     ROUND_2 = "ROUND_2"
+    REVISING = "REVISING"
+    ROUND_3 = "ROUND_3"
     FALLBACK = "FALLBACK"
     FINAL_VALIDATION = "FINAL_VALIDATION"
     TERMINAL = "TERMINAL"
@@ -193,6 +195,13 @@ class ScenarioSnapshot(Contract):
             raise ValueError("Rule IDs must be unique")
         if not set(REQUIRED_RULES).issubset(self.required_rule_ids):
             raise ValueError("The PRD's required hard rules cannot be removed")
+        if self.ruleset_version == "organizer-v1" and not {
+            "SYSTEM-OPS-01",
+            "PILOT-DUTY-01",
+            "GROUND-NOTICE-01",
+            "GROUND-TURN-01",
+        }.issubset(self.required_rule_ids):
+            raise ValueError("Organizer operational rules cannot be removed")
         return self
 
     @property
@@ -369,7 +378,7 @@ class AgentMessage(Contract):
     message_id: Identifier
     run_id: Identifier
     sender_role: Role
-    round: Literal[1, 2]
+    round: Literal[1, 2, 3]
     message_type: Literal["OFFER", "VOTE"]
     scenario_revision: Revision
     resource_revision: Revision
@@ -386,7 +395,7 @@ class ProviderInfo(Contract):
     api_base: str | None = None
     api_mode: ApiMode = "responses"
     reasoning_effort: Literal["none"] | None = None
-    prompt_version: str = "roles-v5"
+    prompt_version: str = "roles-v7"
     max_output_tokens: Annotated[StrictInt, Field(ge=1, le=500)] = 500
     retries: Literal[0] = 0
 
@@ -400,9 +409,9 @@ class RunRecord(Contract):
     processing_state: State = State.CREATED
     negotiation_outcome: Outcome | None = None
     approval_state: Approval = Approval.NONE
-    round_count: Annotated[StrictInt, Field(ge=0, le=2)] = 0
-    agent_invocation_count: Annotated[StrictInt, Field(ge=0, le=6)] = 0
-    model_call_count: Annotated[StrictInt, Field(ge=0, le=6)] = 0
+    round_count: Annotated[StrictInt, Field(ge=0, le=3)] = 0
+    agent_invocation_count: Annotated[StrictInt, Field(ge=0, le=9)] = 0
+    model_call_count: Annotated[StrictInt, Field(ge=0, le=9)] = 0
     created_at: AwareDatetime
     deadline_at: AwareDatetime
     finished_at: AwareDatetime | None = None
@@ -413,6 +422,8 @@ class RunRecord(Contract):
     checks: tuple[ConstraintResult, ...] = ()
     offers: dict[Role, AgentOffer] = Field(default_factory=dict)
     votes: dict[Role, AgentVote] = Field(default_factory=dict)
+    previous_votes: dict[Role, AgentVote] = Field(default_factory=dict)
+    previous_candidate_id: Identifier | None = None
     fallback_reason: str | None = None
     reason_code: str | None = None
 

@@ -71,11 +71,24 @@ class FallbackResult(_Frozen):
 
 
 def missing_critical_facts(snapshot: ScenarioSnapshot) -> list[str]:
-    return [
+    missing = [
         f"{section}.{field}"
         for section, field in CRITICAL_FACTS
         if getattr(getattr(snapshot.overlay, section), field) is None
     ]
+    ops = snapshot.overlay.operations
+    if ops is not None:
+        missing += [
+            f"operations.{field}"
+            for field in ("trip_fuel_kg", "flight_crew_report_s")
+            if getattr(ops, field) is None
+        ]
+        missing += [
+            f"crews.{crew.crew_id}.report_time_s"
+            for crew in snapshot.overlay.crews
+            if crew.report_time_s is None
+        ]
+    return missing
 
 
 def search_bounds(snapshot: ScenarioSnapshot) -> SearchBounds:
@@ -117,7 +130,13 @@ def evaluate_catalog(snapshot: ScenarioSnapshot) -> list[CheckedCandidate]:
     for plan in enumerate_candidates(snapshot):
         checks = check_plan(snapshot, plan)
         checked.append(
-            CheckedCandidate(plan=plan, checks=checks, feasible=is_approval_ready(checks))
+            CheckedCandidate(
+                plan=plan,
+                checks=checks,
+                feasible=is_approval_ready(
+                    checks, operational=snapshot.overlay.operations is not None
+                ),
+            )
         )
     return checked
 

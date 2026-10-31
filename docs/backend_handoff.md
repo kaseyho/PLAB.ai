@@ -1,5 +1,11 @@
 # Developer B implementation and integration handoff
 
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
 This branch implements the backend, contracts, three role agents, coordination,
 persistence, trace export, and the storage boundary for human review. It now
 integrates Developer C's deterministic checker and fallback from
@@ -9,48 +15,22 @@ booking validation and dashboard evidence from [PR #4](https://github.com/kaseyh
 The frozen evaluation suite remains with its owner in the
 [work plan](developer_work_plan.md).
 
-## Organizer clarification and current input status
+## Organizer implementation
 
-The [organizer update](organizer_updates.md) defines a turn as one structured
-message from each of the three independent agents. Consensus is allowed within
-three turns, otherwise deterministic fallback decides: at most nine agent
-messages/generation requests and zero fallback model calls. This service currently
-uses the shorter two-turn/six-request profile. Existing `round`/`round_count`
-fields count those agent turns. All two-round/six-call verification below describes
-the implemented profile and remains historical development evidence.
-
-The newly announced `flights.csv` contains 358,774 rows from 2015 satisfying
-`WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20`, according to the organizers.
-The local file remains the earlier full release. D01 record 71 and the retained
-smokes bind to that legacy input; their locators must be re-extracted and checked
-against natural identity and the new hash before switching files. The matching
-358,774 legacy lookup-resolved count does not prove release identity.
-
-DOT data has no gates, runways, fuel or crew. The new
-`challenge2_operational_constraints.xlsx` supplies synthetic per-airport gates,
-runways, movements/hour and turnaround, plus wake separation, fuel and crew rules.
-Cited real figures are also accepted. The workbook was unavailable for inspection;
-no exact sheet/cell mapping or figure is verified here. The loader accepts JSON
-scenarios and has no XLSX importer. Current D01 constants remain illustrative.
-
-Developer C owns inspecting the workbook/new CSV, normalizing units and rule
-applicability, recording sheet/cell or real-citation references, rebinding rows,
-validating the modeled airport subset, and rerunning boundaries/B0/B1/evaluations.
-Developer B carries the resulting versioned evidence through shared facts, prompts
-and exports; Developer A exposes it during review. The filtered cohort cannot
-supply complete movement schedules or aircraft rotations. Unavailable required
-operational evidence must remain unknown. Updating source/rule mappings must
-invalidate previous approval bindings and preserve the old traces.
+The submission app loads scenarios/organizer/ and supports three turns/nine
+requests. app/operational_data.py imports the workbook; app/prepare.py binds the
+358,774-row release to identities and source hashes. Legacy D01 and old smokes
+remain historical evidence. app/demo.py launches an isolated live or offline
+demo. app/evaluate.py provides optional B0/B1 evaluation. Approval now reserves
+runway, gate, crew and equipment in the same transaction.
 
 ## Specification decisions
 
 The [technical PRD](technical_prd.md) and challenge requirements govern this
 implementation. The high-level guide uses the same functional design,
 deterministic safety boundary and hash-chained log. This service uses three independent calls per
-turn, a declared two-turn profile inside the organizer’s three-turn ceiling, a
-checked deterministic fallback, SQLite and human approval. Any optional third-turn
-profile needs coordinated contract/store/coordinator/prompt/UI/test changes as
-described in PRD Section 9; a documentation change does not enable it.
+turn, a three-turn/nine-request limit, a
+checked deterministic fallback, SQLite and human approval. Turn 3 requires fresh unanimous votes on an untried common proposal.
 There is one service process;
 no agent framework, message broker, recursive tool loop, or separate microservice.
 
@@ -249,11 +229,13 @@ or fallback does not mean applied.
   minimax cost tuple and stable tie breakers. Refusal remains possible.
 - Round 2: three independent votes over the same complete plan hash, with all
   peer offers visible. Three current accepts and final passing checks are required.
-- Limits: two rounds, six started requests, 12 seconds per request, 45 seconds per
+- Round 3, when needed: valid dissent selects an untried common candidate within
+  the remaining budget and collects three fresh votes on the revised plan hash.
+- Limits: three turns, nine started requests, 12 seconds per request, 45 seconds per
   run, five seconds reserved for fallback, 500 output tokens, zero retries. These
   are the actual profile limits; the organizer permits up to three turns/nine
   requests. Each completed turn has one structured message from each role.
-- Agent failures, malformed JSON, invented IDs, wrong hashes, or dissent enter
+- Agent failures, malformed JSON, invented IDs, wrong hashes, or unresolved dissent enter
   deterministic fallback. Stale inputs interrupt instead of falling back from an
   obsolete catalog. Non-executable outcomes have no reviewable candidate.
 - No resource write occurs during negotiation. Cancellation and terminal state
@@ -315,7 +297,7 @@ or relationships; render trusted metrics from deterministic results and retain
 human review rather than treating JSON validation as semantic verification.
 
 The historical provider verification above used fixture planning certificates.
-The default service now integrates PR #1's real deterministic checker and D01
+The original development service integrated PR #1's deterministic checker and legacy D01
 overlay; the explicit `examples.backend_demo` commands remain fixture demos.
 
 An integrated API smoke run on 2026-10-31 used the supplied CSV and live SoCLaaS

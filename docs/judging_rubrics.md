@@ -1,5 +1,11 @@
 # Judging Rubrics
 
+The organizer MVP is implemented: verified filtered data, workbook imports,
+three turns/nine requests, deterministic fallback, B0/B1 comparisons and human
+approval of runway/gate/crew/equipment bookings. See [the submission guide](submission.md)
+for commands, measured results and simulation assumptions. The delivery priority
+is the working demo; broader evaluation is optional.
+
 ## Application note: organizer clarification, 31 October 2026
 
 The source rubric and its six-criterion weighted table below are unchanged. The
@@ -9,7 +15,7 @@ to demonstrate this project:
 - **Technical soundness (25%):** one structured message from each independent
   ATC/Pilot/Ground agent per turn; consensus within three turns, otherwise
   deterministic fallback. Show actual turn/message/request counts and the
-  configured profile. Current implementation uses two turns/six requests inside
+  configured profile. Current implementation supports three turns/nine requests at
   the three-turn/nine-request ceiling. Fallback uses zero model calls.
 - **Problem realism (20%):** use a qualifying row from the organizer-reported
   358,774-row 2015 release and disclose actual source/hash. DOT data contains no
@@ -28,10 +34,7 @@ to demonstrate this project:
 - **Time discipline (5%):** record actual submission and keep the presentation
   within three minutes; this is separate from the three agent-turn limit.
 
-The workbook, `challenge2_operational_constraints.xlsx`, is not yet available for
-local inspection and the updated CSV has not been independently profiled here.
-Existing D01 figures and development smokes
-must remain labelled legacy/illustrative. These notes apply the supplied rubric;
+The filtered CSV and workbook are now verified and imported. The first live evaluation reached consensus in 1/6 nominal cases, with all failures retained. These notes apply the supplied rubric;
 they do not introduce a new judging criterion or change its weights.
 
 ## Supplied rubric text

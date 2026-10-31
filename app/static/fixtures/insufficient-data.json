@@ -1,18 +1,18 @@
 {
-  "run_id": "d9f6c2a6-6d6d-48eb-bc8d-390763ebd7bf",
+  "run_id": "cb15d7f8-3690-46db-b96a-d14130b52ff6",
   "parent_run_id": null,
   "snapshot": {
     "scenario_id": "D01",
     "revision": 1,
     "resource_id": "airport:MIA",
     "resource_revision": 1,
-    "ruleset_version": "toy-rules-v1",
-    "policy_version": "balanced-v1",
+    "ruleset_version": "organizer-v1",
+    "policy_version": "balanced-workbook-v1",
     "simulation_epoch": "2026-10-31T00:00:00Z",
     "source": {
       "dataset_id": "flights.csv",
-      "dataset_sha256": "afa4e42188b113dd69427a3fbd00a4b6979c6235c866f963c2899d18a3403a83",
-      "record_ordinal": 71,
+      "dataset_sha256": "bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e",
+      "record_ordinal": 47,
       "identity": "2015-1-1:AA1057",
       "original_fields": {
         "AIRLINE": "AA",
@@ -53,14 +53,14 @@
         "fact_id": "overlay.search",
         "domain": null,
         "value": {
-          "earliest_landing_s": 600,
+          "earliest_landing_s": 1200,
           "horizon_s": 1800,
           "step_s": 60
         },
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/search",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -75,7 +75,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/aircraft",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -86,7 +86,7 @@
         "value": {
           "available_intervals": [
             [
-              540,
+              0,
               86400
             ]
           ],
@@ -96,7 +96,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/runway",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -108,20 +108,22 @@
           {
             "movement_id": "BG1",
             "occupancy_s": 60,
-            "time_s": 300,
+            "runway_id": "R1",
+            "time_s": 900,
             "wake_category": "M"
           },
           {
             "movement_id": "BG2",
             "occupancy_s": 60,
-            "time_s": 780,
+            "runway_id": "R1",
+            "time_s": 1380,
             "wake_category": "M"
           }
         ],
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/movements",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -130,12 +132,27 @@
         "fact_id": "overlay.separation_s",
         "domain": "ATC",
         "value": {
-          "M>M": 180
+          "H>H": 120,
+          "H>L": 120,
+          "H>M": 120,
+          "H>S": 60,
+          "L>H": 60,
+          "L>L": 60,
+          "L>M": 60,
+          "L>S": 60,
+          "M>H": 60,
+          "M>L": 60,
+          "M>M": 60,
+          "M>S": 60,
+          "S>H": 180,
+          "S>L": 180,
+          "S>M": 180,
+          "S>S": 60
         },
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "policy",
         "source_reference": "scenarios/D01.json#/overlay/separation_s",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -144,13 +161,13 @@
         "fact_id": "overlay.capacity",
         "domain": "ATC",
         "value": {
-          "max_movements": 10,
+          "max_movements": 60,
           "window_s": 3600
         },
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "policy",
         "source_reference": "scenarios/D01.json#/overlay/capacity",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -197,7 +214,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/routes",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -209,7 +226,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/taxi_blockages",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -230,7 +247,7 @@
             "reservations": [
               [
                 0,
-                1500
+                1800
               ]
             ]
           },
@@ -246,7 +263,7 @@
             "reservations": [
               [
                 0,
-                1080
+                1680
               ]
             ]
           }
@@ -254,7 +271,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/gates",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -266,20 +283,24 @@
           {
             "available_from_s": 0,
             "crew_id": "CREW-G1",
-            "max_duty_end_s": 3000,
-            "regular_shift_end_s": 2700
+            "max_duty_end_s": 7200,
+            "regular_shift_end_s": 5400,
+            "report_time_s": -23400,
+            "reservations": []
           },
           {
             "available_from_s": 0,
             "crew_id": "CREW-G2",
-            "max_duty_end_s": 3600,
-            "regular_shift_end_s": 1080
+            "max_duty_end_s": 7200,
+            "regular_shift_end_s": 1680,
+            "report_time_s": -27120,
+            "reservations": []
           }
         ],
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/crews",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -310,7 +331,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/equipment",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -319,16 +340,16 @@
         "fact_id": "overlay.fuel",
         "domain": "PILOT",
         "value": {
-          "hold_burn_kg_per_min": 50.0,
+          "hold_burn_kg_per_min": 40.0,
           "projected_fuel_at_earliest_kg": null,
-          "reserve_floor_kg": 2200.0,
+          "reserve_floor_kg": 1400.0,
           "taxi_burn_kg_per_min": 20.0,
-          "uncertainty_allowance_kg": 100.0
+          "uncertainty_allowance_kg": 50.0
         },
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/fuel",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -349,7 +370,7 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/arrival_options",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -358,16 +379,16 @@
         "fact_id": "overlay.service",
         "domain": "GROUND",
         "value": {
-          "duration_s": 1200,
+          "duration_s": 2100,
           "gate_buffer_s": 0,
           "pre_service_buffer_s": 0,
           "release_buffer_s": 0,
-          "target_service_end_s": 2700
+          "target_service_end_s": 3900
         },
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/service",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -377,7 +398,7 @@
         "domain": "PILOT",
         "value": [
           {
-            "deadline_s": 6000,
+            "deadline_s": 5400,
             "group_id": "CONN-1",
             "passengers": 12,
             "transfer_time_s": 1200
@@ -386,7 +407,183 @@
         "units": "schema-defined seconds/kg/minutes",
         "provenance": "synthetic_scenario",
         "source_reference": "scenarios/D01.json#/overlay/connections",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
+        "observed_at": null,
+        "valid_until": null,
+        "input_ids": []
+      },
+      {
+        "fact_id": "overlay.operations",
+        "domain": null,
+        "value": {
+          "aircraft_kind": "narrowbody",
+          "assigned_gate_id": "G1",
+          "assumptions": [
+            "Workbook values are organizer-supplied synthetic planning limits, not actual airport data.",
+            "One runway and two candidate spare gates are a declared subset of the airport inventory. Other gates are unavailable to this decision.",
+            "Background movements are a complete synthetic traffic schedule within the planning and capacity windows; filtered DOT rows are not a queue.",
+            "M denotes Large; S/H/L denote Super/Heavy/Small. Same-runway departure time minima are an explicitly declared arrival simulation proxy; nautical-mile separation is not modeled.",
+            "Narrowbody class, 4000 kg trip fuel, 20 kg/min taxi burn and 50 kg uncertainty allowance are synthetic inputs. Arrival spare fuel includes the reserve and contingency, a conservative interpretation.",
+            "Flight duty ends at gate arrival. Report time and ground crew report times are synthetic; ground maximum duty ends at t=7200, an additional declared scenario cap.",
+            "Gate-change notice is measured from t=0 to landing, conservatively before gate arrival. Routes, service targets, connections, reservations and equipment availability are synthetic."
+          ],
+          "flight_crew_report_s": -42000,
+          "gate_decision_s": 0,
+          "modeled_runway_ids": [
+            "R1"
+          ],
+          "policy": {
+            "active_runways": 3,
+            "airport_code": "MIA",
+            "contingency_percent": 5,
+            "flight_crew_duty_s": 46800,
+            "gate_notice_s": 1200,
+            "gates": 70,
+            "ground_shift_s": 28800,
+            "max_ops_per_hour": 60,
+            "min_turnaround_s": 2100,
+            "narrowbody_hold_kg_per_hour": 2400,
+            "overtime_multiplier": 1.5,
+            "reserve_hold_min": 30,
+            "separation_nm": {
+              "H>H": 4,
+              "H>L": 6,
+              "H>M": 5,
+              "H>S": 3,
+              "L>H": 3,
+              "L>L": 3,
+              "L>M": 3,
+              "L>S": 3,
+              "M>H": 3,
+              "M>L": 4,
+              "M>M": 3,
+              "M>S": 3,
+              "S>H": 6,
+              "S>L": 8,
+              "S>M": 7,
+              "S>S": 3
+            },
+            "separation_s": {
+              "H>H": 120,
+              "H>L": 120,
+              "H>M": 120,
+              "H>S": 60,
+              "L>H": 60,
+              "L>L": 60,
+              "L>M": 60,
+              "L>S": 60,
+              "M>H": 60,
+              "M>L": 60,
+              "M>M": 60,
+              "M>S": 60,
+              "S>H": 180,
+              "S>L": 180,
+              "S>M": 180,
+              "S>S": 60
+            },
+            "source_cells": {
+              "Assumed spare fuel on arrival": "fuel_and_crew!A6:C6",
+              "Contingency fuel": "fuel_and_crew!A3:C3",
+              "Final fuel reserve": "fuel_and_crew!A2:C2",
+              "Flight crew max duty": "fuel_and_crew!A7:C7",
+              "Gate change notice": "fuel_and_crew!A9:C9",
+              "Ground crew shift": "fuel_and_crew!A8:C8",
+              "Holding fuel burn (narrowbody)": "fuel_and_crew!A4:C4",
+              "Holding fuel burn (widebody)": "fuel_and_crew!A5:C5",
+              "airport": "airport_capacity!A22:K22",
+              "wake": "wake_separation!A3:D11"
+            },
+            "spare_gates": 3,
+            "spare_hold_min": 45,
+            "widebody_hold_kg_per_hour": 6500,
+            "workbook_file": "challenge2_operational_constraints.xlsx",
+            "workbook_sha256": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211"
+          },
+          "trip_fuel_kg": 4000.0,
+          "wake_application": "departure_time_proxy_for_arrivals"
+        },
+        "units": "schema-defined seconds/kg/minutes",
+        "provenance": "synthetic_scenario",
+        "source_reference": "scenarios/D01.json#/overlay/operations",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
+        "observed_at": null,
+        "valid_until": null,
+        "input_ids": []
+      },
+      {
+        "fact_id": "policy.operational_limits",
+        "domain": null,
+        "value": {
+          "active_runways": 3,
+          "airport_code": "MIA",
+          "contingency_percent": 5,
+          "flight_crew_duty_s": 46800,
+          "gate_notice_s": 1200,
+          "gates": 70,
+          "ground_shift_s": 28800,
+          "max_ops_per_hour": 60,
+          "min_turnaround_s": 2100,
+          "narrowbody_hold_kg_per_hour": 2400,
+          "overtime_multiplier": 1.5,
+          "reserve_hold_min": 30,
+          "separation_nm": {
+            "H>H": 4,
+            "H>L": 6,
+            "H>M": 5,
+            "H>S": 3,
+            "L>H": 3,
+            "L>L": 3,
+            "L>M": 3,
+            "L>S": 3,
+            "M>H": 3,
+            "M>L": 4,
+            "M>M": 3,
+            "M>S": 3,
+            "S>H": 6,
+            "S>L": 8,
+            "S>M": 7,
+            "S>S": 3
+          },
+          "separation_s": {
+            "H>H": 120,
+            "H>L": 120,
+            "H>M": 120,
+            "H>S": 60,
+            "L>H": 60,
+            "L>L": 60,
+            "L>M": 60,
+            "L>S": 60,
+            "M>H": 60,
+            "M>L": 60,
+            "M>M": 60,
+            "M>S": 60,
+            "S>H": 180,
+            "S>L": 180,
+            "S>M": 180,
+            "S>S": 60
+          },
+          "source_cells": {
+            "Assumed spare fuel on arrival": "fuel_and_crew!A6:C6",
+            "Contingency fuel": "fuel_and_crew!A3:C3",
+            "Final fuel reserve": "fuel_and_crew!A2:C2",
+            "Flight crew max duty": "fuel_and_crew!A7:C7",
+            "Gate change notice": "fuel_and_crew!A9:C9",
+            "Ground crew shift": "fuel_and_crew!A8:C8",
+            "Holding fuel burn (narrowbody)": "fuel_and_crew!A4:C4",
+            "Holding fuel burn (widebody)": "fuel_and_crew!A5:C5",
+            "airport": "airport_capacity!A22:K22",
+            "wake": "wake_separation!A3:D11"
+          },
+          "spare_gates": 3,
+          "spare_hold_min": 45,
+          "widebody_hold_kg_per_hour": 6500,
+          "workbook_file": "challenge2_operational_constraints.xlsx",
+          "workbook_sha256": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211"
+        },
+        "units": "seconds, kg/hour, percent, count, nautical miles",
+        "provenance": "policy",
+        "source_reference": "challenge2_operational_constraints.xlsx: airport_capacity!A22:K22; wake_separation!A3:D11; fuel_and_crew!A1:C9",
+        "source_version": "f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -395,15 +592,15 @@
         "fact_id": "snapshot.versions",
         "domain": null,
         "value": {
-          "policy_version": "balanced-v1",
+          "policy_version": "balanced-workbook-v1",
           "resource_revision": 1,
-          "ruleset_version": "toy-rules-v1",
+          "ruleset_version": "organizer-v1",
           "scenario_revision": 1
         },
         "units": "version",
         "provenance": "derived",
         "source_reference": "frozen scenario envelope",
-        "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+        "source_version": "a9dba70005eebd5c2285cdb49fabe2310c8c90615db928c5ffa58a34c77cead6",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -412,13 +609,13 @@
         "fact_id": "policy.fuel_limits",
         "domain": "PILOT",
         "value": {
-          "reserve_floor_kg": 2200.0,
-          "uncertainty_allowance_kg": 100.0
+          "reserve_floor_kg": 1400.0,
+          "uncertainty_allowance_kg": 50.0
         },
         "units": "kg",
         "provenance": "policy",
         "source_reference": "scenario fuel reserve and uncertainty policy",
-        "source_version": "toy-rules-v1",
+        "source_version": "organizer-v1",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -430,6 +627,7 @@
           "connection_normalizer": 20,
           "delay_normalizer_s": 1800,
           "fuel_normalizer_kg": 800,
+          "overtime_multiplier": "1.5",
           "overtime_normalizer_min": 20,
           "paired_weight": "0.5",
           "turnaround_normalizer_min": 30
@@ -437,7 +635,7 @@
         "units": "dimensionless",
         "provenance": "policy",
         "source_reference": "docs/technical_prd.md section 8.6",
-        "source_version": "balanced-v1",
+        "source_version": "balanced-workbook-v1",
         "observed_at": null,
         "valid_until": null,
         "input_ids": []
@@ -459,11 +657,14 @@
       "overlay.arrival_options",
       "overlay.service",
       "overlay.connections",
+      "overlay.operations",
+      "policy.operational_limits",
       "snapshot.versions",
       "policy.fuel_limits",
       "policy.scoring"
     ],
     "required_rule_ids": [
+      "SYSTEM-FRESH-01",
       "ATC-RWY-01",
       "ATC-SEP-01",
       "ATC-TAXI-01",
@@ -474,7 +675,10 @@
       "GROUND-OCC-01",
       "GROUND-CREW-01",
       "GROUND-EQUIP-01",
-      "SYSTEM-FRESH-01"
+      "SYSTEM-OPS-01",
+      "PILOT-DUTY-01",
+      "GROUND-NOTICE-01",
+      "GROUND-TURN-01"
     ],
     "concession_delta": {
       "ATC": "0.25",
@@ -490,7 +694,7 @@
     "api_base": null,
     "api_mode": "responses",
     "reasoning_effort": null,
-    "prompt_version": "roles-v5",
+    "prompt_version": "roles-v6",
     "max_output_tokens": 500,
     "retries": 0
   },
@@ -500,9 +704,9 @@
   "round_count": 0,
   "agent_invocation_count": 0,
   "model_call_count": 0,
-  "created_at": "2026-10-31T05:36:09.098352Z",
-  "deadline_at": "2026-10-31T05:36:54.098352Z",
-  "finished_at": "2026-10-31T05:36:09.106475Z",
+  "created_at": "2026-10-31T06:11:09.376928Z",
+  "deadline_at": "2026-10-31T06:11:54.376928Z",
+  "finished_at": "2026-10-31T06:11:09.385154Z",
   "expires_at": null,
   "elapsed_ms": 8,
   "catalog": {
@@ -516,6 +720,8 @@
   "checks": [],
   "offers": {},
   "votes": {},
+  "previous_votes": {},
+  "previous_candidate_id": null,
   "fallback_reason": "EMPTY_FEASIBLE_SHORTLIST",
   "reason_code": "INSUFFICIENT_DATA",
   "mode": "fixture",
@@ -526,6 +732,7 @@
   "catalog_feasible_count": 0,
   "blockers": {},
   "baseline_b0": null,
+  "baseline_b1": null,
   "events": [
     {
       "sequence": 1,

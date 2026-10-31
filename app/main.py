@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class Settings:
-    db_path: Path = Path("artifacts/plab.sqlite3")
-    scenario_dir: Path = Path("scenarios")
+    db_path: Path = Path("artifacts/organizer.sqlite3")
+    scenario_dir: Path = Path("scenarios/organizer")
     data_dir: Path = Path("data")
     static_dir: Path = Path("app/static")
     evaluation_path: Path = Path("artifacts/evals/latest.json")
@@ -71,7 +71,7 @@ class Settings:
         if api_mode not in ("responses", "chat_completions"):
             raise ValueError("Provider API_MODE must be responses or chat_completions")
         return cls(
-            db_path=Path(os.getenv("PLAB_DB_PATH", "artifacts/plab.sqlite3")),
+            db_path=Path(os.getenv("PLAB_DB_PATH", "artifacts/organizer.sqlite3")),
             data_dir=Path(os.getenv("PLAB_DATA_DIR", "data")),
             public_origin=os.getenv("PLAB_PUBLIC_ORIGIN", "http://127.0.0.1:8000").rstrip("/"),
             reviewer_id=os.getenv("PLAB_REVIEWER_ID", "local-duty-manager"),
@@ -142,8 +142,6 @@ def create_app(
             try:
                 snapshot = load_snapshot(path, config.data_dir)
             except ServiceError as error:
-                if error.code != "SOURCE_FILE_NOT_FOUND":
-                    raise
                 scenario_errors.append({"file": path.name, "code": error.code})
                 continue
             database.register_scenario(
@@ -216,6 +214,15 @@ def create_app(
 
     mutations = [Depends(authorize)]
 
+    def require_sources(snapshot: ScenarioSnapshot) -> None:
+        from app.operational_data import verify_source_files
+
+        try:
+            verify_source_files(snapshot, config.data_dir)
+        except ServiceError:
+            database.invalidate_resource(snapshot.resource_id)
+            raise
+
     @application.get("/health")
     async def health() -> dict[str, JsonValue]:
         database.list_scenarios()  # Verifies storage is readable, without exposing its path.
@@ -284,8 +291,12 @@ def create_app(
         accepted_at = time.monotonic()
         if coordinator is None or planning is None:
             raise ServiceError("PLANNING_NOT_CONNECTED", 503)
+        key = idempotency_key(request)
+        if existing := database.existing_run(body, key):
+            return run_response(existing)
+        require_sources(database.get_scenario(body.scenario_id, body.scenario_revision))
         run, created = database.create_run(
-            body, idempotency_key(request), agent_provider.info, planning.mode, budgets.deadline_s
+            body, key, agent_provider.info, planning.mode, budgets.deadline_s
         )
         if created:
             task = asyncio.create_task(coordinator.run(run.run_id, accepted_at))
@@ -317,6 +328,8 @@ def create_app(
     async def decision(run_id: str, body: ReviewRequest, request: Request) -> dict[str, JsonValue]:
         if review_hook is None:
             raise ServiceError("REVIEW_NOT_CONNECTED", 503)
+        if body.decision == "APPROVE":
+            require_sources(database.get_run(run_id).snapshot)
         result = database.review(
             run_id, body, idempotency_key(request), config.reviewer_id, review_hook
         )

@@ -1,144 +1,103 @@
-# PLAB.ai
+# PLAB.ai — Airbus Challenge #2
 
-Airport coordination simulator for the Airbus challenge: independent ATC, Pilot,
-and Ground agents negotiate a checked plan, then a human reviews its simulated
-application. This is a prototype, not an operational aviation system.
+A working airport coordination simulator: independent ATC, Pilot and Ground agents
+negotiate a checked arrival plan, and a duty manager approves its application.
+The organizer's workbook supplies synthetic operational limits.
 
-The requirements are in [the technical PRD](docs/technical_prd.md); ownership is in
-[the three-developer work plan](docs/developer_work_plan.md). The
-[organizer clarification](docs/organizer_updates.md) records the new flight release,
-turn definition and operational workbook requirements.
+## Start the MVP
 
-One turn is one structured message from each of ATC, Pilot and Ground. The challenge
-allows consensus within three turns (nine agent generation requests maximum), then
-deterministic fallback. The implemented profile uses two turns/six requests, with
-early fallback on failure or dissent. Fallback makes no model calls. Human approval
-is required before simulated application in either case.
-
-## Backend setup
-
-Use Python 3.12 and [uv](https://docs.astral.sh/uv/). Dependencies are locked in
-`uv.lock`.
+Requires Python 3.12 and uv. Keep the organizer's filtered flights.csv in data/.
+The small operational workbook is included; the flight CSV remains local.
 
 ```sh
 uv sync --locked --dev
 cp -n .env.example .env
+uv run python -m app.prepare
+uv run python -m app.demo
 ```
 
-Configure `.env` locally. Never commit credentials:
+Set SOCLAAS_API_KEY and SOCLAAS_MODEL in .env, or the OPENAI_* equivalents.
+The demo prints a temporary operator access code when PLAB_SESSION_TOKEN is unset.
+Alternatively set it to at least 16 random characters in .env. Keep credentials out of Git.
 
-- `SOCLAAS_API_KEY`, `SOCLAAS_MODEL`, `SOCLAAS_BASE_URL`: the configured SoCLaaS
-  provider. Use an active key and a supported model ID. The example uses
-  `qwen3.8:27b`, verified on the backend conflict fixture.
-- `SOCLAAS_API_MODE=chat_completions`: the verified gateway endpoint. The adapter
-  requests reasoning disabled to reserve the output budget for the structured reply.
-- Alternatively, leave `SOCLAAS_API_KEY` unset and configure `OPENAI_API_KEY`,
-  `OPENAI_MODEL`, and optionally `OPENAI_BASE_URL`.
-- `PLAB_SESSION_TOKEN`: a local operator token of at least 16 characters. Generate
-  one with `openssl rand -hex 24` and put it in this field locally.
-- `PLAB_REVIEWER_ID`, `PLAB_DB_PATH`, `PLAB_PUBLIC_ORIGIN`: local reviewer identity,
-  SQLite location, and browser origin. Defaults bind the service to
-  `http://127.0.0.1:8000`.
-- Put the selected historical dataset at `data/flights.csv`, or set
-  `PLAB_DATA_DIR` to its containing directory. The organizer reports a new release
-  of **358,774 rows from 2015**, selected by `WEATHER_DELAY > 15 OR
-  LATE_AIRCRAFT_DELAY > 20`. Profile the actual file and preserve its hash.
-- The local CSV is still the earlier 592,406,591-byte full release. Current D01
-  loads its record 71 (AA1057 DFW–MIA, 2015-01-01). Before switching to the filtered
-  release, re-extract and verify that identity, its qualifying values, new ordinal
-  and file hash in the scenario. Old ordinals do not transfer across releases.
-- Obtain `challenge2_operational_constraints.xlsx` for synthetic airport gates,
-  runways, movements/hour and turnaround, plus wake separation, fuel and crew
-  rules; cited real figures are also accepted. Inspect exact cells, units and
-  applicability before producing normalized versioned JSON scenarios. The workbook
-  was not available for inspection during this documentation update. The service
-  does not automatically import XLSX; current D01 constants remain illustrative.
+Open **http://127.0.0.1:8000**, enter that access code, select D01, and click
+**Start run**. Review the plan, messages, checks and B0/B1 comparisons. Enter a
+reason and approve or reject. Fallback also needs the acknowledgement.
+Each launch uses a fresh SQLite database under artifacts/demos/.
 
-Environment variables take precedence over `.env`. A configured SoCLaaS key takes
-precedence over OpenAI configuration. The adapter uses the OpenAI SDK, with Chat
-Completions for SoCLaaS and Responses for OpenAI. Both request a strict JSON schema,
-a 500-token output cap, and zero retries; local schema and policy validation remain
-mandatory. Set `<PROVIDER>_API_MODE` to `responses` or `chat_completions` to select
-the endpoint explicitly. The endpoint never switches during a run. SoCLaaS
-documents a [Responses API subset](https://soclaas.comp.nus.edu.sg/guides/api.html);
-its responses did not consistently obey the requested schema in the initial smoke
-tests. The exact contract is also included in the trusted role prompt. An unsupported
-request becomes an explicit provider failure and deterministic fallback, never a
-hidden retry.
-
-## Run Developer B's slice now
+For an offline presentation with the real planner and review gate:
 
 ```sh
-# Offline protocol smoke: deterministic role responses and planner fixtures.
-uv run python -m examples.backend_demo
-
-# Real provider calls over the same explicitly labelled planner fixture.
-uv run python -m examples.backend_demo --live
-
-# Local fixture API for Developer A; add --live to use the configured provider.
-uv run python -m examples.backend_demo --serve
+uv run python -m app.demo --offline
+# Show a third-turn revision with explicitly labelled fixture agents:
+uv run python -m app.demo --offline --third-turn
 ```
 
-Each command uses a fresh database under `artifacts/backend-smoke/`. Smoke runs
-save their full trace and print the path. `planning_mode=FIXTURE` remains visible
-even when `provider.mode=LIVE`. Fixture checks are test certificates, not an
-aviation checker or evaluation baseline. The fixture review hook only demonstrates
-atomic storage behavior. Nothing applies automatically.
+The UI always identifies fixture agents. Eight read-only samples are available,
+including third-turn agreement, missing data, no feasible plan, fallback,
+rejection, stale approval and applied simulation.
 
-To run the backend with the deterministic planner integrated from
-[PR #1](https://github.com/kaseyho/PLAB.ai/pull/1):
+## Implemented behavior
 
-```sh
-uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 1
-```
+- One structured message per role per turn, at most **three turns / nine requests**,
+  and no SDK retries. Valid dissent selects an untried common plan for fresh votes.
+- **45 seconds per run**, **12 seconds per request**, **five seconds for fallback**.
+  Fallback makes zero model calls. Invalid or missing inputs never become consensus.
+- Up to 124 candidate combinations and 15 deterministic checks. Workbook rules
+  cover airport inventory/capacity, wake times, reserve plus contingency fuel,
+  flight duty, ground overtime, turnaround and gate notice.
+- Human approval bound to the exact plan, versions and expiry. Application
+  atomically reserves runway, gate, crew and equipment. Changed sources or stale
+  state block approval; rejection/cancellation do not apply a plan.
+- Persisted messages, requests, counters, checks and hash-chained audit events.
+  Download the full trace from the dashboard.
+- B0 earliest-feasible and B1 joint-cost baselines over the same full catalog.
 
-Visit `/docs` for the API schema and `/health` for integration status. Mutations
-require `Authorization: Bearer <PLAB_SESSION_TOKEN>`; starting a run and recording
-a review also require `Idempotency-Key`. Poll run status and incremental events.
-The API serves the duty desk at `/`. Select a scenario, enter the configured
-operator token, and start a run. The token remains in that tab's memory. The
-dashboard shows actual provider/planner modes, events, deterministic impacts,
-checks and review expiry. Both approval and rejection require a reason. Explicit
-`?sample=consensus` (or `fallback`, `no-feasible`, `insufficient-data`, `stale`,
-`applied`, `rejected`) opens a labelled sample with actions disabled.
-The `?fixture=` alias is also supported.
+## Inputs and scope
 
-The default service uses the integrated checker and the existing illustrative D01
-scenario. DOT data has no gates, runways, fuel or crew; the filtered disrupted-flight
-cohort also does not establish a full traffic schedule or aircraft rotation. Use
-inspected workbook/cited limits and explicit scenario state, not inferred operational
-facts. The one-runway/two-gate slice must be declared as a subset of sourced airport
-totals. Updating source facts/rules requires new versions and invalidates old reviews.
+The delivered CSV was verified as **358,774 eligible 2015 rows**, SHA-256
+`bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e`.
+The workbook SHA-256 is
+`f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211`.
+Scenarios retain identity, ordinal, both hashes and source cells.
+AA1057 DFW–MIA is now record **47**, rather than 71 in the legacy file.
 
-The default service loads the selected historical file. A missing CSV
-appears in `/health` as `SOURCE_FILE_NOT_FOUND`; it never fabricates a historical
-row. Human approval rechecks the current runway/gate reservations inside the
-SQLite transaction before applying the simulated plan. Refreshing a scenario
-retains committed reservations and invalidates old recommendations. Applied
-bookings include the run ID, candidate ID and plan hash. This prototype reserves
-runway and gate occupancy; crew and equipment checks use the scenario's availability
-and do not yet create persistent reservations. Negotiation does not apply a plan.
-See [the integration handoff](docs/backend_handoff.md) for
-exact signatures, payloads, and acceptance evidence.
+One runway and two candidate spare gates form a declared subset of airport totals.
+Traffic, occupancy, routes, aircraft type, fuel state, report times and equipment
+are synthetic scenario inputs. The departure wake-time table is a **declared
+arrival-simulation proxy**; nautical-mile spacing is retained but not simulated.
+Filtered DOT rows are never treated as a full queue or an aircraft rotation.
+This prototype is not operational flight-control software.
 
-## Verify
+Default scenarios are in scenarios/organizer/. scenarios/D01.json remains the
+legacy arithmetic regression fixture and is not loaded by the submission app.
+See [the demo guide](docs/submission.md) for presentation steps and limitations.
+
+## Verification and optional evaluations
 
 ```sh
 uv run ruff check app examples tests
 uv run ruff format --check app examples tests
 uv run mypy
 uv run pytest -q
+node --check app/static/app.js
+# Optional; not required to run the MVP:
+uv run python -m app.evaluate
+uv run python -m app.evaluate --live
 ```
 
-The tests make no live model calls. The last merged code verification passed 176
-offline tests; this documentation update does not claim workbook-backed tests or
-new-release evaluation results. They cover the scenario hard rules, catalog
-and fallback integration, coordination, provider requests, failure recovery,
-persistence, authorization, and atomic approval. B0/B1 comparisons and the frozen
-evaluation suite remain separate team gates. `/api/evaluations/latest` returns
-`NOT_YET_EVALUATED` until C writes `artifacts/evals/latest.json`.
+Live evaluation starts at most 54 requests for six nominal holdout cases.
+Fault cases use labelled fixtures. Reports retain failures and distinguish
+contract checks from model consensus. Results appear at /api/evaluations/latest.
+Traces, databases, local credentials and generated reports stay under ignored paths.
 
-`data/` is ignored because the supplied flight CSV exceeds GitHub's file size
-limit. Runtime databases, traces, reports, local environment files, and caches are
-also ignored. Retain failures and review evidence before deliberately publishing
-any generated artifact.
+For a persistent service instead of an isolated demo:
+
+```sh
+uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 1
+```
+
+/health reports input/provider setup; /docs exposes the API. Mutations require the
+operator bearer token; starts/reviews also require Idempotency-Key.
+See [the PRD](docs/technical_prd.md), [backend handoff](docs/backend_handoff.md) and
+[three-developer plan](docs/developer_work_plan.md).
