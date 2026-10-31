@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 class Settings:
     db_path: Path = Path("artifacts/plab.sqlite3")
     scenario_dir: Path = Path("scenarios")
+    data_dir: Path = Path("data")
     static_dir: Path = Path("app/static")
     evaluation_path: Path = Path("artifacts/evals/latest.json")
     public_origin: str = "http://127.0.0.1:8000"
@@ -71,6 +72,7 @@ class Settings:
             raise ValueError("Provider API_MODE must be responses or chat_completions")
         return cls(
             db_path=Path(os.getenv("PLAB_DB_PATH", "artifacts/plab.sqlite3")),
+            data_dir=Path(os.getenv("PLAB_DATA_DIR", "data")),
             public_origin=os.getenv("PLAB_PUBLIC_ORIGIN", "http://127.0.0.1:8000").rstrip("/"),
             reviewer_id=os.getenv("PLAB_REVIEWER_ID", "local-duty-manager"),
             session_token=os.getenv("PLAB_SESSION_TOKEN", ""),
@@ -84,12 +86,11 @@ class Settings:
 def discover_planner() -> PlanningHooks | None:
     try:
         planning = importlib.import_module("app.planning")
-        constraints = importlib.import_module("app.constraints")
     except ModuleNotFoundError as error:
         if error.name in {"app.planning", "app.constraints"}:
             return None
         raise
-    return PlanningHooks(planning.build_catalog, constraints.check_plan, planning.select_fallback)
+    return PlanningHooks(planning.build_catalog, planning.check_plan, planning.select_fallback)
 
 
 def discover_reviewer() -> ReviewHook | None:
@@ -125,6 +126,7 @@ def create_app(
     budgets = limits or Limits()
     coordinator = Coordinator(database, planning, agent_provider, budgets) if planning else None
     tasks: dict[str, asyncio.Task[RunRecord]] = {}
+    scenario_errors: list[JsonValue] = []
 
     def task_finished(run_id: str, task: asyncio.Task[RunRecord]) -> None:
         tasks.pop(run_id, None)
@@ -134,8 +136,16 @@ def create_app(
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         database.recover_interrupted()
+        from app.planning import load_snapshot
+
         for path in sorted(config.scenario_dir.glob("*.json")):
-            snapshot = ScenarioSnapshot.model_validate_json(path.read_text())
+            try:
+                snapshot = load_snapshot(path, config.data_dir)
+            except ServiceError as error:
+                if error.code != "SOURCE_FILE_NOT_FOUND":
+                    raise
+                scenario_errors.append({"file": path.name, "code": error.code})
+                continue
             database.register_scenario(
                 snapshot,
                 ResourceState(
@@ -210,7 +220,8 @@ def create_app(
     async def health() -> dict[str, JsonValue]:
         database.list_scenarios()  # Verifies storage is readable, without exposing its path.
         return {
-            "status": "ok",
+            "status": "degraded" if scenario_errors else "ok",
+            "scenario_load_errors": scenario_errors,
             "planning_connected": planning is not None,
             "review_connected": review_hook is not None,
             "provider_mode": agent_provider.info.mode,

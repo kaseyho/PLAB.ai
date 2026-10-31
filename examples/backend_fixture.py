@@ -184,7 +184,8 @@ class FixtureProvider:
         timeout_s: float,
     ) -> ProviderReply:
         context = cast(dict[str, JsonValue], prompt["context"])
-        evidence = (f"impact:C2:{role}",)
+        candidates = cast(list[dict[str, JsonValue]], context["candidates"])
+        evidence = (f"impact:{candidates[0]['candidate_id']}:{role}",)
         if round_number == 1:
             initial = cast(list[str], context["allowed_initial_ids"])
             concessions = cast(list[str], context["allowed_concession_ids"])

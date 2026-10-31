@@ -235,7 +235,9 @@ def test_hook_cannot_apply_an_invalid_check_set(store, tmp_path):
         assert store.get_resource("fixture-airport").data == {}
 
 
-def test_missing_integrations_are_explicit_not_faked(tmp_path):
+def test_missing_integrations_are_explicit_not_faked(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.main.discover_planner", lambda: None)
+    monkeypatch.setattr("app.main.discover_reviewer", lambda: None)
     settings = Settings(
         db_path=tmp_path / "missing.sqlite3", session_token=TOKEN, scenario_dir=tmp_path / "none"
     )

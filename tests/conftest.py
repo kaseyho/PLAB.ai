@@ -1,8 +1,11 @@
+import copy
+import json
 from pathlib import Path
 
 import pytest
 
 from app.contracts import ResourceState, StartRunRequest
+from app.scenarios import ScenarioSnapshot, snapshot_from_dict
 from app.store import Store
 from examples.backend_fixture import sample_snapshot
 
@@ -23,3 +26,20 @@ def start_run(store, provider, key="start", **kwargs):
         "FIXTURE",
         kwargs.get("deadline_s", 45),
     )[0]
+
+
+ROOT = Path(__file__).resolve().parent.parent
+
+D01 = json.loads((ROOT / "scenarios" / "D01.json").read_text())
+
+
+def scenario(mutate=None) -> ScenarioSnapshot:
+    """The Appendix A fixture, optionally edited by `mutate(raw_dict)` before validation."""
+    raw = copy.deepcopy(D01)
+    if mutate:
+        mutate(raw)
+    return snapshot_from_dict(raw)
+
+
+def result(results, rule_id):
+    return next(r for r in results if r.rule_id == rule_id)

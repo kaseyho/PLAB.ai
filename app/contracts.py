@@ -226,7 +226,8 @@ class RouteEdge(Interval):
 class ImpactVector(Contract):
     additional_landing_delay_s: Count
     modeled_fuel_used_kg: Nonnegative
-    fuel_at_gate_kg: Nonnegative
+    # Failed catalog candidates can project a deficit; required fuel checks block approval.
+    fuel_at_gate_kg: Decimal
     reserve_margin_kg: Decimal
     crew_overtime_min: Nonnegative
     turnaround_lateness_min: Nonnegative
