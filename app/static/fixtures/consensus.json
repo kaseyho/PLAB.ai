@@ -1,0 +1,3606 @@
+{
+ "sample_label": "Sample 'consensus': real API, planner and checks; agent messages from an offline test provider.",
+ "run": {
+  "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+  "parent_run_id": null,
+  "snapshot": {
+   "scenario_id": "D01",
+   "revision": 1,
+   "resource_id": "airport:MIA",
+   "resource_revision": 1,
+   "ruleset_version": "toy-rules-v1",
+   "policy_version": "balanced-v1",
+   "simulation_epoch": "2026-10-31T00:00:00Z",
+   "source": {
+    "dataset_id": "flights.csv",
+    "dataset_sha256": "afa4e42188b113dd69427a3fbd00a4b6979c6235c866f963c2899d18a3403a83",
+    "record_ordinal": 71,
+    "identity": "2015-1-1:AA1057",
+    "original_fields": {
+     "AIRLINE": "AA",
+     "AIRLINE_DELAY": "0",
+     "AIR_SYSTEM_DELAY": "0",
+     "AIR_TIME": "133",
+     "ARRIVAL_DELAY": "102",
+     "ARRIVAL_TIME": "1038",
+     "CANCELLATION_REASON": "",
+     "CANCELLED": "0",
+     "DAY": "1",
+     "DAY_OF_WEEK": "4",
+     "DEPARTURE_DELAY": "108",
+     "DEPARTURE_TIME": "0703",
+     "DESTINATION_AIRPORT": "MIA",
+     "DISTANCE": "1121",
+     "DIVERTED": "0",
+     "ELAPSED_TIME": "155",
+     "FLIGHT_NUMBER": "1057",
+     "LATE_AIRCRAFT_DELAY": "0",
+     "MONTH": "1",
+     "ORIGIN_AIRPORT": "DFW",
+     "SCHEDULED_ARRIVAL": "0856",
+     "SCHEDULED_DEPARTURE": "0515",
+     "SCHEDULED_TIME": "161",
+     "SECURITY_DELAY": "0",
+     "TAIL_NUMBER": "N3ASAA",
+     "TAXI_IN": "7",
+     "TAXI_OUT": "15",
+     "WEATHER_DELAY": "102",
+     "WHEELS_OFF": "0718",
+     "WHEELS_ON": "1031",
+     "YEAR": "2015"
+    }
+   },
+   "facts": [
+    {
+     "fact_id": "overlay.search",
+     "domain": null,
+     "value": {
+      "earliest_landing_s": 600,
+      "horizon_s": 1800,
+      "step_s": 60
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/search",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.aircraft",
+     "domain": null,
+     "value": {
+      "aircraft_class": "C",
+      "wake_category": "M"
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/aircraft",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.runway",
+     "domain": "ATC",
+     "value": {
+      "available_intervals": [
+       [
+        540,
+        86400
+       ]
+      ],
+      "focal_occupancy_s": 60,
+      "runway_id": "R1"
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/runway",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.movements",
+     "domain": "ATC",
+     "value": [
+      {
+       "movement_id": "BG1",
+       "occupancy_s": 60,
+       "time_s": 300,
+       "wake_category": "M"
+      },
+      {
+       "movement_id": "BG2",
+       "occupancy_s": 60,
+       "time_s": 780,
+       "wake_category": "M"
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/movements",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.separation_s",
+     "domain": "ATC",
+     "value": {
+      "M>M": 180
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "policy",
+     "source_reference": "scenarios/D01.json#/overlay/separation_s",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.capacity",
+     "domain": "ATC",
+     "value": {
+      "max_movements": 10,
+      "window_s": 3600
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "policy",
+     "source_reference": "scenarios/D01.json#/overlay/capacity",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.routes",
+     "domain": null,
+     "value": [
+      {
+       "edges": [
+        {
+         "duration_s": 300,
+         "edge_id": "TWY-A"
+        }
+       ],
+       "gate_id": "G1",
+       "route_id": "G1-short"
+      },
+      {
+       "edges": [
+        {
+         "duration_s": 240,
+         "edge_id": "TWY-B1"
+        },
+        {
+         "duration_s": 300,
+         "edge_id": "TWY-B2"
+        }
+       ],
+       "gate_id": "G1",
+       "route_id": "G1-long"
+      },
+      {
+       "edges": [
+        {
+         "duration_s": 480,
+         "edge_id": "TWY-C"
+        }
+       ],
+       "gate_id": "G2",
+       "route_id": "G2-route"
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/routes",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.taxi_blockages",
+     "domain": "ATC",
+     "value": {},
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/taxi_blockages",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.gates",
+     "domain": "GROUND",
+     "value": [
+      {
+       "compatible_classes": [
+        "C"
+       ],
+       "crew_id": "CREW-G1",
+       "gate_id": "G1",
+       "required_equipment": [
+        "GPU-1"
+       ],
+       "reservations": [
+        [
+         0,
+         1500
+        ]
+       ]
+      },
+      {
+       "compatible_classes": [
+        "C"
+       ],
+       "crew_id": "CREW-G2",
+       "gate_id": "G2",
+       "required_equipment": [
+        "GPU-2"
+       ],
+       "reservations": [
+        [
+         0,
+         1080
+        ]
+       ]
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/gates",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.crews",
+     "domain": "GROUND",
+     "value": [
+      {
+       "available_from_s": 0,
+       "crew_id": "CREW-G1",
+       "max_duty_end_s": 3000,
+       "regular_shift_end_s": 2700
+      },
+      {
+       "available_from_s": 0,
+       "crew_id": "CREW-G2",
+       "max_duty_end_s": 3600,
+       "regular_shift_end_s": 1080
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/crews",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.equipment",
+     "domain": "GROUND",
+     "value": [
+      {
+       "available_intervals": [
+        [
+         0,
+         86400
+        ]
+       ],
+       "equipment_id": "GPU-1"
+      },
+      {
+       "available_intervals": [
+        [
+         0,
+         86400
+        ]
+       ],
+       "equipment_id": "GPU-2"
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/equipment",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.fuel",
+     "domain": "PILOT",
+     "value": {
+      "hold_burn_kg_per_min": 50.0,
+      "projected_fuel_at_earliest_kg": 3000.0,
+      "reserve_floor_kg": 2200.0,
+      "taxi_burn_kg_per_min": 20.0,
+      "uncertainty_allowance_kg": 100.0
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/fuel",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.arrival_options",
+     "domain": "PILOT",
+     "value": [
+      {
+       "arrival_option_id": "ARR-STD",
+       "landing_window": [
+        0,
+        86400
+       ],
+       "permitted": true
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/arrival_options",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.service",
+     "domain": "GROUND",
+     "value": {
+      "duration_s": 1200,
+      "gate_buffer_s": 0,
+      "pre_service_buffer_s": 0,
+      "release_buffer_s": 0,
+      "target_service_end_s": 2700
+     },
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/service",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "overlay.connections",
+     "domain": "PILOT",
+     "value": [
+      {
+       "deadline_s": 6000,
+       "group_id": "CONN-1",
+       "passengers": 12,
+       "transfer_time_s": 1200
+      }
+     ],
+     "units": "schema-defined seconds/kg/minutes",
+     "provenance": "synthetic_scenario",
+     "source_reference": "scenarios/D01.json#/overlay/connections",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "snapshot.versions",
+     "domain": null,
+     "value": {
+      "policy_version": "balanced-v1",
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "scenario_revision": 1
+     },
+     "units": "version",
+     "provenance": "derived",
+     "source_reference": "frozen scenario envelope",
+     "source_version": "bc6bda78992e29eae6bf7581f088188bb690c7fba61f9bdfe995e10ef3fa8244",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "policy.fuel_limits",
+     "domain": "PILOT",
+     "value": {
+      "reserve_floor_kg": 2200.0,
+      "uncertainty_allowance_kg": 100.0
+     },
+     "units": "kg",
+     "provenance": "policy",
+     "source_reference": "scenario fuel reserve and uncertainty policy",
+     "source_version": "toy-rules-v1",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    },
+    {
+     "fact_id": "policy.scoring",
+     "domain": null,
+     "value": {
+      "connection_normalizer": 20,
+      "delay_normalizer_s": 1800,
+      "fuel_normalizer_kg": 800,
+      "overtime_normalizer_min": 20,
+      "paired_weight": "0.5",
+      "turnaround_normalizer_min": 30
+     },
+     "units": "dimensionless",
+     "provenance": "policy",
+     "source_reference": "docs/technical_prd.md section 8.6",
+     "source_version": "balanced-v1",
+     "observed_at": null,
+     "valid_until": null,
+     "input_ids": []
+    }
+   ],
+   "required_fact_ids": [
+    "overlay.search",
+    "overlay.aircraft",
+    "overlay.runway",
+    "overlay.movements",
+    "overlay.separation_s",
+    "overlay.capacity",
+    "overlay.routes",
+    "overlay.taxi_blockages",
+    "overlay.gates",
+    "overlay.crews",
+    "overlay.equipment",
+    "overlay.fuel",
+    "overlay.arrival_options",
+    "overlay.service",
+    "overlay.connections",
+    "snapshot.versions",
+    "policy.fuel_limits",
+    "policy.scoring"
+   ],
+   "required_rule_ids": [
+    "ATC-RWY-01",
+    "ATC-SEP-01",
+    "ATC-TAXI-01",
+    "ATC-CAP-01",
+    "PILOT-FUEL-01",
+    "PILOT-ROUTE-01",
+    "GROUND-GATE-01",
+    "GROUND-OCC-01",
+    "GROUND-CREW-01",
+    "GROUND-EQUIP-01",
+    "SYSTEM-FRESH-01"
+   ],
+   "concession_delta": {
+    "ATC": "0.25",
+    "PILOT": "0.25",
+    "GROUND": "0.25"
+   },
+   "valid_until": null
+  },
+  "planning_mode": "INTEGRATED",
+  "provider": {
+   "mode": "FIXTURE",
+   "model": "deterministic-test-double",
+   "api_base": null,
+   "api_mode": "responses",
+   "reasoning_effort": null,
+   "prompt_version": "roles-v5",
+   "max_output_tokens": 500,
+   "retries": 0
+  },
+  "processing_state": "TERMINAL",
+  "negotiation_outcome": "FEASIBLE_CONSENSUS",
+  "approval_state": "PENDING",
+  "round_count": 2,
+  "agent_invocation_count": 6,
+  "model_call_count": 0,
+  "created_at": "2026-10-31T05:21:35.358329Z",
+  "deadline_at": "2026-10-31T05:22:20.358329Z",
+  "finished_at": "2026-10-31T05:21:37.597248Z",
+  "expires_at": "2026-10-31T05:23:37.615249Z",
+  "elapsed_ms": 2312,
+  "catalog": {
+   "candidates": [
+    {
+     "plan": {
+      "candidate_id": "L600-G2-route",
+      "scenario_id": "D01",
+      "scenario_revision": 1,
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "policy_version": "balanced-v1",
+      "landing_time_s": 600,
+      "runway_id": "R1",
+      "runway_occupancy_end_s": 660,
+      "taxi_route_id": "G2-route",
+      "route_edge_intervals": [
+       {
+        "start_s": 600,
+        "end_s": 1080,
+        "edge_id": "TWY-C"
+       }
+      ],
+      "gate_id": "G2",
+      "gate_in_time_s": 1080,
+      "service_start_s": 1080,
+      "service_end_s": 2280,
+      "gate_release_s": 2280,
+      "crew_id": "CREW-G2",
+      "arrival_option_id": "ARR-STD",
+      "impacts": {
+       "additional_landing_delay_s": 0,
+       "modeled_fuel_used_kg": "160",
+       "fuel_at_gate_kg": "2840",
+       "reserve_margin_kg": "540",
+       "crew_overtime_min": "20",
+       "turnaround_lateness_min": "0",
+       "missed_connection_passengers": 0
+      },
+      "costs": {
+       "ATC": "0",
+       "PILOT": "0.1",
+       "GROUND": "0.5"
+      },
+      "evidence_ids": [
+       "overlay.search",
+       "overlay.aircraft",
+       "overlay.runway",
+       "overlay.movements",
+       "overlay.separation_s",
+       "overlay.capacity",
+       "overlay.routes",
+       "overlay.taxi_blockages",
+       "overlay.gates",
+       "overlay.crews",
+       "overlay.equipment",
+       "overlay.fuel",
+       "overlay.arrival_options",
+       "overlay.service",
+       "overlay.connections",
+       "policy.scoring"
+      ]
+     },
+     "checks": [
+      {
+       "check_id": "L600-G2-route:SYSTEM-FRESH-01",
+       "rule_id": "SYSTEM-FRESH-01",
+       "rule_version": "toy-rules-v1",
+       "domain": null,
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "operator": "==",
+       "required": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "units": "version",
+       "margin": null,
+       "evidence_ids": [
+        "snapshot.versions"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:ATC-RWY-01",
+       "rule_id": "ATC-RWY-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": [
+        600,
+        660
+       ],
+       "operator": "inside available, no overlap",
+       "required": [
+        [
+         540,
+         86400
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.movements",
+        "overlay.runway"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:ATC-SEP-01",
+       "rule_id": "ATC-SEP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": {
+        "BG1": 300,
+        "BG2": 180
+       },
+       "operator": ">=",
+       "required": {
+        "BG1": 180,
+        "BG2": 180
+       },
+       "units": "s",
+       "margin": "0",
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.movements",
+        "overlay.separation_s"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:ATC-TAXI-01",
+       "rule_id": "ATC-TAXI-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": [
+        [
+         "TWY-C",
+         600,
+         1080
+        ]
+       ],
+       "operator": "no edge overlaps a blockage",
+       "required": null,
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.routes",
+        "overlay.taxi_blockages"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:ATC-CAP-01",
+       "rule_id": "ATC-CAP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": {
+        "movements": 3,
+        "window": [
+         300,
+         3900
+        ]
+       },
+       "operator": "<=",
+       "required": 10,
+       "units": "movements",
+       "margin": "7",
+       "evidence_ids": [
+        "overlay.capacity",
+        "overlay.movements"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:PILOT-FUEL-01",
+       "rule_id": "PILOT-FUEL-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": 2840,
+       "operator": ">=",
+       "required": 2300,
+       "units": "kg",
+       "margin": "540",
+       "evidence_ids": [
+        "overlay.fuel",
+        "overlay.routes",
+        "overlay.search"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:PILOT-ROUTE-01",
+       "rule_id": "PILOT-ROUTE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": {
+        "ARR-STD": true
+       },
+       "operator": "all permitted",
+       "required": true,
+       "units": "label",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.arrival_options"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:GROUND-GATE-01",
+       "rule_id": "GROUND-GATE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": "C",
+       "operator": "in",
+       "required": [
+        "C"
+       ],
+       "units": "class",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.gates"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:GROUND-OCC-01",
+       "rule_id": "GROUND-OCC-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": [
+        1080,
+        2280
+       ],
+       "operator": "no overlap",
+       "required": [
+        [
+         0,
+         1080
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.gates",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:GROUND-CREW-01",
+       "rule_id": "GROUND-CREW-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": [
+        1080,
+        2280
+       ],
+       "operator": "within",
+       "required": [
+        0,
+        3600
+       ],
+       "units": "s",
+       "margin": "1320",
+       "evidence_ids": [
+        "overlay.crews",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L600-G2-route:GROUND-EQUIP-01",
+       "rule_id": "GROUND-EQUIP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L600-G2-route",
+       "status": "PASS",
+       "actual": [
+        1080,
+        2280
+       ],
+       "operator": "inside an available interval",
+       "required": [
+        "GPU-2"
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.equipment"
+       ],
+       "reason_code": "OK"
+      }
+     ]
+    },
+    {
+     "plan": {
+      "candidate_id": "L960-G1-long",
+      "scenario_id": "D01",
+      "scenario_revision": 1,
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "policy_version": "balanced-v1",
+      "landing_time_s": 960,
+      "runway_id": "R1",
+      "runway_occupancy_end_s": 1020,
+      "taxi_route_id": "G1-long",
+      "route_edge_intervals": [
+       {
+        "start_s": 960,
+        "end_s": 1200,
+        "edge_id": "TWY-B1"
+       },
+       {
+        "start_s": 1200,
+        "end_s": 1500,
+        "edge_id": "TWY-B2"
+       }
+      ],
+      "gate_id": "G1",
+      "gate_in_time_s": 1500,
+      "service_start_s": 1500,
+      "service_end_s": 2700,
+      "gate_release_s": 2700,
+      "crew_id": "CREW-G1",
+      "arrival_option_id": "ARR-STD",
+      "impacts": {
+       "additional_landing_delay_s": 360,
+       "modeled_fuel_used_kg": "480",
+       "fuel_at_gate_kg": "2520",
+       "reserve_margin_kg": "220",
+       "crew_overtime_min": "0",
+       "turnaround_lateness_min": "0",
+       "missed_connection_passengers": 0
+      },
+      "costs": {
+       "ATC": "0.2",
+       "PILOT": "0.3",
+       "GROUND": "0"
+      },
+      "evidence_ids": [
+       "overlay.search",
+       "overlay.aircraft",
+       "overlay.runway",
+       "overlay.movements",
+       "overlay.separation_s",
+       "overlay.capacity",
+       "overlay.routes",
+       "overlay.taxi_blockages",
+       "overlay.gates",
+       "overlay.crews",
+       "overlay.equipment",
+       "overlay.fuel",
+       "overlay.arrival_options",
+       "overlay.service",
+       "overlay.connections",
+       "policy.scoring"
+      ]
+     },
+     "checks": [
+      {
+       "check_id": "L960-G1-long:SYSTEM-FRESH-01",
+       "rule_id": "SYSTEM-FRESH-01",
+       "rule_version": "toy-rules-v1",
+       "domain": null,
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "operator": "==",
+       "required": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "units": "version",
+       "margin": null,
+       "evidence_ids": [
+        "snapshot.versions"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:ATC-RWY-01",
+       "rule_id": "ATC-RWY-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": [
+        960,
+        1020
+       ],
+       "operator": "inside available, no overlap",
+       "required": [
+        [
+         540,
+         86400
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.movements",
+        "overlay.runway"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:ATC-SEP-01",
+       "rule_id": "ATC-SEP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": {
+        "BG2": 180
+       },
+       "operator": ">=",
+       "required": {
+        "BG2": 180
+       },
+       "units": "s",
+       "margin": "0",
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.movements",
+        "overlay.separation_s"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:ATC-TAXI-01",
+       "rule_id": "ATC-TAXI-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": [
+        [
+         "TWY-B1",
+         960,
+         1200
+        ],
+        [
+         "TWY-B2",
+         1200,
+         1500
+        ]
+       ],
+       "operator": "no edge overlaps a blockage",
+       "required": null,
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.routes",
+        "overlay.taxi_blockages"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:ATC-CAP-01",
+       "rule_id": "ATC-CAP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": {
+        "movements": 3,
+        "window": [
+         300,
+         3900
+        ]
+       },
+       "operator": "<=",
+       "required": 10,
+       "units": "movements",
+       "margin": "7",
+       "evidence_ids": [
+        "overlay.capacity",
+        "overlay.movements"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:PILOT-FUEL-01",
+       "rule_id": "PILOT-FUEL-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": 2520,
+       "operator": ">=",
+       "required": 2300,
+       "units": "kg",
+       "margin": "220",
+       "evidence_ids": [
+        "overlay.fuel",
+        "overlay.routes",
+        "overlay.search"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:PILOT-ROUTE-01",
+       "rule_id": "PILOT-ROUTE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": {
+        "ARR-STD": true
+       },
+       "operator": "all permitted",
+       "required": true,
+       "units": "label",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.arrival_options"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:GROUND-GATE-01",
+       "rule_id": "GROUND-GATE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": "C",
+       "operator": "in",
+       "required": [
+        "C"
+       ],
+       "units": "class",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.gates"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:GROUND-OCC-01",
+       "rule_id": "GROUND-OCC-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": [
+        1500,
+        2700
+       ],
+       "operator": "no overlap",
+       "required": [
+        [
+         0,
+         1500
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.gates",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:GROUND-CREW-01",
+       "rule_id": "GROUND-CREW-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": [
+        1500,
+        2700
+       ],
+       "operator": "within",
+       "required": [
+        0,
+        3000
+       ],
+       "units": "s",
+       "margin": "300",
+       "evidence_ids": [
+        "overlay.crews",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L960-G1-long:GROUND-EQUIP-01",
+       "rule_id": "GROUND-EQUIP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L960-G1-long",
+       "status": "PASS",
+       "actual": [
+        1500,
+        2700
+       ],
+       "operator": "inside an available interval",
+       "required": [
+        "GPU-1"
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.equipment"
+       ],
+       "reason_code": "OK"
+      }
+     ]
+    },
+    {
+     "plan": {
+      "candidate_id": "L1020-G1-long",
+      "scenario_id": "D01",
+      "scenario_revision": 1,
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "policy_version": "balanced-v1",
+      "landing_time_s": 1020,
+      "runway_id": "R1",
+      "runway_occupancy_end_s": 1080,
+      "taxi_route_id": "G1-long",
+      "route_edge_intervals": [
+       {
+        "start_s": 1020,
+        "end_s": 1260,
+        "edge_id": "TWY-B1"
+       },
+       {
+        "start_s": 1260,
+        "end_s": 1560,
+        "edge_id": "TWY-B2"
+       }
+      ],
+      "gate_id": "G1",
+      "gate_in_time_s": 1560,
+      "service_start_s": 1560,
+      "service_end_s": 2760,
+      "gate_release_s": 2760,
+      "crew_id": "CREW-G1",
+      "arrival_option_id": "ARR-STD",
+      "impacts": {
+       "additional_landing_delay_s": 420,
+       "modeled_fuel_used_kg": "530",
+       "fuel_at_gate_kg": "2470",
+       "reserve_margin_kg": "170",
+       "crew_overtime_min": "1",
+       "turnaround_lateness_min": "1",
+       "missed_connection_passengers": 0
+      },
+      "costs": {
+       "ATC": "0.2333333333333333333333333333",
+       "PILOT": "0.33125",
+       "GROUND": "0.04166666666666666666666666667"
+      },
+      "evidence_ids": [
+       "overlay.search",
+       "overlay.aircraft",
+       "overlay.runway",
+       "overlay.movements",
+       "overlay.separation_s",
+       "overlay.capacity",
+       "overlay.routes",
+       "overlay.taxi_blockages",
+       "overlay.gates",
+       "overlay.crews",
+       "overlay.equipment",
+       "overlay.fuel",
+       "overlay.arrival_options",
+       "overlay.service",
+       "overlay.connections",
+       "policy.scoring"
+      ]
+     },
+     "checks": [
+      {
+       "check_id": "L1020-G1-long:SYSTEM-FRESH-01",
+       "rule_id": "SYSTEM-FRESH-01",
+       "rule_version": "toy-rules-v1",
+       "domain": null,
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "operator": "==",
+       "required": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "units": "version",
+       "margin": null,
+       "evidence_ids": [
+        "snapshot.versions"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:ATC-RWY-01",
+       "rule_id": "ATC-RWY-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": [
+        1020,
+        1080
+       ],
+       "operator": "inside available, no overlap",
+       "required": [
+        [
+         540,
+         86400
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.movements",
+        "overlay.runway"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:ATC-SEP-01",
+       "rule_id": "ATC-SEP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": {
+        "BG2": 240
+       },
+       "operator": ">=",
+       "required": {
+        "BG2": 180
+       },
+       "units": "s",
+       "margin": "60",
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.movements",
+        "overlay.separation_s"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:ATC-TAXI-01",
+       "rule_id": "ATC-TAXI-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": [
+        [
+         "TWY-B1",
+         1020,
+         1260
+        ],
+        [
+         "TWY-B2",
+         1260,
+         1560
+        ]
+       ],
+       "operator": "no edge overlaps a blockage",
+       "required": null,
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.routes",
+        "overlay.taxi_blockages"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:ATC-CAP-01",
+       "rule_id": "ATC-CAP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": {
+        "movements": 3,
+        "window": [
+         300,
+         3900
+        ]
+       },
+       "operator": "<=",
+       "required": 10,
+       "units": "movements",
+       "margin": "7",
+       "evidence_ids": [
+        "overlay.capacity",
+        "overlay.movements"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:PILOT-FUEL-01",
+       "rule_id": "PILOT-FUEL-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": 2470,
+       "operator": ">=",
+       "required": 2300,
+       "units": "kg",
+       "margin": "170",
+       "evidence_ids": [
+        "overlay.fuel",
+        "overlay.routes",
+        "overlay.search"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:PILOT-ROUTE-01",
+       "rule_id": "PILOT-ROUTE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": {
+        "ARR-STD": true
+       },
+       "operator": "all permitted",
+       "required": true,
+       "units": "label",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.arrival_options"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:GROUND-GATE-01",
+       "rule_id": "GROUND-GATE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": "C",
+       "operator": "in",
+       "required": [
+        "C"
+       ],
+       "units": "class",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.gates"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:GROUND-OCC-01",
+       "rule_id": "GROUND-OCC-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": [
+        1560,
+        2760
+       ],
+       "operator": "no overlap",
+       "required": [
+        [
+         0,
+         1500
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.gates",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:GROUND-CREW-01",
+       "rule_id": "GROUND-CREW-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": [
+        1560,
+        2760
+       ],
+       "operator": "within",
+       "required": [
+        0,
+        3000
+       ],
+       "units": "s",
+       "margin": "240",
+       "evidence_ids": [
+        "overlay.crews",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1020-G1-long:GROUND-EQUIP-01",
+       "rule_id": "GROUND-EQUIP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1020-G1-long",
+       "status": "PASS",
+       "actual": [
+        1560,
+        2760
+       ],
+       "operator": "inside an available interval",
+       "required": [
+        "GPU-1"
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.equipment"
+       ],
+       "reason_code": "OK"
+      }
+     ]
+    },
+    {
+     "plan": {
+      "candidate_id": "L1080-G1-long",
+      "scenario_id": "D01",
+      "scenario_revision": 1,
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "policy_version": "balanced-v1",
+      "landing_time_s": 1080,
+      "runway_id": "R1",
+      "runway_occupancy_end_s": 1140,
+      "taxi_route_id": "G1-long",
+      "route_edge_intervals": [
+       {
+        "start_s": 1080,
+        "end_s": 1320,
+        "edge_id": "TWY-B1"
+       },
+       {
+        "start_s": 1320,
+        "end_s": 1620,
+        "edge_id": "TWY-B2"
+       }
+      ],
+      "gate_id": "G1",
+      "gate_in_time_s": 1620,
+      "service_start_s": 1620,
+      "service_end_s": 2820,
+      "gate_release_s": 2820,
+      "crew_id": "CREW-G1",
+      "arrival_option_id": "ARR-STD",
+      "impacts": {
+       "additional_landing_delay_s": 480,
+       "modeled_fuel_used_kg": "580",
+       "fuel_at_gate_kg": "2420",
+       "reserve_margin_kg": "120",
+       "crew_overtime_min": "2",
+       "turnaround_lateness_min": "2",
+       "missed_connection_passengers": 0
+      },
+      "costs": {
+       "ATC": "0.2666666666666666666666666667",
+       "PILOT": "0.3625",
+       "GROUND": "0.08333333333333333333333333333"
+      },
+      "evidence_ids": [
+       "overlay.search",
+       "overlay.aircraft",
+       "overlay.runway",
+       "overlay.movements",
+       "overlay.separation_s",
+       "overlay.capacity",
+       "overlay.routes",
+       "overlay.taxi_blockages",
+       "overlay.gates",
+       "overlay.crews",
+       "overlay.equipment",
+       "overlay.fuel",
+       "overlay.arrival_options",
+       "overlay.service",
+       "overlay.connections",
+       "policy.scoring"
+      ]
+     },
+     "checks": [
+      {
+       "check_id": "L1080-G1-long:SYSTEM-FRESH-01",
+       "rule_id": "SYSTEM-FRESH-01",
+       "rule_version": "toy-rules-v1",
+       "domain": null,
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "operator": "==",
+       "required": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "units": "version",
+       "margin": null,
+       "evidence_ids": [
+        "snapshot.versions"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:ATC-RWY-01",
+       "rule_id": "ATC-RWY-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": [
+        1080,
+        1140
+       ],
+       "operator": "inside available, no overlap",
+       "required": [
+        [
+         540,
+         86400
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.movements",
+        "overlay.runway"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:ATC-SEP-01",
+       "rule_id": "ATC-SEP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": {
+        "BG2": 300
+       },
+       "operator": ">=",
+       "required": {
+        "BG2": 180
+       },
+       "units": "s",
+       "margin": "120",
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.movements",
+        "overlay.separation_s"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:ATC-TAXI-01",
+       "rule_id": "ATC-TAXI-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": [
+        [
+         "TWY-B1",
+         1080,
+         1320
+        ],
+        [
+         "TWY-B2",
+         1320,
+         1620
+        ]
+       ],
+       "operator": "no edge overlaps a blockage",
+       "required": null,
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.routes",
+        "overlay.taxi_blockages"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:ATC-CAP-01",
+       "rule_id": "ATC-CAP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": {
+        "movements": 3,
+        "window": [
+         300,
+         3900
+        ]
+       },
+       "operator": "<=",
+       "required": 10,
+       "units": "movements",
+       "margin": "7",
+       "evidence_ids": [
+        "overlay.capacity",
+        "overlay.movements"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:PILOT-FUEL-01",
+       "rule_id": "PILOT-FUEL-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": 2420,
+       "operator": ">=",
+       "required": 2300,
+       "units": "kg",
+       "margin": "120",
+       "evidence_ids": [
+        "overlay.fuel",
+        "overlay.routes",
+        "overlay.search"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:PILOT-ROUTE-01",
+       "rule_id": "PILOT-ROUTE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": {
+        "ARR-STD": true
+       },
+       "operator": "all permitted",
+       "required": true,
+       "units": "label",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.arrival_options"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:GROUND-GATE-01",
+       "rule_id": "GROUND-GATE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": "C",
+       "operator": "in",
+       "required": [
+        "C"
+       ],
+       "units": "class",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.gates"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:GROUND-OCC-01",
+       "rule_id": "GROUND-OCC-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": [
+        1620,
+        2820
+       ],
+       "operator": "no overlap",
+       "required": [
+        [
+         0,
+         1500
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.gates",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:GROUND-CREW-01",
+       "rule_id": "GROUND-CREW-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": [
+        1620,
+        2820
+       ],
+       "operator": "within",
+       "required": [
+        0,
+        3000
+       ],
+       "units": "s",
+       "margin": "180",
+       "evidence_ids": [
+        "overlay.crews",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1080-G1-long:GROUND-EQUIP-01",
+       "rule_id": "GROUND-EQUIP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1080-G1-long",
+       "status": "PASS",
+       "actual": [
+        1620,
+        2820
+       ],
+       "operator": "inside an available interval",
+       "required": [
+        "GPU-1"
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.equipment"
+       ],
+       "reason_code": "OK"
+      }
+     ]
+    },
+    {
+     "plan": {
+      "candidate_id": "L1140-G1-long",
+      "scenario_id": "D01",
+      "scenario_revision": 1,
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "policy_version": "balanced-v1",
+      "landing_time_s": 1140,
+      "runway_id": "R1",
+      "runway_occupancy_end_s": 1200,
+      "taxi_route_id": "G1-long",
+      "route_edge_intervals": [
+       {
+        "start_s": 1140,
+        "end_s": 1380,
+        "edge_id": "TWY-B1"
+       },
+       {
+        "start_s": 1380,
+        "end_s": 1680,
+        "edge_id": "TWY-B2"
+       }
+      ],
+      "gate_id": "G1",
+      "gate_in_time_s": 1680,
+      "service_start_s": 1680,
+      "service_end_s": 2880,
+      "gate_release_s": 2880,
+      "crew_id": "CREW-G1",
+      "arrival_option_id": "ARR-STD",
+      "impacts": {
+       "additional_landing_delay_s": 540,
+       "modeled_fuel_used_kg": "630",
+       "fuel_at_gate_kg": "2370",
+       "reserve_margin_kg": "70",
+       "crew_overtime_min": "3",
+       "turnaround_lateness_min": "3",
+       "missed_connection_passengers": 0
+      },
+      "costs": {
+       "ATC": "0.3",
+       "PILOT": "0.39375",
+       "GROUND": "0.125"
+      },
+      "evidence_ids": [
+       "overlay.search",
+       "overlay.aircraft",
+       "overlay.runway",
+       "overlay.movements",
+       "overlay.separation_s",
+       "overlay.capacity",
+       "overlay.routes",
+       "overlay.taxi_blockages",
+       "overlay.gates",
+       "overlay.crews",
+       "overlay.equipment",
+       "overlay.fuel",
+       "overlay.arrival_options",
+       "overlay.service",
+       "overlay.connections",
+       "policy.scoring"
+      ]
+     },
+     "checks": [
+      {
+       "check_id": "L1140-G1-long:SYSTEM-FRESH-01",
+       "rule_id": "SYSTEM-FRESH-01",
+       "rule_version": "toy-rules-v1",
+       "domain": null,
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "operator": "==",
+       "required": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "units": "version",
+       "margin": null,
+       "evidence_ids": [
+        "snapshot.versions"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:ATC-RWY-01",
+       "rule_id": "ATC-RWY-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": [
+        1140,
+        1200
+       ],
+       "operator": "inside available, no overlap",
+       "required": [
+        [
+         540,
+         86400
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.movements",
+        "overlay.runway"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:ATC-SEP-01",
+       "rule_id": "ATC-SEP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": {
+        "BG2": 360
+       },
+       "operator": ">=",
+       "required": {
+        "BG2": 180
+       },
+       "units": "s",
+       "margin": "180",
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.movements",
+        "overlay.separation_s"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:ATC-TAXI-01",
+       "rule_id": "ATC-TAXI-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": [
+        [
+         "TWY-B1",
+         1140,
+         1380
+        ],
+        [
+         "TWY-B2",
+         1380,
+         1680
+        ]
+       ],
+       "operator": "no edge overlaps a blockage",
+       "required": null,
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.routes",
+        "overlay.taxi_blockages"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:ATC-CAP-01",
+       "rule_id": "ATC-CAP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": {
+        "movements": 3,
+        "window": [
+         300,
+         3900
+        ]
+       },
+       "operator": "<=",
+       "required": 10,
+       "units": "movements",
+       "margin": "7",
+       "evidence_ids": [
+        "overlay.capacity",
+        "overlay.movements"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:PILOT-FUEL-01",
+       "rule_id": "PILOT-FUEL-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": 2370,
+       "operator": ">=",
+       "required": 2300,
+       "units": "kg",
+       "margin": "70",
+       "evidence_ids": [
+        "overlay.fuel",
+        "overlay.routes",
+        "overlay.search"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:PILOT-ROUTE-01",
+       "rule_id": "PILOT-ROUTE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": {
+        "ARR-STD": true
+       },
+       "operator": "all permitted",
+       "required": true,
+       "units": "label",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.arrival_options"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:GROUND-GATE-01",
+       "rule_id": "GROUND-GATE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": "C",
+       "operator": "in",
+       "required": [
+        "C"
+       ],
+       "units": "class",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.gates"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:GROUND-OCC-01",
+       "rule_id": "GROUND-OCC-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": [
+        1680,
+        2880
+       ],
+       "operator": "no overlap",
+       "required": [
+        [
+         0,
+         1500
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.gates",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:GROUND-CREW-01",
+       "rule_id": "GROUND-CREW-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": [
+        1680,
+        2880
+       ],
+       "operator": "within",
+       "required": [
+        0,
+        3000
+       ],
+       "units": "s",
+       "margin": "120",
+       "evidence_ids": [
+        "overlay.crews",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1140-G1-long:GROUND-EQUIP-01",
+       "rule_id": "GROUND-EQUIP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1140-G1-long",
+       "status": "PASS",
+       "actual": [
+        1680,
+        2880
+       ],
+       "operator": "inside an available interval",
+       "required": [
+        "GPU-1"
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.equipment"
+       ],
+       "reason_code": "OK"
+      }
+     ]
+    },
+    {
+     "plan": {
+      "candidate_id": "L1200-G1-short",
+      "scenario_id": "D01",
+      "scenario_revision": 1,
+      "resource_revision": 1,
+      "ruleset_version": "toy-rules-v1",
+      "policy_version": "balanced-v1",
+      "landing_time_s": 1200,
+      "runway_id": "R1",
+      "runway_occupancy_end_s": 1260,
+      "taxi_route_id": "G1-short",
+      "route_edge_intervals": [
+       {
+        "start_s": 1200,
+        "end_s": 1500,
+        "edge_id": "TWY-A"
+       }
+      ],
+      "gate_id": "G1",
+      "gate_in_time_s": 1500,
+      "service_start_s": 1500,
+      "service_end_s": 2700,
+      "gate_release_s": 2700,
+      "crew_id": "CREW-G1",
+      "arrival_option_id": "ARR-STD",
+      "impacts": {
+       "additional_landing_delay_s": 600,
+       "modeled_fuel_used_kg": "600",
+       "fuel_at_gate_kg": "2400",
+       "reserve_margin_kg": "100",
+       "crew_overtime_min": "0",
+       "turnaround_lateness_min": "0",
+       "missed_connection_passengers": 0
+      },
+      "costs": {
+       "ATC": "0.3333333333333333333333333333",
+       "PILOT": "0.375",
+       "GROUND": "0"
+      },
+      "evidence_ids": [
+       "overlay.search",
+       "overlay.aircraft",
+       "overlay.runway",
+       "overlay.movements",
+       "overlay.separation_s",
+       "overlay.capacity",
+       "overlay.routes",
+       "overlay.taxi_blockages",
+       "overlay.gates",
+       "overlay.crews",
+       "overlay.equipment",
+       "overlay.fuel",
+       "overlay.arrival_options",
+       "overlay.service",
+       "overlay.connections",
+       "policy.scoring"
+      ]
+     },
+     "checks": [
+      {
+       "check_id": "L1200-G1-short:SYSTEM-FRESH-01",
+       "rule_id": "SYSTEM-FRESH-01",
+       "rule_version": "toy-rules-v1",
+       "domain": null,
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "operator": "==",
+       "required": {
+        "policy_version": "balanced-v1",
+        "resource_revision": 1,
+        "ruleset_version": "toy-rules-v1",
+        "scenario_id": "D01",
+        "scenario_revision": 1
+       },
+       "units": "version",
+       "margin": null,
+       "evidence_ids": [
+        "snapshot.versions"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:ATC-RWY-01",
+       "rule_id": "ATC-RWY-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": [
+        1200,
+        1260
+       ],
+       "operator": "inside available, no overlap",
+       "required": [
+        [
+         540,
+         86400
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.movements",
+        "overlay.runway"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:ATC-SEP-01",
+       "rule_id": "ATC-SEP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": {
+        "BG2": 420
+       },
+       "operator": ">=",
+       "required": {
+        "BG2": 180
+       },
+       "units": "s",
+       "margin": "240",
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.movements",
+        "overlay.separation_s"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:ATC-TAXI-01",
+       "rule_id": "ATC-TAXI-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": [
+        [
+         "TWY-A",
+         1200,
+         1500
+        ]
+       ],
+       "operator": "no edge overlaps a blockage",
+       "required": null,
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.routes",
+        "overlay.taxi_blockages"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:ATC-CAP-01",
+       "rule_id": "ATC-CAP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "ATC",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": {
+        "movements": 3,
+        "window": [
+         300,
+         3900
+        ]
+       },
+       "operator": "<=",
+       "required": 10,
+       "units": "movements",
+       "margin": "7",
+       "evidence_ids": [
+        "overlay.capacity",
+        "overlay.movements"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:PILOT-FUEL-01",
+       "rule_id": "PILOT-FUEL-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": 2400,
+       "operator": ">=",
+       "required": 2300,
+       "units": "kg",
+       "margin": "100",
+       "evidence_ids": [
+        "overlay.fuel",
+        "overlay.routes",
+        "overlay.search"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:PILOT-ROUTE-01",
+       "rule_id": "PILOT-ROUTE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "PILOT",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": {
+        "ARR-STD": true
+       },
+       "operator": "all permitted",
+       "required": true,
+       "units": "label",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.arrival_options"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:GROUND-GATE-01",
+       "rule_id": "GROUND-GATE-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": "C",
+       "operator": "in",
+       "required": [
+        "C"
+       ],
+       "units": "class",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.aircraft",
+        "overlay.gates"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:GROUND-OCC-01",
+       "rule_id": "GROUND-OCC-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": [
+        1500,
+        2700
+       ],
+       "operator": "no overlap",
+       "required": [
+        [
+         0,
+         1500
+        ]
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.gates",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:GROUND-CREW-01",
+       "rule_id": "GROUND-CREW-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": [
+        1500,
+        2700
+       ],
+       "operator": "within",
+       "required": [
+        0,
+        3000
+       ],
+       "units": "s",
+       "margin": "300",
+       "evidence_ids": [
+        "overlay.crews",
+        "overlay.service"
+       ],
+       "reason_code": "OK"
+      },
+      {
+       "check_id": "L1200-G1-short:GROUND-EQUIP-01",
+       "rule_id": "GROUND-EQUIP-01",
+       "rule_version": "toy-rules-v1",
+       "domain": "GROUND",
+       "candidate_id": "L1200-G1-short",
+       "status": "PASS",
+       "actual": [
+        1500,
+        2700
+       ],
+       "operator": "inside an available interval",
+       "required": [
+        "GPU-1"
+       ],
+       "units": "s",
+       "margin": null,
+       "evidence_ids": [
+        "overlay.equipment"
+       ],
+       "reason_code": "OK"
+      }
+     ]
+    }
+   ],
+   "shortlist_ids": [
+    "L600-G2-route",
+    "L1200-G1-short",
+    "L960-G1-long",
+    "L1020-G1-long",
+    "L1080-G1-long",
+    "L1140-G1-long"
+   ],
+   "blocking_reasons": [],
+   "sample_summary": {
+    "candidates": 93,
+    "feasible": 14,
+    "blockers": {
+     "ATC-RWY-01": 3,
+     "ATC-SEP-01": 15,
+     "GROUND-CREW-01": 42,
+     "GROUND-OCC-01": 16,
+     "PILOT-FUEL-01": 58
+    }
+   }
+  },
+  "candidate": {
+   "candidate_id": "L960-G1-long",
+   "scenario_id": "D01",
+   "scenario_revision": 1,
+   "resource_revision": 1,
+   "ruleset_version": "toy-rules-v1",
+   "policy_version": "balanced-v1",
+   "landing_time_s": 960,
+   "runway_id": "R1",
+   "runway_occupancy_end_s": 1020,
+   "taxi_route_id": "G1-long",
+   "route_edge_intervals": [
+    {
+     "start_s": 960,
+     "end_s": 1200,
+     "edge_id": "TWY-B1"
+    },
+    {
+     "start_s": 1200,
+     "end_s": 1500,
+     "edge_id": "TWY-B2"
+    }
+   ],
+   "gate_id": "G1",
+   "gate_in_time_s": 1500,
+   "service_start_s": 1500,
+   "service_end_s": 2700,
+   "gate_release_s": 2700,
+   "crew_id": "CREW-G1",
+   "arrival_option_id": "ARR-STD",
+   "impacts": {
+    "additional_landing_delay_s": 360,
+    "modeled_fuel_used_kg": "480",
+    "fuel_at_gate_kg": "2520",
+    "reserve_margin_kg": "220",
+    "crew_overtime_min": "0",
+    "turnaround_lateness_min": "0",
+    "missed_connection_passengers": 0
+   },
+   "costs": {
+    "ATC": "0.2",
+    "PILOT": "0.3",
+    "GROUND": "0"
+   },
+   "evidence_ids": [
+    "overlay.search",
+    "overlay.aircraft",
+    "overlay.runway",
+    "overlay.movements",
+    "overlay.separation_s",
+    "overlay.capacity",
+    "overlay.routes",
+    "overlay.taxi_blockages",
+    "overlay.gates",
+    "overlay.crews",
+    "overlay.equipment",
+    "overlay.fuel",
+    "overlay.arrival_options",
+    "overlay.service",
+    "overlay.connections",
+    "policy.scoring"
+   ]
+  },
+  "checks": [
+   {
+    "check_id": "L960-G1-long:SYSTEM-FRESH-01",
+    "rule_id": "SYSTEM-FRESH-01",
+    "rule_version": "toy-rules-v1",
+    "domain": null,
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": {
+     "policy_version": "balanced-v1",
+     "resource_revision": 1,
+     "ruleset_version": "toy-rules-v1",
+     "scenario_id": "D01",
+     "scenario_revision": 1
+    },
+    "operator": "==",
+    "required": {
+     "policy_version": "balanced-v1",
+     "resource_revision": 1,
+     "ruleset_version": "toy-rules-v1",
+     "scenario_id": "D01",
+     "scenario_revision": 1
+    },
+    "units": "version",
+    "margin": null,
+    "evidence_ids": [
+     "snapshot.versions"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:ATC-RWY-01",
+    "rule_id": "ATC-RWY-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "ATC",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": [
+     960,
+     1020
+    ],
+    "operator": "inside available, no overlap",
+    "required": [
+     [
+      540,
+      86400
+     ]
+    ],
+    "units": "s",
+    "margin": null,
+    "evidence_ids": [
+     "overlay.movements",
+     "overlay.runway"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:ATC-SEP-01",
+    "rule_id": "ATC-SEP-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "ATC",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": {
+     "BG2": 180
+    },
+    "operator": ">=",
+    "required": {
+     "BG2": 180
+    },
+    "units": "s",
+    "margin": "0",
+    "evidence_ids": [
+     "overlay.aircraft",
+     "overlay.movements",
+     "overlay.separation_s"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:ATC-TAXI-01",
+    "rule_id": "ATC-TAXI-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "ATC",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": [
+     [
+      "TWY-B1",
+      960,
+      1200
+     ],
+     [
+      "TWY-B2",
+      1200,
+      1500
+     ]
+    ],
+    "operator": "no edge overlaps a blockage",
+    "required": null,
+    "units": "s",
+    "margin": null,
+    "evidence_ids": [
+     "overlay.routes",
+     "overlay.taxi_blockages"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:ATC-CAP-01",
+    "rule_id": "ATC-CAP-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "ATC",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": {
+     "movements": 3,
+     "window": [
+      300,
+      3900
+     ]
+    },
+    "operator": "<=",
+    "required": 10,
+    "units": "movements",
+    "margin": "7",
+    "evidence_ids": [
+     "overlay.capacity",
+     "overlay.movements"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:PILOT-FUEL-01",
+    "rule_id": "PILOT-FUEL-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "PILOT",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": 2520,
+    "operator": ">=",
+    "required": 2300,
+    "units": "kg",
+    "margin": "220",
+    "evidence_ids": [
+     "overlay.fuel",
+     "overlay.routes",
+     "overlay.search"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:PILOT-ROUTE-01",
+    "rule_id": "PILOT-ROUTE-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "PILOT",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": {
+     "ARR-STD": true
+    },
+    "operator": "all permitted",
+    "required": true,
+    "units": "label",
+    "margin": null,
+    "evidence_ids": [
+     "overlay.arrival_options"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:GROUND-GATE-01",
+    "rule_id": "GROUND-GATE-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "GROUND",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": "C",
+    "operator": "in",
+    "required": [
+     "C"
+    ],
+    "units": "class",
+    "margin": null,
+    "evidence_ids": [
+     "overlay.aircraft",
+     "overlay.gates"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:GROUND-OCC-01",
+    "rule_id": "GROUND-OCC-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "GROUND",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": [
+     1500,
+     2700
+    ],
+    "operator": "no overlap",
+    "required": [
+     [
+      0,
+      1500
+     ]
+    ],
+    "units": "s",
+    "margin": null,
+    "evidence_ids": [
+     "overlay.gates",
+     "overlay.service"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:GROUND-CREW-01",
+    "rule_id": "GROUND-CREW-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "GROUND",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": [
+     1500,
+     2700
+    ],
+    "operator": "within",
+    "required": [
+     0,
+     3000
+    ],
+    "units": "s",
+    "margin": "300",
+    "evidence_ids": [
+     "overlay.crews",
+     "overlay.service"
+    ],
+    "reason_code": "OK"
+   },
+   {
+    "check_id": "L960-G1-long:GROUND-EQUIP-01",
+    "rule_id": "GROUND-EQUIP-01",
+    "rule_version": "toy-rules-v1",
+    "domain": "GROUND",
+    "candidate_id": "L960-G1-long",
+    "status": "PASS",
+    "actual": [
+     1500,
+     2700
+    ],
+    "operator": "inside an available interval",
+    "required": [
+     "GPU-1"
+    ],
+    "units": "s",
+    "margin": null,
+    "evidence_ids": [
+     "overlay.equipment"
+    ],
+    "reason_code": "OK"
+   }
+  ],
+  "offers": {
+   "ATC": {
+    "preferred_candidate_id": "L600-G2-route",
+    "ranked_candidate_ids": [
+     "L600-G2-route",
+     "L960-G1-long",
+     "L1020-G1-long"
+    ],
+    "acceptable_candidate_ids": [
+     "L600-G2-route"
+    ],
+    "concession_candidate_ids": [
+     "L1020-G1-long",
+     "L600-G2-route",
+     "L960-G1-long"
+    ],
+    "objections": [],
+    "evidence_ids": [
+     "impact:L600-G2-route:ATC"
+    ],
+    "rationale": "Fixture offer within the supplied envelope."
+   },
+   "GROUND": {
+    "preferred_candidate_id": "L1200-G1-short",
+    "ranked_candidate_ids": [
+     "L1200-G1-short",
+     "L960-G1-long",
+     "L1020-G1-long",
+     "L1080-G1-long",
+     "L1140-G1-long"
+    ],
+    "acceptable_candidate_ids": [
+     "L1200-G1-short",
+     "L960-G1-long"
+    ],
+    "concession_candidate_ids": [
+     "L1020-G1-long",
+     "L1080-G1-long",
+     "L1140-G1-long",
+     "L1200-G1-short",
+     "L960-G1-long"
+    ],
+    "objections": [],
+    "evidence_ids": [
+     "impact:L600-G2-route:GROUND"
+    ],
+    "rationale": "Fixture offer within the supplied envelope."
+   },
+   "PILOT": {
+    "preferred_candidate_id": "L600-G2-route",
+    "ranked_candidate_ids": [
+     "L600-G2-route",
+     "L960-G1-long",
+     "L1020-G1-long"
+    ],
+    "acceptable_candidate_ids": [
+     "L600-G2-route"
+    ],
+    "concession_candidate_ids": [
+     "L1020-G1-long",
+     "L600-G2-route",
+     "L960-G1-long"
+    ],
+    "objections": [],
+    "evidence_ids": [
+     "impact:L600-G2-route:PILOT"
+    ],
+    "rationale": "Fixture offer within the supplied envelope."
+   }
+  },
+  "votes": {
+   "ATC": {
+    "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5",
+    "decision": "ACCEPT",
+    "reason_codes": [
+     "FIXTURE_ACCEPT"
+    ],
+    "evidence_ids": [
+     "impact:L600-G2-route:ATC"
+    ],
+    "rationale": "Fixture acceptance of the exact proposed plan."
+   },
+   "GROUND": {
+    "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5",
+    "decision": "ACCEPT",
+    "reason_codes": [
+     "FIXTURE_ACCEPT"
+    ],
+    "evidence_ids": [
+     "impact:L600-G2-route:GROUND"
+    ],
+    "rationale": "Fixture acceptance of the exact proposed plan."
+   },
+   "PILOT": {
+    "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5",
+    "decision": "ACCEPT",
+    "reason_codes": [
+     "FIXTURE_ACCEPT"
+    ],
+    "evidence_ids": [
+     "impact:L600-G2-route:PILOT"
+    ],
+    "rationale": "Fixture acceptance of the exact proposed plan."
+   }
+  },
+  "fallback_reason": null,
+  "reason_code": null,
+  "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5",
+  "snapshot_hash": "f50c77f3ea60fd820194ba49a745b4f1d54b0f8e4f22b2d60684db9f446a3855",
+  "scenario_revision": 1,
+  "resource_revision": 1,
+  "ruleset_version": "toy-rules-v1",
+  "policy_version": "balanced-v1",
+  "candidate_set_hash": "7ae6060bdcd91dde57d794543f620e0a966e2039269cf1935757e3e686eac302"
+ },
+ "events": [
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 1,
+   "event_type": "RUN_CREATED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.364328Z",
+   "payload": {
+    "mode": "FIXTURE",
+    "planning_mode": "INTEGRATED",
+    "snapshot_hash": "f50c77f3ea60fd820194ba49a745b4f1d54b0f8e4f22b2d60684db9f446a3855"
+   },
+   "previous_hash": "",
+   "event_hash": "9fb107a8c10d6f264bf2004606690d67d58d66ff22163a8eb8d7cb3c16c55f15"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 2,
+   "event_type": "STATE_CHANGED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.378044Z",
+   "payload": {
+    "state": "VALIDATING"
+   },
+   "previous_hash": "9fb107a8c10d6f264bf2004606690d67d58d66ff22163a8eb8d7cb3c16c55f15",
+   "event_hash": "d7b17f0f010045c3d1ae4908f32779e585dbb2ad2fa17e1486a913f9d6fab6e8"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 3,
+   "event_type": "INPUT_VALIDATED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.387036Z",
+   "payload": {},
+   "previous_hash": "d7b17f0f010045c3d1ae4908f32779e585dbb2ad2fa17e1486a913f9d6fab6e8",
+   "event_hash": "886cdeb0ccdaee259c473bd1514735f01f29a1f3c41150d3070eeba4152c4527"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 4,
+   "event_type": "STATE_CHANGED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.396250Z",
+   "payload": {
+    "state": "PREPARING"
+   },
+   "previous_hash": "886cdeb0ccdaee259c473bd1514735f01f29a1f3c41150d3070eeba4152c4527",
+   "event_hash": "fd915a309605329dd7e9e93f8d3d7bdd48bfda76cd8fdf8b9611ec8679ffb0f0"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 5,
+   "event_type": "CANDIDATES_EVALUATED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.515758Z",
+   "payload": {
+    "catalog_hash": "7ae6060bdcd91dde57d794543f620e0a966e2039269cf1935757e3e686eac302",
+    "count": 93,
+    "shortlist_ids": [
+     "L600-G2-route",
+     "L1200-G1-short",
+     "L960-G1-long",
+     "L1020-G1-long",
+     "L1080-G1-long",
+     "L1140-G1-long"
+    ]
+   },
+   "previous_hash": "fd915a309605329dd7e9e93f8d3d7bdd48bfda76cd8fdf8b9611ec8679ffb0f0",
+   "event_hash": "17ce4fecbd990b148483e9ed94ba13729b60cc76197ac871f2adbfa0bfd825b1"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 6,
+   "event_type": "STATE_CHANGED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.580067Z",
+   "payload": {
+    "state": "ROUND_1"
+   },
+   "previous_hash": "17ce4fecbd990b148483e9ed94ba13729b60cc76197ac871f2adbfa0bfd825b1",
+   "event_hash": "909f46429e683c5f66edd097842b818d0fcd28741c71995bc7a051694ea5862f"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 7,
+   "event_type": "AGENT_REQUEST_STARTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.680009Z",
+   "payload": {
+    "request_id": "9676e42c-c253-4ab5-acb5-360c55e4f3f6",
+    "role": "ATC",
+    "round": 1
+   },
+   "previous_hash": "909f46429e683c5f66edd097842b818d0fcd28741c71995bc7a051694ea5862f",
+   "event_hash": "ff177f590d8ebd4ad8fffc9e70aab7e8d4866bc180a992d4b4f5681b47d39af8"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 8,
+   "event_type": "AGENT_REQUEST_STARTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.835821Z",
+   "payload": {
+    "request_id": "6933936f-471c-434d-a466-18a92bce3e09",
+    "role": "PILOT",
+    "round": 1
+   },
+   "previous_hash": "ff177f590d8ebd4ad8fffc9e70aab7e8d4866bc180a992d4b4f5681b47d39af8",
+   "event_hash": "7260d0ab6f251508da667cba0cafb046637eb18028518194bfc949d44ab31bf3"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 9,
+   "event_type": "AGENT_REQUEST_STARTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.926740Z",
+   "payload": {
+    "request_id": "e4cccc0a-f841-422a-a520-83eb58faad3e",
+    "role": "GROUND",
+    "round": 1
+   },
+   "previous_hash": "7260d0ab6f251508da667cba0cafb046637eb18028518194bfc949d44ab31bf3",
+   "event_hash": "dd6558e7d2bdd2a922d4772fe361403b44d5020e1c589466fe115c564d678a65"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 10,
+   "event_type": "AGENT_RESPONSE_RECEIVED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:35.941471Z",
+   "payload": {
+    "request_id": "9676e42c-c253-4ab5-acb5-360c55e4f3f6",
+    "status": "RECEIVED"
+   },
+   "previous_hash": "dd6558e7d2bdd2a922d4772fe361403b44d5020e1c589466fe115c564d678a65",
+   "event_hash": "a257cfe07b5b87e09a5d1c3cf2558a5cc444b9a79d6dc4586cb6632155e8a4af"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 11,
+   "event_type": "OFFER_RECORDED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.115594Z",
+   "payload": {
+    "message_id": "9676e42c-c253-4ab5-acb5-360c55e4f3f6",
+    "role": "ATC"
+   },
+   "previous_hash": "a257cfe07b5b87e09a5d1c3cf2558a5cc444b9a79d6dc4586cb6632155e8a4af",
+   "event_hash": "34303fa9348bd82037a422c2072d24c2b6343be49251975a6047df6c7f1ff4e3"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 12,
+   "event_type": "AGENT_RESPONSE_RECEIVED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.130916Z",
+   "payload": {
+    "request_id": "6933936f-471c-434d-a466-18a92bce3e09",
+    "status": "RECEIVED"
+   },
+   "previous_hash": "34303fa9348bd82037a422c2072d24c2b6343be49251975a6047df6c7f1ff4e3",
+   "event_hash": "e0fabec3a381e9f3c1a5d1891a2862e5a772212049ae3c19460358397366cd07"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 13,
+   "event_type": "OFFER_RECORDED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.240422Z",
+   "payload": {
+    "message_id": "6933936f-471c-434d-a466-18a92bce3e09",
+    "role": "PILOT"
+   },
+   "previous_hash": "e0fabec3a381e9f3c1a5d1891a2862e5a772212049ae3c19460358397366cd07",
+   "event_hash": "7f88cf28b4f6df25e6549ade9ba40bbcf2b55158cd0ec7db3ea5008f83b0a956"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 14,
+   "event_type": "AGENT_RESPONSE_RECEIVED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.258334Z",
+   "payload": {
+    "request_id": "e4cccc0a-f841-422a-a520-83eb58faad3e",
+    "status": "RECEIVED"
+   },
+   "previous_hash": "7f88cf28b4f6df25e6549ade9ba40bbcf2b55158cd0ec7db3ea5008f83b0a956",
+   "event_hash": "08932fb6b71630f7ba4d618b2e5586214c4ac4ee783efee20be9057114a08ea4"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 15,
+   "event_type": "OFFER_RECORDED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.368042Z",
+   "payload": {
+    "message_id": "e4cccc0a-f841-422a-a520-83eb58faad3e",
+    "role": "GROUND"
+   },
+   "previous_hash": "08932fb6b71630f7ba4d618b2e5586214c4ac4ee783efee20be9057114a08ea4",
+   "event_hash": "15ec0b7b4f4f2066b5f11fb67fc6ebe8b7686c2a4757b589841202bbe5cf1f30"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 16,
+   "event_type": "STATE_CHANGED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.490483Z",
+   "payload": {
+    "state": "RECONCILING"
+   },
+   "previous_hash": "15ec0b7b4f4f2066b5f11fb67fc6ebe8b7686c2a4757b589841202bbe5cf1f30",
+   "event_hash": "d2a9264aa02bad40e030b11954c17c14fecafa6c5a0115bbee68e91a0955334f"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 17,
+   "event_type": "PROPOSAL_SELECTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.545481Z",
+   "payload": {
+    "candidate_id": "L960-G1-long",
+    "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5"
+   },
+   "previous_hash": "d2a9264aa02bad40e030b11954c17c14fecafa6c5a0115bbee68e91a0955334f",
+   "event_hash": "3ddb5ffee8c49dad426d59d4216f177f30d18b5ee4920505b4b37a0b56e0c873"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 18,
+   "event_type": "STATE_CHANGED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.605317Z",
+   "payload": {
+    "state": "ROUND_2"
+   },
+   "previous_hash": "3ddb5ffee8c49dad426d59d4216f177f30d18b5ee4920505b4b37a0b56e0c873",
+   "event_hash": "f491c7fe0d94bbe75cb171a8ba8ade1e66843fc929e5b22d1bc4879ac5664461"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 19,
+   "event_type": "AGENT_REQUEST_STARTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.690938Z",
+   "payload": {
+    "request_id": "47e81fd6-e12b-49d4-8787-b35df5f73dbb",
+    "role": "ATC",
+    "round": 2
+   },
+   "previous_hash": "f491c7fe0d94bbe75cb171a8ba8ade1e66843fc929e5b22d1bc4879ac5664461",
+   "event_hash": "eb3d9fc7babb66a5b31334e0f6593abcf51f6c08194f01213d2546144d70937c"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 20,
+   "event_type": "AGENT_REQUEST_STARTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.836991Z",
+   "payload": {
+    "request_id": "4b8ae264-1ae5-422e-bb58-e4e22b024645",
+    "role": "PILOT",
+    "round": 2
+   },
+   "previous_hash": "eb3d9fc7babb66a5b31334e0f6593abcf51f6c08194f01213d2546144d70937c",
+   "event_hash": "2b3ae0782b7e7b34e501c0f706226bbaa95cc1d170ce3f8574c2a99f1fa99f52"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 21,
+   "event_type": "AGENT_REQUEST_STARTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.928208Z",
+   "payload": {
+    "request_id": "430c91df-c813-4598-9ab8-16d7161df816",
+    "role": "GROUND",
+    "round": 2
+   },
+   "previous_hash": "2b3ae0782b7e7b34e501c0f706226bbaa95cc1d170ce3f8574c2a99f1fa99f52",
+   "event_hash": "8d015412487e75dfe6860f535be541e00238c3ff64cbc524d0ba5fd6fa2fec7b"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 22,
+   "event_type": "AGENT_RESPONSE_RECEIVED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:36.945071Z",
+   "payload": {
+    "request_id": "47e81fd6-e12b-49d4-8787-b35df5f73dbb",
+    "status": "RECEIVED"
+   },
+   "previous_hash": "8d015412487e75dfe6860f535be541e00238c3ff64cbc524d0ba5fd6fa2fec7b",
+   "event_hash": "7f5153285b405f827eafde15126ef2ee42df3d6e76751a2dda46c9c2ecc43ad6"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 23,
+   "event_type": "VOTE_RECORDED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.124693Z",
+   "payload": {
+    "message_id": "47e81fd6-e12b-49d4-8787-b35df5f73dbb",
+    "role": "ATC"
+   },
+   "previous_hash": "7f5153285b405f827eafde15126ef2ee42df3d6e76751a2dda46c9c2ecc43ad6",
+   "event_hash": "9d4a96339febf27d0e539bc007d759eb3d53f229df1fe0306e0ecd403214d0d4"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 24,
+   "event_type": "AGENT_RESPONSE_RECEIVED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.146398Z",
+   "payload": {
+    "request_id": "4b8ae264-1ae5-422e-bb58-e4e22b024645",
+    "status": "RECEIVED"
+   },
+   "previous_hash": "9d4a96339febf27d0e539bc007d759eb3d53f229df1fe0306e0ecd403214d0d4",
+   "event_hash": "b49664b0e93db1ac7c32725d5f396ff88aae6d44e62d91b2c404aa2fd51ccafa"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 25,
+   "event_type": "VOTE_RECORDED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.263620Z",
+   "payload": {
+    "message_id": "4b8ae264-1ae5-422e-bb58-e4e22b024645",
+    "role": "PILOT"
+   },
+   "previous_hash": "b49664b0e93db1ac7c32725d5f396ff88aae6d44e62d91b2c404aa2fd51ccafa",
+   "event_hash": "cfff143a380fbbcd2f1868d094ac8312d9d1e7a0a84ceb67c8257d3019a56837"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 26,
+   "event_type": "AGENT_RESPONSE_RECEIVED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.280571Z",
+   "payload": {
+    "request_id": "430c91df-c813-4598-9ab8-16d7161df816",
+    "status": "RECEIVED"
+   },
+   "previous_hash": "cfff143a380fbbcd2f1868d094ac8312d9d1e7a0a84ceb67c8257d3019a56837",
+   "event_hash": "87ebc981a80cbc25ad6946618c66d9ef5cfce5495076fbae50458b869f7f1e56"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 27,
+   "event_type": "VOTE_RECORDED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.398998Z",
+   "payload": {
+    "message_id": "430c91df-c813-4598-9ab8-16d7161df816",
+    "role": "GROUND"
+   },
+   "previous_hash": "87ebc981a80cbc25ad6946618c66d9ef5cfce5495076fbae50458b869f7f1e56",
+   "event_hash": "8b5be6646f813245fb498b537a8e4218c0df5089ee1d8634893af9e9c8f75280"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 28,
+   "event_type": "STATE_CHANGED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.537536Z",
+   "payload": {
+    "state": "FINAL_VALIDATION"
+   },
+   "previous_hash": "8b5be6646f813245fb498b537a8e4218c0df5089ee1d8634893af9e9c8f75280",
+   "event_hash": "bbeebd9b9003f953f0a5681b7bc1524be66a2d3afec09a4f1d15873de71c725a"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 29,
+   "event_type": "PLAN_REVALIDATED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.577524Z",
+   "payload": {
+    "candidate_id": "L960-G1-long",
+    "checks": [
+     {
+      "actual": {
+       "policy_version": "balanced-v1",
+       "resource_revision": 1,
+       "ruleset_version": "toy-rules-v1",
+       "scenario_id": "D01",
+       "scenario_revision": 1
+      },
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:SYSTEM-FRESH-01",
+      "domain": null,
+      "evidence_ids": [
+       "snapshot.versions"
+      ],
+      "margin": null,
+      "operator": "==",
+      "reason_code": "OK",
+      "required": {
+       "policy_version": "balanced-v1",
+       "resource_revision": 1,
+       "ruleset_version": "toy-rules-v1",
+       "scenario_id": "D01",
+       "scenario_revision": 1
+      },
+      "rule_id": "SYSTEM-FRESH-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "version"
+     },
+     {
+      "actual": [
+       960,
+       1020
+      ],
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:ATC-RWY-01",
+      "domain": "ATC",
+      "evidence_ids": [
+       "overlay.movements",
+       "overlay.runway"
+      ],
+      "margin": null,
+      "operator": "inside available, no overlap",
+      "reason_code": "OK",
+      "required": [
+       [
+        540,
+        86400
+       ]
+      ],
+      "rule_id": "ATC-RWY-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "s"
+     },
+     {
+      "actual": {
+       "BG2": 180
+      },
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:ATC-SEP-01",
+      "domain": "ATC",
+      "evidence_ids": [
+       "overlay.aircraft",
+       "overlay.movements",
+       "overlay.separation_s"
+      ],
+      "margin": "0",
+      "operator": ">=",
+      "reason_code": "OK",
+      "required": {
+       "BG2": 180
+      },
+      "rule_id": "ATC-SEP-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "s"
+     },
+     {
+      "actual": [
+       [
+        "TWY-B1",
+        960,
+        1200
+       ],
+       [
+        "TWY-B2",
+        1200,
+        1500
+       ]
+      ],
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:ATC-TAXI-01",
+      "domain": "ATC",
+      "evidence_ids": [
+       "overlay.routes",
+       "overlay.taxi_blockages"
+      ],
+      "margin": null,
+      "operator": "no edge overlaps a blockage",
+      "reason_code": "OK",
+      "required": null,
+      "rule_id": "ATC-TAXI-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "s"
+     },
+     {
+      "actual": {
+       "movements": 3,
+       "window": [
+        300,
+        3900
+       ]
+      },
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:ATC-CAP-01",
+      "domain": "ATC",
+      "evidence_ids": [
+       "overlay.capacity",
+       "overlay.movements"
+      ],
+      "margin": "7",
+      "operator": "<=",
+      "reason_code": "OK",
+      "required": 10,
+      "rule_id": "ATC-CAP-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "movements"
+     },
+     {
+      "actual": 2520,
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:PILOT-FUEL-01",
+      "domain": "PILOT",
+      "evidence_ids": [
+       "overlay.fuel",
+       "overlay.routes",
+       "overlay.search"
+      ],
+      "margin": "220",
+      "operator": ">=",
+      "reason_code": "OK",
+      "required": 2300,
+      "rule_id": "PILOT-FUEL-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "kg"
+     },
+     {
+      "actual": {
+       "ARR-STD": true
+      },
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:PILOT-ROUTE-01",
+      "domain": "PILOT",
+      "evidence_ids": [
+       "overlay.arrival_options"
+      ],
+      "margin": null,
+      "operator": "all permitted",
+      "reason_code": "OK",
+      "required": true,
+      "rule_id": "PILOT-ROUTE-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "label"
+     },
+     {
+      "actual": "C",
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:GROUND-GATE-01",
+      "domain": "GROUND",
+      "evidence_ids": [
+       "overlay.aircraft",
+       "overlay.gates"
+      ],
+      "margin": null,
+      "operator": "in",
+      "reason_code": "OK",
+      "required": [
+       "C"
+      ],
+      "rule_id": "GROUND-GATE-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "class"
+     },
+     {
+      "actual": [
+       1500,
+       2700
+      ],
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:GROUND-OCC-01",
+      "domain": "GROUND",
+      "evidence_ids": [
+       "overlay.gates",
+       "overlay.service"
+      ],
+      "margin": null,
+      "operator": "no overlap",
+      "reason_code": "OK",
+      "required": [
+       [
+        0,
+        1500
+       ]
+      ],
+      "rule_id": "GROUND-OCC-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "s"
+     },
+     {
+      "actual": [
+       1500,
+       2700
+      ],
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:GROUND-CREW-01",
+      "domain": "GROUND",
+      "evidence_ids": [
+       "overlay.crews",
+       "overlay.service"
+      ],
+      "margin": "300",
+      "operator": "within",
+      "reason_code": "OK",
+      "required": [
+       0,
+       3000
+      ],
+      "rule_id": "GROUND-CREW-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "s"
+     },
+     {
+      "actual": [
+       1500,
+       2700
+      ],
+      "candidate_id": "L960-G1-long",
+      "check_id": "L960-G1-long:GROUND-EQUIP-01",
+      "domain": "GROUND",
+      "evidence_ids": [
+       "overlay.equipment"
+      ],
+      "margin": null,
+      "operator": "inside an available interval",
+      "reason_code": "OK",
+      "required": [
+       "GPU-1"
+      ],
+      "rule_id": "GROUND-EQUIP-01",
+      "rule_version": "toy-rules-v1",
+      "status": "PASS",
+      "units": "s"
+     }
+    ],
+    "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5"
+   },
+   "previous_hash": "bbeebd9b9003f953f0a5681b7bc1524be66a2d3afec09a4f1d15873de71c725a",
+   "event_hash": "49f7baa7e1f28d07085a366b01d8b864421d6fcf002e887b7d7c59e9de798d2c"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 30,
+   "event_type": "CONSENSUS_REACHED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.651237Z",
+   "payload": {
+    "outcome": "FEASIBLE_CONSENSUS",
+    "reason_code": null
+   },
+   "previous_hash": "49f7baa7e1f28d07085a366b01d8b864421d6fcf002e887b7d7c59e9de798d2c",
+   "event_hash": "4fc17ee4adb7cc6046d1454bff5367872b2b46e1c65425ef5107ecdf63171848"
+  },
+  {
+   "run_id": "b2d055b2-1b25-448b-8544-c0aecefe5d9b",
+   "sequence": 31,
+   "event_type": "REVIEW_REQUESTED",
+   "actor": "SYSTEM",
+   "occurred_at": "2026-10-31T05:21:37.651237Z",
+   "payload": {
+    "plan_hash": "b8a4e535197bdcd15bf8ddb126b08925c5416d9d0240dba455df47050d219aa5"
+   },
+   "previous_hash": "4fc17ee4adb7cc6046d1454bff5367872b2b46e1c65425ef5107ecdf63171848",
+   "event_hash": "7ee8c26b7bcee8f3e17f83a42b9fe03e1e8dbcd72acd6164cf23953d4de22560"
+  }
+ ],
+ "resource": {
+  "resource_id": "airport:MIA",
+  "revision": 1,
+  "data": {}
+ },
+ "evaluation": {
+  "status": "NOT_YET_EVALUATED"
+ }
+}
