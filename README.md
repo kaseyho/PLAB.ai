@@ -1,148 +1,124 @@
-# PLAB.ai — Airbus Challenge #2
+# PLAB.ai
 
-A working airport coordination simulator: independent ATC, Pilot and Ground agents
-negotiate a checked arrival plan, and a duty manager approves its application.
-The organizer's workbook supplies synthetic operational limits.
+**Three AI agents help an airport duty manager compare arrival plans.**
 
-**[Open the public demo](https://plab-ai-alpha.vercel.app/)** ·
-**[Judge guide: requirements, rubric and evidence](https://plab-ai-alpha.vercel.app/static/judges.html)**
+A working simulation for **Airbus Challenge #2: Air Traffic Decisions**.
 
-The judge guide maps every challenge requirement and all six weighted criteria to
-observable features, saved examples and measured results. It separates live-model
-consensus from contract checks, and includes a three-minute presentation route.
+[Try the app](https://plab-ai-alpha.vercel.app/) ·
+[Judge guide](https://plab-ai-alpha.vercel.app/static/judges.html)
 
-The app puts the three highlighted rubric strengths in the workflow itself:
+## Root cause → problem → solution
 
-- **Problem realism (20%):** a named airport duty-manager job, the current
-  phone/manual-update process, its fuel/overtime/resource risks, and source limits.
-- **Technical soundness (25%):** an explicit Python/LLM/human responsibility
-  split, actual execution counts, and a same-input B0/B1 comparison before review.
-  Change the simulated fuel quantity in Step 1 to exercise a new versioned input;
-  an unknown quantity blocks planning and insufficient fuel can remove every option.
-- **Honest evaluation (20%):** report-derived denominators, latency, all retained
-  cases, baseline deltas and a recorded failure with a cause and next step. The
-  initial 1/6 live consensus result remains distinct from 12/12 contract cases.
+- **Root cause:** Air traffic control, pilots and ground crews plan separately, coordinating disruptions through phone calls and manual updates.
+- **Problem:** Their plans can clash, adding delays, fuel use and crew overtime.
+- **Solution:** Three AI agents compare options, Python rules check the constraints, and a human reviews the recommendation.
 
-Fuel edits use the existing scenario-revision API and invalidate pending plans.
-They retain synthetic provenance and cannot edit workbook or reserve policy.
-Evaluation metrics describe the frozen report, not edited inputs or a new prompt.
+The prototype focuses on **when a delayed flight can land and which gate it can use**.
 
-## Public judge deployment
+## Try it
 
-The frontend, Python API and agent execution run on Vercel Hobby, with a connected
-Neon Free Postgres database for persistent state. Provider credentials remain
-server-only environment variables. Keep the browser tab open during negotiation;
-the bounded execution request streams until the agents finish.
-Judges receive an anonymous browser session automatically: no API key or access
-code is required, and each visitor has separate scenario/resource copies.
-Human approval remains mandatory. Live-model failures still use the checked fallback.
-Completed runs and human decisions survive function restarts. The previous
-Render deployment remains available as a fallback.
+Open **[PLAB.ai](https://plab-ai-alpha.vercel.app/)**. Judges need no API key or access code.
 
-Public mode permits ten runs per visitor per UTC day, 100 runs across the service
-per UTC day, and two simultaneous negotiations. Saved examples remain available.
-The service downloads the organizer CSV from the repository's data release and
-verifies its SHA-256 before startup. See [deployment instructions](docs/deployment.md).
+1. Choose a flight and click **Start negotiation**. Keep the tab open while it runs.
+2. Inspect the agents' replies, the recommended plan and its checks.
+3. Enter a reason and **approve or reject** the plan.
 
-## Start the MVP
+The **Mode** menu includes saved agreements, failures and missing-data examples.
+You can also change the simulated fuel quantity to try a different input.
 
-Requires Python 3.12 and uv. Keep the organizer's filtered flights.csv in data/.
-The small operational workbook is included; the flight CSV remains local.
+## How it works
+
+| Agent | Focus |
+| --- | --- |
+| Air traffic control (ATC) | Runways, aircraft spacing, taxi routes and airport capacity |
+| Pilot | Fuel reserves and flight-crew duty limits |
+| Ground operations | Gates, handling crews, equipment and turnaround |
+
+Python builds candidate plans and runs **15 deterministic checks**. Each agent
+makes its own model request and sends one structured message per turn:
+
+- **Turn 1:** Offer preferred options and acceptable compromises.
+- **Turn 2:** Vote on one shared proposal.
+- **Turn 3, if needed:** Revise the proposal and collect fresh votes.
+
+Consensus requires **all three agents to accept the same complete plan**.
+The limit is **three turns, nine requests and 45 seconds**, with 12 seconds per request.
+
+Without agreement, fixed rules choose a checked fallback using no extra AI calls.
+The app explains the cause, including disagreements, timeouts or invalid replies.
+Missing critical data or no feasible option can leave the run without a plan.
+
+**Human approval is always required**, including for fallback. Approval rechecks
+current resources before booking the runway, gate, crew and equipment together
+in the simulator. Stale or expired plans cannot be applied.
+
+## Data and limits
+
+- **Real historical flights:** The organizer's `flights.csv` contains **358,774 records from 2015**, filtered by `WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20`.
+- **Synthetic operational rules:** `data/challenge2_operational_constraints.xlsx` supplies airport capacity, gate/runway totals, turnaround, wake separation, fuel and crew rules. These facts are absent from the CSV.
+- **Simulated conditions:** Traffic, occupancy, routes, fuel and crew availability are scenario inputs. We model one runway and two candidate gates; departure wake times serve as a declared arrival-simulation proxy.
+
+Source hashes and workbook references remain attached to the evidence.
+This is a simulation prototype; operational use would need further validation.
+
+## Evaluation: what worked and what failed
+
+Plans are compared with two rule-based baselines using the same inputs:
+**B0, the earliest feasible plan**, and **B1, a balanced-cost plan**.
+
+The initial live evaluation on **31 October 2026**, using prompt `roles-v6`, recorded:
+
+| Measure | Result |
+| --- | --- |
+| Live runs with agent consensus | **1 of 6**; five used fallback |
+| System contract cases passed | **12 of 12**, including six scripted fault cases |
+
+All six live results matched B0 on measured impacts. No improvement over B0 was shown.
+These historical results do not measure the final prompt version or real airport savings.
+Failures remain visible in the app.
+
+[Evaluation report](evals/results/initial-live-holdout.json) ·
+[Methods and limitations](docs/submission.md#evidence-retained)
+
+## Tech stack and hosting
+
+| Part | Technology |
+| --- | --- |
+| Interface | HTML, CSS, JavaScript and SVG animations |
+| API, agents and rules | Python, FastAPI and a custom three-agent coordinator |
+| Model access | Qwen through SoCLaaS; OpenAI-compatible provider support |
+| Production hosting | Vercel Hobby for the interface, API and agent execution |
+| Storage | Neon Free Postgres in production; SQLite for local demos |
+
+API keys stay on the server. Saved runs and human decisions survive function restarts.
+Vercel runs each negotiation inside an open streamed request. Both hosting plans
+have usage limits. See [deployment details](docs/deployment.md).
+
+## Run locally
+
+Requires **Python 3.12** and **uv**. From the repository root:
 
 ```sh
-uv sync --locked --dev
+uv sync --locked
 cp -n .env.example .env
-uv run python -m app.prepare
-uv run python -m app.demo
-```
-
-Set SOCLAAS_API_KEY and SOCLAAS_MODEL in .env, or the OPENAI_* equivalents.
-The demo prints a temporary operator access code when PLAB_SESSION_TOKEN is unset.
-Alternatively set it to at least 16 random characters in .env. Keep credentials out of Git.
-
-Open **http://127.0.0.1:8000**, enter that access code, select D01, and click
-**Start negotiation**. Review the plan, messages, checks and B0/B1 comparisons. Enter a
-reason and approve or reject. Fallback also needs the acknowledgement.
-Each launch uses a fresh SQLite database under artifacts/demos/.
-
-For an offline presentation with the real planner and review gate:
-
-```sh
+uv run python -m app.download_data
 uv run python -m app.demo --offline
-# Show a third-turn revision with explicitly labelled fixture agents:
-uv run python -m app.demo --offline --third-turn
 ```
 
-The UI always identifies fixture agents. Eight scripted read-only samples are available,
-including third-turn agreement, missing data, no feasible plan, fallback,
-rejection, stale approval and applied simulation.
-Five additional read-only recordings show the actual roles-v6 live failures.
-The negotiation section explains the recorded cause, each role's response, and
-any non-accepting agent's stated reason. Timeouts and cancelled peer requests
-are distinguished from rejection. Recorded live cases are labelled historical;
-opening them makes no model calls.
+The download command verifies the flight CSV's hash. The workbook and prepared
+scenarios are included in Git. Open **http://127.0.0.1:8000** and use the operator
+code printed in the terminal, or your configured `PLAB_SESSION_TOKEN`.
+Offline mode uses labelled scripted agents with real checks and human review.
 
-## Implemented behavior
+For live agents, set `SOCLAAS_API_KEY` and `SOCLAAS_MODEL` in `.env` (or the
+`OPENAI_*` equivalents), then run `uv run python -m app.demo`.
+Use `--offline --third-turn` to demonstrate a scripted revised-plan vote.
+Each local demo launch creates a fresh SQLite database. Keep credentials out of Git.
 
-- One structured message per role per turn, at most **three turns / nine requests**,
-  and no SDK retries. Valid dissent selects an untried common plan for fresh votes.
-- **45 seconds per run**, **12 seconds per request**, **five seconds for fallback**.
-  Fallback makes zero model calls. Invalid or missing inputs never become consensus.
-- Up to 124 candidate combinations and 15 deterministic checks. Workbook rules
-  cover airport inventory/capacity, wake times, reserve plus contingency fuel,
-  flight duty, ground overtime, turnaround and gate notice.
-- Human approval bound to the exact plan, versions and expiry. Application
-  atomically reserves runway, gate, crew and equipment. Changed sources or stale
-  state block approval; rejection/cancellation do not apply a plan.
-- Persisted messages, requests, counters, checks and hash-chained audit events.
-  Download the full trace from the dashboard.
-- B0 earliest-feasible and B1 joint-cost baselines over the same full catalog.
+## More details
 
-## Inputs and scope
-
-The delivered CSV was verified as **358,774 eligible 2015 rows**, SHA-256
-`bfb7fc2112a1a98b748fa1c5bbba57f6f8f14acbd6419ea4cf84f4470ed5d79e`.
-The workbook SHA-256 is
-`f889ae9e012c36cbbf95a5b0b70a0ae81c1fa9090f07be5f9d0db81520e78211`.
-Scenarios retain identity, ordinal, both hashes and source cells.
-AA1057 DFW–MIA is now record **47**, rather than 71 in the legacy file.
-
-One runway and two candidate spare gates form a declared subset of airport totals.
-Traffic, occupancy, routes, aircraft type, fuel state, report times and equipment
-are synthetic scenario inputs. The departure wake-time table is a **declared
-arrival-simulation proxy**; nautical-mile spacing is retained but not simulated.
-Filtered DOT rows are never treated as a full queue or an aircraft rotation.
-This prototype is not operational flight-control software.
-
-Default scenarios are in scenarios/organizer/. scenarios/D01.json remains the
-legacy arithmetic regression fixture and is not loaded by the submission app.
-See [the demo guide](docs/submission.md) for presentation steps and limitations.
-
-## Verification and optional evaluations
-
-```sh
-uv run ruff check app examples tests
-uv run ruff format --check app examples tests
-uv run mypy
-uv run pytest -q
-node --check app/static/app.js
-# Optional; not required to run the MVP:
-uv run python -m app.evaluate
-uv run python -m app.evaluate --live
-```
-
-Live evaluation starts at most 54 requests for six nominal holdout cases.
-Fault cases use labelled fixtures. Reports retain failures and distinguish
-contract checks from model consensus. Results appear at /api/evaluations/latest.
-Traces, databases, local credentials and generated reports stay under ignored paths.
-
-For a persistent service instead of an isolated demo:
-
-```sh
-uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 1
-```
-
-/health reports input/provider setup; /docs exposes the API. Mutations require the
-operator bearer token; starts/reviews also require Idempotency-Key.
-See [the PRD](docs/technical_prd.md), [backend handoff](docs/backend_handoff.md) and
-[three-developer plan](docs/developer_work_plan.md).
+[Problem statement](docs/problem_statement.md) ·
+[Organizer updates](docs/organizer_updates.md) ·
+[Technical PRD](docs/technical_prd.md) ·
+[Demo guide](docs/submission.md) ·
+[Developer handoff](HANDOFF.md)
