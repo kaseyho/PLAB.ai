@@ -1,4 +1,4 @@
-"""PR #2 review cases exercised through the integrated API and real SQLite store."""
+"""Review integration exercised through the shared hook, API and real SQLite store."""
 
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.agents import UnavailableProvider
-from app.approvals import Reservation, review_plan
+from app.approvals import APPLIED_KEY, Reservation, current_snapshot, review_plan
 from app.contracts import (
     ResourceState,
     ReviewRequest,
@@ -15,7 +15,7 @@ from app.contracts import (
     canonical_json,
 )
 from app.main import Settings, create_app
-from app.planning import snapshot_from_definition
+from app.planning import build_catalog, check_plan, snapshot_from_definition
 from app.scenarios import Movement
 from app.store import Store
 from examples.backend_fixture import FixtureProvider, sample_snapshot
@@ -76,6 +76,8 @@ def test_nothing_changes_before_approval_and_exact_plan_applies_once(tmp_path):
         reservation = Reservation.model_validate(resource.data["reservations"][0])
         plan = run["candidate"]
         assert reservation.run_id == run["run_id"]
+        assert reservation.plan_hash == run["plan_hash"]
+        assert reservation.candidate_id == plan["candidate_id"]
         assert reservation.movement.time_s == plan["landing_time_s"]
         assert (
             reservation.movement.occupancy_s
@@ -129,11 +131,12 @@ def test_reject_or_cancel_preserves_resources_and_blocks_approval(tmp_path, deci
 
 
 @pytest.mark.parametrize("reason", ["", "   "])
-def test_reject_requires_nonblank_reason(tmp_path, reason):
+@pytest.mark.parametrize("decision", ["APPROVE", "REJECT"])
+def test_decision_requires_nonblank_reason(tmp_path, reason, decision):
     client, store, snapshot = open_api(tmp_path)
     with client:
         run = ready(client)
-        assert decide(client, run, "REJECT", reason=reason).status_code == 422
+        assert decide(client, run, decision, reason=reason).status_code == 422
         assert store.get_resource(snapshot.resource_id).revision == 1
 
 
@@ -314,3 +317,115 @@ def test_refresh_preserves_committed_reservations_and_invalidates_pending_runs(t
         )
         assert any(c["status"] == "FAIL" for c in original["checks"])
         assert len(store.get_resource(snapshot.resource_id).data["reservations"]) == 1
+
+
+def test_current_reservations_expose_exact_rule_failures_without_mutating_snapshot():
+    snapshot = snapshot_from_definition(scenario(), sample_snapshot().source)
+    original = snapshot.model_dump(mode="json")
+    plan = next(
+        entry.plan
+        for entry in build_catalog(snapshot).candidates
+        if entry.plan.candidate_id == "L960-G1-long"
+    )
+    booking = Reservation(
+        run_id="other",
+        runway_id="R1",
+        movement=Movement(
+            movement_id="APPLIED-other", time_s=960, wake_category="M", occupancy_s=60
+        ),
+        gate_id="G1",
+        gate_interval=(1500, 2700),
+    )
+    resource = ResourceState(
+        resource_id=snapshot.resource_id,
+        revision=1,
+        data={APPLIED_KEY: [booking.model_dump(mode="json")]},
+    )
+    failed = {
+        check.rule_id
+        for check in check_plan(current_snapshot(snapshot, resource), plan)
+        if check.status != "PASS"
+    }
+    assert failed == {"ATC-RWY-01", "ATC-SEP-01", "GROUND-OCC-01"}
+    assert snapshot.model_dump(mode="json") == original
+    assert all(check.status == "PASS" for check in check_plan(snapshot, plan))
+
+
+def test_booking_already_in_revised_snapshot_is_not_added_twice():
+    snapshot = snapshot_from_definition(scenario(), sample_snapshot().source)
+    booking = Reservation(
+        run_id="other",
+        runway_id="R1",
+        movement=Movement(movement_id="BG2", time_s=780, wake_category="M", occupancy_s=60),
+        gate_id="G1",
+        gate_interval=(0, 1500),
+    )
+    resource = ResourceState(
+        resource_id=snapshot.resource_id,
+        revision=1,
+        data={APPLIED_KEY: [booking.model_dump(mode="json")]},
+    )
+    updated = current_snapshot(snapshot, resource)
+    facts = {fact.fact_id: fact.value for fact in updated.facts}
+    assert [movement["movement_id"] for movement in facts["overlay.movements"]] == ["BG1", "BG2"]
+    assert facts["overlay.gates"][0]["reservations"] == [[0, 1500]]
+    assert current_snapshot(updated, resource) == updated
+
+
+def test_review_hook_is_pure_and_refuses_double_application(tmp_path):
+    client, store, snapshot = open_api(tmp_path)
+    with client:
+        raw = ready(client)
+        run = store.get_run(raw["run_id"])
+        state = store.get_resource(snapshot.resource_id)
+        request = ReviewRequest.model_validate(decision_body(raw))
+        effect = review_plan(run, state, request)
+        assert state.data == {}
+        assert store.get_resource(snapshot.resource_id) == state
+        assert store.get_run(run.run_id) == run
+        booked = ResourceState(resource_id=state.resource_id, revision=1, data=effect.resource_data)
+        with pytest.raises(ServiceError, match="ALREADY_APPLIED"):
+            review_plan(run, booked, request)
+
+
+@pytest.mark.parametrize("data", [{APPLIED_KEY: "not-a-list"}, {APPLIED_KEY: [1, 2]}])
+def test_malformed_reservations_refuse_review_without_changing_state(tmp_path, data):
+    client, store, snapshot = open_api(tmp_path)
+    with client:
+        run = ready(client)
+        state = ResourceState(resource_id=snapshot.resource_id, revision=1, data=data)
+        with store.transaction() as db:
+            db.execute(
+                "UPDATE resource_states SET data=? WHERE resource_id=?",
+                (canonical_json(state), state.resource_id),
+            )
+        response = decide(client, run)
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "RESOURCE_STATE_INVALID"
+        assert store.get_resource(snapshot.resource_id) == state
+        assert store.get_run(run["run_id"]).approval_state == "PENDING"
+
+
+@pytest.mark.parametrize("remove_routes", [False, True])
+def test_refresh_cannot_erase_a_committed_gate_by_removing_it(tmp_path, remove_routes):
+    client, store, snapshot = open_api(tmp_path)
+    with client:
+        run = ready(client)
+        assert decide(client, run).status_code == 200
+        state = store.get_resource(snapshot.resource_id)
+        raw = snapshot.model_dump(mode="json")
+        raw.update(revision=2, resource_revision=3)
+        for fact in raw["facts"]:
+            if fact["fact_id"] == "overlay.gates" or (
+                remove_routes and fact["fact_id"] == "overlay.routes"
+            ):
+                fact["value"] = [
+                    gate for gate in fact["value"] if gate["gate_id"] != run["candidate"]["gate_id"]
+                ]
+        response = client.post("/api/scenarios/D01/revisions", json=raw, headers=HEADERS)
+        assert response.status_code == (409 if remove_routes else 422)
+        assert response.json()["error"]["code"] == (
+            "RESOURCE_STATE_INVALID" if remove_routes else "INVALID_INPUT"
+        )
+        assert store.get_resource(snapshot.resource_id) == state
+        assert client.get("/api/scenarios/D01").json()["revision"] == 1

@@ -7,11 +7,26 @@
 
 const params = new URLSearchParams(location.search);
 let runParam = params.get("run");
-const fixtureName = params.get("fixture");
+const fixtureName = params.get("fixture") || params.get("sample");
 const LIVE = !fixtureName;
 const TERMINAL_APPROVAL = ["APPLIED_SIMULATION", "REJECTED", "STALE", "EXPIRED", "CANCELLED"];
 const ROLES = ["ATC", "PILOT", "GROUND"];
 const ICON = { PASS: "✓ PASS", FAIL: "✗ FAIL", UNKNOWN: "? UNKNOWN" };
+const ERRORS = {
+  REVIEWER_SESSION_REQUIRED: "Operator token missing or wrong.",
+  ORIGIN_NOT_ALLOWED: "This page address is not the configured public origin.",
+  REVIEW_BINDING_MISMATCH: "The plan on screen is out of date. Reload before deciding.",
+  RECOMMENDATION_EXPIRED: "The recommendation expired. Refresh and rerun.",
+  REVIEW_NOT_PENDING: "This recommendation is already closed.",
+  FALLBACK_ACKNOWLEDGEMENT_REQUIRED: "Acknowledge that no consensus was obtained first.",
+  IDEMPOTENCY_CONFLICT: "This decision conflicts with one already recorded.",
+  REQUIRED_CHECK_FAIL: "The plan no longer passes every hard check against current resources.",
+  REQUIRED_CHECK_UNKNOWN: "A required hard check could not be assessed.",
+  RESOURCE_STATE_INVALID: "The current resource record needs correction before review.",
+  ALREADY_APPLIED: "This plan is already applied.",
+  STATE_CHANGED: "Airport resources changed. Refresh the scenario and rerun.",
+  INVALID_INPUT: "The request was rejected as invalid.",
+};
 
 let run = null;
 let lastSeq = 0;
@@ -88,6 +103,7 @@ function view(raw, events = []) {
     ruleset_version: snapshot.ruleset_version, policy_version: snapshot.policy_version,
     candidate: planView(raw.candidate, raw.checks, raw.plan_hash),
     candidates: catalog.filter((entry) => ids.has(entry.plan.candidate_id)).map((entry) => planView(entry.plan, entry.checks)),
+    catalog_feasible_count: raw.catalog_feasible_count ?? feasible.length,
     baseline_b0: baseline ? planView(baseline.plan, baseline.checks) : null,
     missing_facts: raw.catalog?.blocking_reasons || [], blockers,
     events, review_result: reviewResult,
@@ -149,8 +165,8 @@ function renderMode() {
   badge.textContent = !LIVE ? "Sample data" : !run.run_id ? "Ready" : `${run.provider.mode} provider · ${run.planning_mode} planner`;
   $("mode-note").hidden = LIVE && run.provider?.mode !== "FIXTURE";
   $("mode-note").textContent = run.mode_note || "Deterministic fixture agents; no live model calls.";
-  $("fixture-picker").hidden = LIVE;
-  if (!LIVE) $("fixture-select").value = fixtureName;
+  $("fixture-picker").hidden = false;
+  $("fixture-select").value = fixtureName || "";
   $("scenario-picker").hidden = !LIVE;
   $("scenario-select").disabled = busy;
   $("session-row").hidden = !LIVE;
@@ -168,6 +184,7 @@ function renderScenario() {
   fact(list, "Historical flight", source.natural_identity, "historical");
   fact(list, "Qualifies by", source.qualifies_by, "historical");
   fact(list, "Source row", source.record_ordinal ? `${source.dataset_file} record ${source.record_ordinal}` : null);
+  fact(list, "Dataset hash", `${run.snapshot.source.dataset_sha256.slice(0, 12)}…`);
   fact(list, "Scheduled", fields.SCHEDULED_DEPARTURE ? `dep ${fields.SCHEDULED_DEPARTURE}, arr ${fields.SCHEDULED_ARRIVAL} (local, as recorded)` : null, "historical");
   fact(list, "Scenario", run.scenario ? `${run.scenario.scenario_id} rev ${run.scenario_revision}` : null, "synthetic");
   fact(list, "Simulation epoch", run.scenario && run.scenario.simulation_epoch_utc, "synthetic");
@@ -184,8 +201,12 @@ function renderRun() {
   fact(list, "Rounds", `${run.round_count} of 2`);
   fact(list, "Model calls", `${run.model_call_count} of 6`);
   fact(list, "Agent invocations", run.agent_invocation_count);
+  if (run.provider) fact(list, "Provider", `${run.provider.mode} · ${run.provider.model}`, run.provider.prompt_version);
+  if (run.planning_mode) fact(list, "Planner", run.planning_mode);
+  if (run.elapsed_ms != null) fact(list, "Elapsed", `${run.elapsed_ms} ms`);
   fact(list, "Approval", run.approval_state);
   if (run.fallback_reason) fact(list, "Fallback reason", run.fallback_reason);
+  if (run.reason_code) fact(list, "Reason code", run.reason_code);
   const running = LIVE && run.run_id && run.processing_state !== "TERMINAL";
   const authorized = LIVE && sessionConfigured && $("session-token").value.trim();
   $("start-btn").disabled = !authorized || busy || Boolean(running);
@@ -252,13 +273,14 @@ function renderReview() {
   $("ack-row").hidden = !(reviewable && fallback);
   $("review-controls").hidden = !reviewable && !TERMINAL_APPROVAL.includes(run.approval_state);
   const canAct = reviewable && LIVE && sessionConfigured && $("session-token").value.trim() && !busy;
-  $("approve-btn").disabled = !canAct || (fallback && !$("ack-box").checked);
-  $("reject-btn").disabled = !canAct;
+  const hasReason = $("reason-input").value.trim().length > 0;
+  $("approve-btn").disabled = !canAct || !hasReason || (fallback && !$("ack-box").checked);
+  $("reject-btn").disabled = !canAct || !hasReason;
   $("reason-input").disabled = !canAct;
   $("rerun-btn").disabled = !LIVE || busy || !sessionConfigured || !$("session-token").value.trim();
   $("review-hint").textContent = !reviewable
     ? (TERMINAL_APPROVAL.includes(run.approval_state) ? "This recommendation is closed. Start a new run to decide again." : "")
-    : LIVE ? "The server re-checks every hard rule against current airport state before applying."
+    : LIVE ? "Enter a reason for your decision. The server re-checks every hard rule against current airport state before applying."
       : "Sample data: approval needs the backend. The approved and stale samples show the real approval logic's results.";
 
   const result = $("review-result");
@@ -293,8 +315,10 @@ function renderAgents() {
       card.append(el("p", offer.rationale));
     }
     if (vote) {
+      const matches = vote.plan_hash === run.plan_hash;
       card.append(el("p", "Round 2 vote", "label"));
-      card.append(el("p", vote.decision, `status status-${vote.decision === "ACCEPT" ? "PASS" : "FAIL"}`));
+      card.append(el("p", `${vote.decision} (${matches ? "same" : "different"} plan hash)`,
+        `status status-${vote.decision === "ACCEPT" && matches ? "PASS" : "FAIL"}`));
       card.append(el("p", vote.rationale));
     }
     box.append(card);
@@ -313,6 +337,7 @@ function renderCandidates() {
         (run.baseline_b0 && c.candidate_id === run.baseline_b0.candidate_id ? " (B0)" : ""),
       clock(c.landing_time_s), clock(c.gate_in_time_s), `${c.gate_id} / ${c.taxi_route_id}`,
       num(c.added_holding_min, "min"), num(c.fuel_margin_kg, "kg"), num(c.crew_overtime_min, "min"),
+      `${Number(c.costs.ATC).toFixed(3)} / ${Number(c.costs.PILOT).toFixed(3)} / ${Number(c.costs.GROUND).toFixed(3)}`,
     ];
     for (const text of cells) row.append(el("td", text));
     const status = c.feasible ? "PASS" : "FAIL";
@@ -320,7 +345,7 @@ function renderCandidates() {
     body.append(row);
   }
   $("cand-note").textContent = (run.candidates || []).length
-    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked candidates. B0 uses the full catalog.` : "No candidates to compare.";
+    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked candidates, ${run.catalog_feasible_count} feasible. B0 uses the full catalog. Costs are illustrative policy scores.` : "No candidates to compare.";
 }
 
 function renderChecks() {
@@ -346,13 +371,19 @@ function renderChecks() {
   }
 }
 
+function eventSummary(event) {
+  const payload = event.payload || {};
+  const keys = ["state", "decision", "reason", "candidate_id", "outcome", "role", "round", "resource_revision", "reason_code"];
+  return keys.filter((key) => payload[key] != null).map((key) => `${key}=${payload[key]}`).join(", ");
+}
+
 function renderEvidence() {
   const list = $("event-list");
   list.replaceChildren();
   for (const event of run.events || []) {
     const item = el("li");
     item.append(el("strong", `${event.sequence}. ${event.event_type}`), el("span", ` ${event.actor} `, "actor"),
-      el("span", event.payload?.reason_code || event.payload?.state || event.payload?.decision || ""));
+      el("span", eventSummary(event)));
     list.append(item);
   }
   const link = $("export-link");
@@ -376,7 +407,10 @@ async function post(path, body) {
   });
   const data = await response.json();
   if (response.status < 500) pendingKey = null;
-  if (!response.ok) throw new Error(data.error?.code || `Request failed (${response.status})`);
+  if (!response.ok) {
+    const code = data.error?.code;
+    throw new Error(code ? `${ERRORS[code] || "Request refused."} (${code})` : `Request failed (${response.status})`);
+  }
   return data;
 }
 
@@ -403,7 +437,7 @@ async function decide(decision) {
     decision, plan_hash: run.plan_hash, scenario_revision: run.scenario_revision,
     resource_revision: run.resource_revision, ruleset_version: run.ruleset_version,
     policy_version: run.policy_version, expires_at: run.expires_at,
-    reason: $("reason-input").value.trim() || "Approved from the duty desk",
+    reason: $("reason-input").value.trim(),
     acknowledge_fallback: $("ack-box").checked,
   };
   await post(`/api/runs/${encodeURIComponent(run.run_id)}/decision`, body);
@@ -442,7 +476,7 @@ function showError(error) {
 }
 
 $("fixture-select").addEventListener("change", (event) => {
-  location.search = `?fixture=${encodeURIComponent(event.target.value)}`;
+  location.search = event.target.value ? `?sample=${encodeURIComponent(event.target.value)}` : "";
 });
 $("scenario-select").addEventListener("change", async () => {
   if (loadPromise) await loadPromise.catch(() => {});
@@ -456,6 +490,7 @@ $("scenario-select").addEventListener("change", async () => {
 });
 $("session-token").addEventListener("input", () => { if (run) render(); });
 $("ack-box").addEventListener("change", () => renderReview());
+$("reason-input").addEventListener("input", () => renderReview());
 $("approve-btn").addEventListener("click", () => operate(() => decide("APPROVE")));
 $("reject-btn").addEventListener("click", () => {
   if (!$("reason-input").value.trim()) {

@@ -4,7 +4,8 @@ This branch implements the backend, contracts, three role agents, coordination,
 persistence, trace export, and the storage boundary for human review. It now
 integrates Developer C's deterministic checker and fallback from
 [PR #1](https://github.com/kaseyho/PLAB.ai/pull/1) and Developer A's duty desk and
-simulated approval gate from [PR #2](https://github.com/kaseyho/PLAB.ai/pull/2).
+simulated approval gate from [PR #2](https://github.com/kaseyho/PLAB.ai/pull/2), with
+booking validation and dashboard evidence from [PR #4](https://github.com/kaseyho/PLAB.ai/pull/4).
 The frozen evaluation suite remains with its owner in the
 [work plan](developer_work_plan.md).
 
@@ -312,3 +313,22 @@ Regenerate sample views using
 the real coordinator/checker/review store, contain the actual source row, and
 retain truthful zero-live-call counters. They include only a catalog/event view
 projection; the API trace export remains the complete audit record.
+
+PR #4 integration brings the combined suite to 176 passing offline tests. The
+additional cases cover malformed reservations, duplicate booking detection,
+snapshot purity, exact runway/separation/gate conflicts, and edits that remove a
+committed gate. Invalid overlay edits return a validation response without
+changing stored state. New reservations retain the candidate ID and plan hash;
+the existing `reservations` storage format remains compatible with earlier runs.
+
+The dashboard now requires a reason for approval as well as rejection, displays
+domain costs and whether votes match the displayed plan hash, and includes a
+seventh sample for rejection. Browser checks verified the wrong-token error,
+reason-required controls, approval, refresh/rerun, rejection, and all seven sample
+states. No browser console errors occurred. These checks used fixture agents and
+the real planner/review store, with zero live model calls. Ruff lint/format,
+strict mypy and JavaScript syntax checks also pass.
+
+Simulated application persists runway and gate reservations only. Crew and
+equipment availability are checked from scenario facts; persistent bookings for
+those resources and the frozen evaluation suite remain outside these merged PRs.
