@@ -391,7 +391,21 @@ function renderNegotiation() {
   box.replaceChildren();
   for (const role of ROLES) {
     const card = el("article", null, "desk");
-    card.append(el("h3", ROLE_NAMES[role]), el("p", ROLE_NOTES[role], "role-note"));
+    card.dataset.role = role;
+    const heading = el("div", null, "desk-heading");
+    const icon = el("span", null, "role-icon");
+    icon.setAttribute("aria-hidden", "true");
+    const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    symbol.setAttribute("viewBox", "0 0 24 24");
+    symbol.setAttribute("fill", "none");
+    symbol.setAttribute("stroke", "currentColor");
+    symbol.setAttribute("stroke-width", "1.4");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", `/static/roles.svg#${role.toLowerCase()}`);
+    symbol.append(use);
+    icon.append(symbol);
+    heading.append(icon, el("h4", ROLE_NAMES[role]));
+    card.append(heading, el("p", ROLE_NOTES[role], "role-note"));
     const offer = (run.offers || {})[role];
     const previous = run.previous_votes?.[role];
     const vote = (run.votes || {})[role];
@@ -1092,7 +1106,8 @@ function showError(error) {
 }
 
 $("fixture-select").addEventListener("change", (event) => {
-  location.search = event.target.value ? `?sample=${encodeURIComponent(event.target.value)}` : "";
+  const query = event.target.value ? `?sample=${encodeURIComponent(event.target.value)}` : "";
+  location.assign(`${location.pathname}${query}#workspace`);
 });
 $("scenario-select").addEventListener("change", async () => {
   if (loadPromise) await loadPromise.catch(() => {});

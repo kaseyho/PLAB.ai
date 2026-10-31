@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="atc" viewBox="0 0 24 24">
+    <path d="M8 21h8M10 21V10m4 11V10M6 5h12l-2 5H8L6 5Zm6-4v4M4 14h3m10 0h3M2 18h5m10 0h5"/>
+  </symbol>
+  <symbol id="pilot" viewBox="0 0 24 24">
+    <path d="m12 2 2 8 7 5v2l-7-2v5l2 2-4-1-4 1 2-2v-5l-7 2v-2l7-5 2-8Z" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="ground" viewBox="0 0 24 24">
+    <path d="M3 21V9h18v12M1 21h22M6 9V4h12v5M7 13h2m6 0h2M7 17h2m6 0h2M11 21v-4h2v4"/>
+  </symbol>
+</svg>
