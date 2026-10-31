@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Separate teams. Clashing plans. PLAB brings three AI agents together to compare arrival plans, check the rules and ask for human approval.">
+  <meta name="description" content="Compare landing times, taxi routes and gates with ATC, Pilot and Ground agents. Review the rule checks before approving a plan.">
   <meta name="theme-color" content="#242826">
   <title>PLAB.ai · Arrival coordination</title>
   <link rel="icon" type="image/svg+xml" href="/static/mark.svg">
@@ -18,12 +18,11 @@
         <img class="logo" src="/static/mark.svg" alt="" width="32" height="32">
         <div>
           <strong>PLAB.ai</strong>
-          <span class="brand-sub">Arrival disruption desk</span>
         </div>
       </a>
       <nav class="topbar-right" aria-label="Main navigation">
         <a class="nav-link" href="#workspace">Arrival desk</a>
-        <a class="nav-link" href="#evidence">The evidence</a>
+        <a class="nav-link" href="#evidence">Results</a>
 
       </nav>
     </div>
@@ -32,7 +31,6 @@
   <main class="wrap">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Multi-agent arrival planning</p>
         <h1 id="hero-title">Three teams.<br><span>One arrival plan.</span></h1>
         <dl class="hero-story" aria-label="Root cause, problem and solution">
           <div><dt>Root cause</dt><dd>Controllers, pilots and ground crews plan separately.</dd></div>
@@ -43,7 +41,6 @@
           <a class="button primary" href="#workspace">Try it <span aria-hidden="true">↗</span></a>
           <a class="quiet-link" href="/?sample=third-turn#workspace">See an example <span aria-hidden="true">→</span></a>
         </div>
-        <p class="hero-note">For airport duty managers</p>
       </div>
       <figure class="hero-visual">
         <div class="visual-heading"><span>ARRIVAL COORDINATION</span><span>01 — 03</span></div>
@@ -54,12 +51,11 @@
 
     <section class="workspace" id="workspace" aria-labelledby="workspace-h" tabindex="-1">
       <div class="workspace-heading">
-        <div><p class="eyebrow">01 / The workspace</p><h2 id="workspace-h">Your arrival desk.</h2>
-          </div>
+        <h2 id="workspace-h">Arrival desk</h2>
         <label class="examples" id="fixture-picker">
           <span id="fixture-label">Mode</span>
           <select id="fixture-select" aria-labelledby="fixture-label">
-            <option value="">Live workspace</option>
+            <option value="">New run</option>
             <optgroup label="Saved examples">
               <option value="consensus">Agents agreed</option>
               <option value="third-turn">Agreed on turn 3</option>
@@ -197,7 +193,7 @@
 
     <!-- Step 3 -->
     <section class="card" id="review-card" aria-labelledby="review-h">
-      <h3 class="panel-title" id="review-h"><span class="num">03</span> Your decision</h3>
+      <h3 class="panel-title" id="review-h"><span class="num">03</span> Review plan</h3>
       <div class="banner" id="review-state" role="status"></div>
       <div id="plan-summary"></div>
       <section id="baseline-comparison" aria-label="Comparison against deterministic baselines" hidden></section>
@@ -226,8 +222,7 @@
     </section>
 
     <section class="evidence-intro" id="evidence" aria-labelledby="evidence-h">
-      <p class="eyebrow">02 / The evidence</p>
-      <h2 id="evidence-h">See what works. And what fails.</h2>
+      <h2 id="evidence-h">Results and limits</h2>
       <nav class="proof-nav" aria-label="Product evidence">
         <a href="#workflow"><span class="proof-label">Workflow</span><strong>The real problem <span aria-hidden="true">↗</span></strong></a>
         <a href="#method"><span class="proof-label">Decision engine</span><strong>How decisions are checked <span aria-hidden="true">↗</span></strong></a>
@@ -295,7 +290,6 @@
 
     <footer class="foot muted small">
       <a class="footer-brand" href="/">PLAB.ai</a>
-      <span>Arrival planning · Human approval</span>
       <a href="https://github.com/kaseyho/PLAB.ai">View source <span aria-hidden="true">↗</span></a>
     </footer>
   </main>

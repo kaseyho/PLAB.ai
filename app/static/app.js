@@ -298,17 +298,15 @@ function renderMode() {
   $("mode-note").textContent = recorded
     ? `Recorded live run · ${run.provider.model}, ${run.provider.prompt_version}. Read-only; no new model calls.`
     : !LIVE
-    ? "Scripted example · real rule checks. Choose “Live workspace” to try it yourself."
+    ? "Scripted example · real rule checks. Choose “New run” to start a negotiation."
     : fixture ? "Offline demo · scripted agents, real checks and human approval."
     : "Live agents · keep this tab open while they negotiate.";
   $("fixture-select").value = fixtureName || "";
   $("start-row").hidden = !LIVE;
-  $("session-hint").hidden = !LIVE;
+  $("session-hint").hidden = !LIVE || publicDemo;
   $("session-row").hidden = publicDemo;
   $("scenario-select").disabled = busy;
-  if (LIVE) $("session-hint").textContent = publicDemo
-    ? "No API key needed. Your own planning workspace."
-    : sessionConfigured
+  if (LIVE && !publicDemo) $("session-hint").textContent = sessionConfigured
     ? "Kept in this browser tab only. Needed to start, stop or decide."
     : "No access code is set up on the server. Add PLAB_SESSION_TOKEN to .env and restart.";
 }
@@ -389,7 +387,7 @@ function renderNegotiation() {
   const status = $("negotiation-status");
   const n = run.round_count;
   const outcome = run.negotiation_outcome;
-  if (!run.run_id) status.textContent = "Choose a flight and start. The three agents will compare plans.";
+  if (!run.run_id) status.textContent = "Choose a flight, then start negotiation.";
   else if (run.processing_state !== "TERMINAL") status.textContent = n ? `Turn ${n} of 3 · waiting for the agents’ replies…` : "Checking the available plans…";
   else if (outcome === "FEASIBLE_CONSENSUS") status.textContent = `All three agents agreed on the same plan in ${n} ${n === 1 ? "turn" : "turns"}.`;
   else if (outcome === "FEASIBLE_FALLBACK") {
@@ -678,14 +676,14 @@ function voteBlock(turnNumber, vote, candidateId) {
 function reviewState() {
   const outcome = run.negotiation_outcome;
   const approval = run.approval_state;
-  if (!run.run_id) return ["info", "Your plan will appear here", "Review the checks, then approve or reject with a reason."];
-  if (approval === "APPLIED_SIMULATION") return ["ok", "Approval recorded", "Your plan and resource allocations are saved in this workspace. Your decision is recorded in the audit trail."];
+  if (!run.run_id) return ["info", "No plan yet", "Start negotiation to generate a plan."];
+  if (approval === "APPLIED_SIMULATION") return ["ok", "Approval recorded", "Plan and allocations saved to this workspace. Decision added to the audit log."];
   if (approval === "REJECTED") return ["info", "Rejected", "Nothing was changed."];
   if (approval === "CANCELLED") return ["info", "Stopped", "Nothing was changed."];
   if (approval === "STALE") return ["warn", "This plan is out of date", "Airport resources changed. Run again to check an updated plan."];
   if (approval === "EXPIRED") return ["warn", "Review window closed", "This plan’s two-minute review window has ended. Run again for an updated plan."];
   if (run.processing_state && run.processing_state !== "TERMINAL") return ["info", "Negotiating…", `Turn ${Math.max(run.round_count, 1)} of 3. The plan will appear here when the agents finish.`];
-  if (outcome === "FEASIBLE_CONSENSUS") return ["info", "Ready for your review", "All three agents accepted this plan. Your approval is still required."];
+  if (outcome === "FEASIBLE_CONSENSUS") return ["info", "Ready for review", "All three agents accepted. Review the checks before approving."];
   if (outcome === "FEASIBLE_FALLBACK") return ["warn", "Backup plan · review required", "The agents did not agree. Fixed rules chose the earliest plan that passes every check."];
   if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["bad", "No plan passes the checks", "None of the options in the search window is feasible. Choose another flight, or inspect the reasons below."];
   if (outcome === "INSUFFICIENT_DATA") return ["warn", "Required information is missing", "No plan can be approved. See what’s missing below, or choose another flight."];
@@ -868,7 +866,7 @@ function renderControls() {
   $("rerun-btn").disabled = !authorized || busy || !fuelValid;
   $("rerun-btn").hidden = !LIVE || run.processing_state !== "TERMINAL" || reviewable;
   $("review-hint").textContent = !LIVE
-    ? "Saved example · choose “Live workspace” to start your own run."
+    ? "Saved example · choose “New run” to start a negotiation."
     : !reviewable
     ? (closed || run.processing_state === "TERMINAL" ? "Run again with current resources, or choose another flight above." : "")
       : !publicDemo && !token ? "Enter the access code in step 1 to decide."
