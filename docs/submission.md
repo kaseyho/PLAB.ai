@@ -1,50 +1,26 @@
-# Hackathon MVP: launch and demonstrate
+# Demo and evaluation guide
 
-The app is runnable now at [the public demo](https://plab-ai.onrender.com/), with
-team-provided model access and no visitor API key. The
-[judge guide](https://plab-ai.onrender.com/static/judges.html) maps the problem
-statement and all six rubric criteria to working features and evidence.
-For local use, follow [README](../README.md); credentials stay in `.env`.
+Open [PLAB.ai](https://plab-ai-alpha.vercel.app/) to use the arrival planning
+workspace with server-provided model access. No visitor API key is needed.
+For local setup, follow [README](../README.md). Credentials stay in `.env`.
 
-## How the submission answers the rubric
+## Explore the workflow
 
-The app now links the three highlighted criteria directly to observable evidence:
-**Problem realism → the duty-manager workflow**, **Technical soundness → rules,
-agents and human authority**, and **Honest evaluation → the measured report**.
-The workflow includes actual request counts and an immediately visible B0/B1
-comparison of holding, fuel and overtime for the selected plan.
+Choose a flight, start a negotiation, inspect the agents' responses and compare
+the recommendation with the rule-based baselines. Approval records the plan and
+resource allocations in the workspace after rechecking current versions and constraints.
 
-For an unscripted input check, open **Change simulated fuel** in Step 1. Enter a
-different nonnegative quantity, or mark it unknown, and start a run. The browser
-submits a new scenario revision with explicit synthetic provenance through the
-existing API. Unknown fuel produces a non-executable missing-data result; fuel
-below the required reserve can produce no feasible option. Both paths execute the
-real deterministic planner and can stop before any model call. Pending plans are
-invalidated by the new revision, and committed reservations remain present.
-Changing fuel never changes the reserve, contingency or workbook policy.
+Use **Try different fuel** to supply a new scenario input. Unknown fuel blocks a
+plan; insufficient fuel can leave no feasible option. The reserve and workbook
+policy remain fixed. Changed inputs invalidate pending recommendations.
 
-The evaluation panel reads `/api/evaluations/latest`; it does not invent or launch
-an evaluation. It shows the report's model/prompt/date, separate live and fixture
-denominators, measured latency, every case and its B0 deltas, a linked recorded
-failure, and a proposed next validation step. Unavailable comparisons stay
-unavailable. The recorded results do not evaluate browser fuel edits or establish
-performance for a changed prompt. No additional broad evaluation was run for
-these UI improvements.
+The evaluation panel reads the retained report at `/api/evaluations/latest`.
+It shows actual results, separate live and scripted cases, recorded failures,
+baseline comparisons and version limits. See **Methods and limits** in the app
+for the full case table. Historical results do not measure later prompt versions
+or real airport savings.
 
-| Criterion | Weight | Concrete answer and evidence |
-|---|---:|---|
-| Problem realism | 20% | A duty manager coordinates one disrupted arrival across ATC, Pilot and Ground. D01 is the qualifying historical AA1057 flight; workbook limits and additional simulation inputs are explicitly distinguished. |
-| Technical soundness | 25% | Separate structured role invocations, at most three turns/nine requests, deterministic candidate checks and selection, zero-call fallback, persisted API results and atomic simulator application. |
-| Honest evaluation | 20% | Frozen inputs and B0/B1 comparisons; 1/6 initial live nominal consensus versus 12/12 contract cases, including fixture faults. Later development failures remain visible. These are different measures. |
-| Trust and traceability | 20% | Source hashes/cells, check margins, same-plan votes, human reason and fallback acknowledgement. Approval rechecks freshness and resources; missing data and stale plans block application. |
-| Impact | 10% | Paired holding, fuel and overtime comparisons. All six initial nominal live cases matched B0's modeled impacts; no live improvement was demonstrated. The scripted third-turn example illustrates a 2-minute holding / 35-minute overtime trade-off, not real-world savings. |
-| Time discipline | 5% | A timed three-minute walkthrough is published. A valid submission timestamp must be established by the hackathon portal. |
-
-The guide links directly to the agent histories, checks, source facts, approval
-trace and refusal examples. Saved examples are labelled scripted and read-only;
-they do not stand in for live-agent performance. No judging score is self-awarded.
-
-## Presentation route, under three minutes
+## Walkthrough
 
 1. Start `uv run python -m app.demo --offline --third-turn` for a reliable,
    explicitly labelled fixture-agent demonstration with the real rules and review gate.
@@ -56,8 +32,8 @@ they do not stand in for live-agent performance. No judging score is self-awarde
    mode, and three fresh Turn 3 accepts of the revised plan hash.
 4. Compare the plan with B0/B1 and inspect the 15 checks. In the third-turn fixture,
    `L1320-G1-long` adds two minutes of modeled holding and removes 35 minutes of
-   ground-crew overtime relative to B0. These are simulated trade-offs.
-5. Enter a review reason and approve. The UI shows `APPLIED_SIMULATION` and resource
+   ground-crew overtime relative to B0. These are modelled trade-offs.
+5. Enter a review reason and approve. The UI shows “Approval recorded” (`APPLIED_SIMULATION` in the API) and resource
    revision 2. The transaction reserves runway, gate, crew and equipment together.
 6. Select D06 or the missing-data sample to show a non-executable outcome. Mention
    the live failures below and finish with the narrow scope and next validation step.
@@ -92,17 +68,16 @@ final prompt. No new broad evaluation was added after the decision to prioritize
   5% trip contingency, 2400/6500 kg/hour holding burn, 45 holding minutes spare fuel,
   13-hour flight duty, eight-hour ground shift, 1.5× overtime, 20-minute gate notice.
 
-The simulator models one runway and two candidate spare gates. Traffic, fuel
+The planner models one runway and two candidate spare gates. Traffic, fuel
 state, trip fuel, aircraft kind, report times, routes, equipment, occupancy and
 connections are declared synthetic facts. The workbook's departure-time wake
-rule is an explicitly declared arrival-simulation proxy; distance separation is
+rule is an explicitly declared proxy for arrival spacing; distance separation is
 not modeled. Flight duty is checked through gate arrival and gate-change notice
-through landing. This is a simulation, not real-world safety certification.
+through landing. These scenario assumptions do not constitute operational safety certification.
 
-## Submission boundary
+## Sharing and deployment
 
-Code, workbook, normalized scenarios, quick-start instructions and retained result
-summaries are ready to package. The flight CSV is supplied separately or included
-in the local submission archive. Credentials, databases and caches are excluded.
-The team still needs to upload the deliverable and any required video to its
-hackathon portal; this repository does not establish a submission timestamp.
+The public app is hosted on Vercel with shared Postgres storage. See
+[deployment instructions](deployment.md) for runtime configuration and verification.
+The flight CSV is downloaded separately and checked against its recorded hash.
+Credentials, local databases and development caches are excluded from deployments.

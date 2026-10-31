@@ -13,10 +13,10 @@ const TERMINAL_APPROVAL = ["APPLIED_SIMULATION", "REJECTED", "STALE", "EXPIRED",
 const ROLES = ["ATC", "PILOT", "GROUND"];
 const ICON = { PASS: "✓ PASS", FAIL: "✗ FAIL", UNKNOWN: "? UNKNOWN" };
 const ERRORS = {
-  JUDGE_SESSION_REQUIRED: "Reload this page to start your judge session.",
-  JUDGE_SESSION_EXPIRED: "Your judge session expired. Reload to start a new one.",
-  JUDGE_RUN_LIMIT: "The team's demo run budget has been reached. You can still inspect the saved examples.",
-  JUDGE_DESK_BUSY: "Other judges are running negotiations. Please try again in a minute.",
+  JUDGE_SESSION_REQUIRED: "Reload this page to start your session.",
+  JUDGE_SESSION_EXPIRED: "Your session expired. Reload to start a new one.",
+  JUDGE_RUN_LIMIT: "The daily run limit has been reached. You can still inspect the saved examples.",
+  JUDGE_DESK_BUSY: "Other users are running negotiations. Please try again in a minute.",
   REVIEWER_SESSION_REQUIRED: "Operator token missing or wrong.",
   ORIGIN_NOT_ALLOWED: "This page address is not the configured public origin.",
   REVIEW_BINDING_MISMATCH: "The plan on screen is out of date. Reload before deciding.",
@@ -186,7 +186,7 @@ const ROLE_NOTES = {
 };
 const RULE_NAMES = {
   "SYSTEM-FRESH-01": "Plan matches the latest data",
-  "SYSTEM-OPS-01": "Uses the organisers' airport limits",
+  "SYSTEM-OPS-01": "Uses the workbook airport limits",
   "ATC-RWY-01": "Runway is free",
   "ATC-SEP-01": "Safe spacing from other aircraft",
   "ATC-TAXI-01": "Taxi route is open",
@@ -298,7 +298,7 @@ function renderMode() {
   $("mode-note").textContent = recorded
     ? `Recorded live run · ${run.provider.model}, ${run.provider.prompt_version}. Read-only; no new model calls.`
     : !LIVE
-    ? "Scripted example · real rule checks. Choose “Interactive demo” to try it yourself."
+    ? "Scripted example · real rule checks. Choose “Live workspace” to try it yourself."
     : fixture ? "Offline demo · scripted agents, real checks and human approval."
     : "Live agents · keep this tab open while they negotiate.";
   $("fixture-select").value = fixtureName || "";
@@ -307,7 +307,7 @@ function renderMode() {
   $("session-row").hidden = publicDemo;
   $("scenario-select").disabled = busy;
   if (LIVE) $("session-hint").textContent = publicDemo
-    ? "No API key needed. Your own simulation."
+    ? "No API key needed. Your own planning workspace."
     : sessionConfigured
     ? "Kept in this browser tab only. Needed to start, stop or decide."
     : "No access code is set up on the server. Add PLAB_SESSION_TOKEN to .env and restart.";
@@ -363,7 +363,7 @@ function renderInputs() {
     fact(list, "Workbook cells", `${p.source_cells.airport}; ${p.source_cells.wake}; fuel_and_crew!A1:C9`);
   }
   const fuel = snapshotFact("overlay.fuel")?.value;
-  fact(list, "Aircraft fuel state · simulated", fuel?.projected_fuel_at_earliest_kg == null
+  fact(list, "Aircraft fuel state · scenario input", fuel?.projected_fuel_at_earliest_kg == null
     ? "Unknown — required before a plan can be verified" : `${fuel.projected_fuel_at_earliest_kg} kg at earliest landing`);
   $("what-if").hidden = !LIVE || !fuel;
   const revision = `${run.snapshot.scenario_id}:${run.snapshot.revision}`;
@@ -558,7 +558,7 @@ function renderRunMotion() {
     SYSTEM_ERROR: ["Error", "Run failed · nothing applied", "bad"],
   };
   const decisions = {
-    APPLIED_SIMULATION: ["Applied", "Approved and applied to simulation", "ok"],
+    APPLIED_SIMULATION: ["Approved", "Plan and allocations saved to workspace", "ok"],
     REJECTED: ["Rejected", "You rejected the plan · nothing applied", "neutral"],
     STALE: ["Out of date", "Resources changed · run again", "warn"],
     EXPIRED: ["Expired", "Review window closed · run again", "warn"],
@@ -679,7 +679,7 @@ function reviewState() {
   const outcome = run.negotiation_outcome;
   const approval = run.approval_state;
   if (!run.run_id) return ["info", "Your plan will appear here", "Review the checks, then approve or reject with a reason."];
-  if (approval === "APPLIED_SIMULATION") return ["ok", "Applied to simulation", "The runway, gate, crew and equipment are booked. Your decision is recorded in the audit trail."];
+  if (approval === "APPLIED_SIMULATION") return ["ok", "Approval recorded", "Your plan and resource allocations are saved in this workspace. Your decision is recorded in the audit trail."];
   if (approval === "REJECTED") return ["info", "Rejected", "Nothing was changed."];
   if (approval === "CANCELLED") return ["info", "Stopped", "Nothing was changed."];
   if (approval === "STALE") return ["warn", "This plan is out of date", "Airport resources changed. Run again to check an updated plan."];
@@ -868,7 +868,7 @@ function renderControls() {
   $("rerun-btn").disabled = !authorized || busy || !fuelValid;
   $("rerun-btn").hidden = !LIVE || run.processing_state !== "TERMINAL" || reviewable;
   $("review-hint").textContent = !LIVE
-    ? "Saved example · choose “Interactive demo” to start your own run."
+    ? "Saved example · choose “Live workspace” to start your own run."
     : !reviewable
     ? (closed || run.processing_state === "TERMINAL" ? "Run again with current resources, or choose another flight above." : "")
       : !publicDemo && !token ? "Enter the access code in step 1 to decide."
@@ -921,7 +921,7 @@ function renderCandidates() {
     body.append(row);
   }
   $("cand-note").textContent = (run.candidates || []).length
-    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked options, ${run.catalog_feasible_count} of which pass every safety rule. B0 is the earliest feasible option. B1 minimises the highest role cost, then total cost, over the same full catalog. Costs are simulation policy scores, lower is better.`
+    ? `Shortlist from ${run.catalog_total_count ?? run.catalog.candidates.length} checked options, ${run.catalog_feasible_count} of which pass every safety rule. B0 is the earliest feasible option. B1 minimises the highest role cost, then total cost, over the same full catalog. Costs are planning policy scores, lower is better.`
     : "No options to compare for this outcome.";
 }
 
@@ -959,14 +959,14 @@ function renderScenario() {
   fact(list, "Source row", source.record_ordinal ? `${source.dataset_file} record ${source.record_ordinal}` : null);
   fact(list, "Dataset hash", `${run.snapshot.source.dataset_sha256.slice(0, 12)}…`);
   fact(list, "Scheduled", fields.SCHEDULED_DEPARTURE ? `dep ${fields.SCHEDULED_DEPARTURE}, arr ${fields.SCHEDULED_ARRIVAL} (local)` : null, "real");
-  fact(list, "Scenario", run.scenario ? `${run.scenario.scenario_id} revision ${run.scenario_revision}` : null, "simulated");
-  fact(list, "Simulation start", run.scenario && run.scenario.simulation_epoch_utc, "simulated");
+  fact(list, "Scenario", run.scenario ? `${run.scenario.scenario_id} revision ${run.scenario_revision}` : null, "scenario input");
+  fact(list, "Scenario start", run.scenario && run.scenario.simulation_epoch_utc, "scenario input");
   fact(list, "Rules / policy", `${run.ruleset_version} / ${run.policy_version}`);
   fact(list, "Airport record version", run.resource_revision);
   const ops = run.snapshot.facts.find((f) => f.fact_id === "overlay.operations")?.value;
   if (ops) {
     const p = ops.policy;
-    fact(list, "Organisers' workbook", `${p.airport_code} · ${p.workbook_sha256.slice(0, 12)}…`);
+    fact(list, "Operational workbook", `${p.airport_code} · ${p.workbook_sha256.slice(0, 12)}…`);
     fact(list, "Airport limits", `${p.active_runways} runways · ${p.gates} gates · ${p.max_ops_per_hour} movements/hour`);
     fact(list, "Modelled here", `${ops.modeled_runway_ids.length} runway, up to ${p.spare_gates} spare gates`);
     fact(list, "Turnaround / gate notice", `${p.min_turnaround_s / 60} / ${p.gate_notice_s / 60} min`);
@@ -1057,7 +1057,7 @@ function renderEvaluation() {
     ? `${unchanged.length} of ${comparable.length} live runs matched the earliest feasible plan (B0) on every measured impact. ${unchanged.length === comparable.length ? "No improvement was shown." : "See each comparison below."}`
     : "No live comparison was recorded. No improvement can be claimed.", "evaluation-finding"));
   const version = run.provider?.prompt_version;
-  box.append(el("p", "Small historical test with simulated airport, fuel and crew data. It does not evaluate later versions or new inputs.", "small muted"));
+  box.append(el("p", "Small historical test with synthetic airport, fuel and crew inputs. It does not evaluate later versions or new inputs.", "small muted"));
 
   const failure = live.find((item) => item.fallback_reason === "FINAL_VOTE_DISSENT" && RECORDED_TRACES[item.trace])
     || live.find((item) => item.fallback_reason && RECORDED_TRACES[item.trace]);
@@ -1299,7 +1299,7 @@ async function init() {
     .then((response) => response.ok ? response.json() : null).catch(() => null);
   if (LIVE) {
     const sessionResponse = await fetch("/api/session", {credentials: "same-origin"});
-    if (!sessionResponse.ok) throw new Error("Could not open a judge session. Please try again shortly.");
+    if (!sessionResponse.ok) throw new Error("Could not open a session. Please try again shortly.");
     publicDemo = (await sessionResponse.json()).public_demo;
     const [healthResponse, scenariosResponse] = await Promise.all([fetch("/health"), fetch("/api/scenarios")]);
     if (!healthResponse.ok || !scenariosResponse.ok) throw new Error("Backend is unavailable");
@@ -1320,7 +1320,7 @@ async function init() {
   evaluationLoaded = true;
   renderEvaluation();
   renderEvidence();
-  // Judge-guide links open the relevant evidence after the run has rendered.
+  // Evidence links open their target after the run has rendered.
   revealAnchor();
 }
 

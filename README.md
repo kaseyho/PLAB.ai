@@ -2,10 +2,9 @@
 
 **Three AI agents help an airport duty manager compare arrival plans.**
 
-A working simulation for **Airbus Challenge #2: Air Traffic Decisions**.
+Arrival planning with independent agents, deterministic checks and human approval.
 
-[Try the app](https://plab-ai-alpha.vercel.app/) ·
-[Judge guide](https://plab-ai-alpha.vercel.app/static/judges.html)
+[Open PLAB.ai](https://plab-ai-alpha.vercel.app/)
 
 ## Root cause → problem → solution
 
@@ -13,18 +12,18 @@ A working simulation for **Airbus Challenge #2: Air Traffic Decisions**.
 - **Problem:** Their plans can clash, adding delays, fuel use and crew overtime.
 - **Solution:** Three AI agents compare options, Python rules check the constraints, and a human reviews the recommendation.
 
-The prototype focuses on **when a delayed flight can land and which gate it can use**.
+PLAB.ai focuses on **when a delayed flight can land and which gate it can use**.
 
 ## Try it
 
-Open **[PLAB.ai](https://plab-ai-alpha.vercel.app/)**. Judges need no API key or access code.
+Open **[PLAB.ai](https://plab-ai-alpha.vercel.app/)**. No API key or access code is needed.
 
 1. Choose a flight and click **Start negotiation**. Keep the tab open while it runs.
 2. Inspect the agents' replies, the recommended plan and its checks.
 3. Enter a reason and **approve or reject** the plan.
 
 The **Mode** menu includes saved agreements, failures and missing-data examples.
-You can also change the simulated fuel quantity to try a different input.
+You can also change the scenario fuel quantity to try a different input.
 
 ## How it works
 
@@ -49,17 +48,18 @@ The app explains the cause, including disagreements, timeouts or invalid replies
 Missing critical data or no feasible option can leave the run without a plan.
 
 **Human approval is always required**, including for fallback. Approval rechecks
-current resources before booking the runway, gate, crew and equipment together
-in the simulator. Stale or expired plans cannot be applied.
+current resources before saving the plan and its runway, gate, crew and equipment
+allocations together in the workspace. Stale or expired plans cannot be applied.
 
 ## Data and limits
 
-- **Real historical flights:** The organizer's `flights.csv` contains **358,774 records from 2015**, filtered by `WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20`.
+- **Real historical flights:** The supplied `flights.csv` contains **358,774 records from 2015**, filtered by `WEATHER_DELAY > 15 OR LATE_AIRCRAFT_DELAY > 20`.
 - **Synthetic operational rules:** `data/challenge2_operational_constraints.xlsx` supplies airport capacity, gate/runway totals, turnaround, wake separation, fuel and crew rules. These facts are absent from the CSV.
-- **Simulated conditions:** Traffic, occupancy, routes, fuel and crew availability are scenario inputs. We model one runway and two candidate gates; departure wake times serve as a declared arrival-simulation proxy.
+- **Scenario inputs:** Traffic, occupancy, routes, fuel and crew availability are scenario inputs. We model one runway and two candidate gates; departure wake times serve as a declared proxy for arrival spacing.
 
 Source hashes and workbook references remain attached to the evidence.
-This is a simulation prototype; operational use would need further validation.
+Approvals save planning records within PLAB.ai. The historical flight data and
+synthetic operational inputs are labelled throughout the evidence.
 
 ## Evaluation: what worked and what failed
 
@@ -117,8 +117,6 @@ Each local demo launch creates a fresh SQLite database. Keep credentials out of 
 
 ## More details
 
-[Problem statement](docs/problem_statement.md) ·
-[Organizer updates](docs/organizer_updates.md) ·
 [Technical PRD](docs/technical_prd.md) ·
 [Demo guide](docs/submission.md) ·
 [Developer handoff](HANDOFF.md)

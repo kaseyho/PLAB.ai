@@ -24,7 +24,6 @@
       <nav class="topbar-right" aria-label="Main navigation">
         <a class="nav-link" href="#workspace">Arrival desk</a>
         <a class="nav-link" href="#evidence">The evidence</a>
-        <a class="nav-link nav-guide" href="/static/judges.html">Judge guide <span aria-hidden="true">↗</span></a>
 
       </nav>
     </div>
@@ -33,7 +32,7 @@
   <main class="wrap">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Airbus Challenge 02 / Air traffic decisions</p>
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Multi-agent arrival planning</p>
         <h1 id="hero-title">Three teams.<br><span>One arrival plan.</span></h1>
         <dl class="hero-story" aria-label="Root cause, problem and solution">
           <div><dt>Root cause</dt><dd>Controllers, pilots and ground crews plan separately.</dd></div>
@@ -44,7 +43,7 @@
           <a class="button primary" href="#workspace">Try it <span aria-hidden="true">↗</span></a>
           <a class="quiet-link" href="/?sample=third-turn#workspace">See an example <span aria-hidden="true">→</span></a>
         </div>
-        <p class="hero-note">For airport duty managers · simulation only</p>
+        <p class="hero-note">For airport duty managers</p>
       </div>
       <figure class="hero-visual">
         <div class="visual-heading"><span>ARRIVAL COORDINATION</span><span>01 — 03</span></div>
@@ -60,7 +59,7 @@
         <label class="examples" id="fixture-picker">
           <span id="fixture-label">Mode</span>
           <select id="fixture-select" aria-labelledby="fixture-label">
-            <option value="">Interactive demo</option>
+            <option value="">Live workspace</option>
             <optgroup label="Saved examples">
               <option value="consensus">Agents agreed</option>
               <option value="third-turn">Agreed on turn 3</option>
@@ -109,11 +108,11 @@
         </div>
       </div>
       <p class="muted small" id="session-hint">Kept in this browser tab only. Needed to start, stop or decide.</p>
-      <p class="muted small provenance" id="data-note">Real flight from 2015. Simulated airport, fuel and crew conditions.</p>
+      <p class="muted small provenance" id="data-note">Historical flight · scenario-based planning inputs.</p>
       <details class="input-evidence" id="input-evidence">
         <summary>Data and limits</summary>
         <dl class="facts" id="input-facts"></dl>
-        <p class="muted small">The filtered DOT file is a disrupted-flight cohort, not a complete airport queue. Current traffic, gate occupancy, aircraft fuel and crew state are simulated.</p>
+        <p class="muted small">The flight records cover historical disruptions. Traffic, gate occupancy, fuel and crew availability are synthetic scenario inputs, not a live airport feed.</p>
         <a class="text-link" href="#scenario-facts">Inspect exact source facts and assumptions</a>
       </details>
       <details class="what-if" id="what-if" hidden>
@@ -193,7 +192,7 @@
         <dl class="guide-map">
           <div><dt>Python rules</dt><dd>Check landing times, gates, routes, fuel and crews. Failed or unknown checks block a plan.</dd></div>
           <div><dt>Three LLM agents</dt><dd>ATC, Pilot and Ground each send one message per turn. They must agree on the same plan within three turns. Otherwise, fixed rules choose a checked backup.</dd></div>
-          <div><dt>You</dt><dd>Approve or reject with a reason. Only approval books resources in the simulator, after a final check.</dd></div>
+          <div><dt>You</dt><dd>Approve or reject with a reason. Approval records the plan and resource allocations in your workspace after a final check.</dd></div>
         </dl>
       </details>
     </section>
@@ -231,18 +230,18 @@
     <section class="evidence-intro" id="evidence" aria-labelledby="evidence-h">
       <p class="eyebrow">02 / The evidence</p>
       <h2 id="evidence-h">See what works. And what fails.</h2>
-      <nav class="proof-nav" aria-label="Rubric evidence">
-        <a href="#workflow"><span class="proof-label">Problem realism <b>20%</b></span><strong>The real problem <span aria-hidden="true">↗</span></strong></a>
-        <a href="#method"><span class="proof-label">Technical soundness <b>25%</b></span><strong>How decisions are checked <span aria-hidden="true">↗</span></strong></a>
-        <a href="#evaluation-panel"><span class="proof-label">Honest evaluation <b>20%</b></span><strong>What we tested <span aria-hidden="true">↗</span></strong></a>
+      <nav class="proof-nav" aria-label="Product evidence">
+        <a href="#workflow"><span class="proof-label">Workflow</span><strong>The real problem <span aria-hidden="true">↗</span></strong></a>
+        <a href="#method"><span class="proof-label">Decision engine</span><strong>How decisions are checked <span aria-hidden="true">↗</span></strong></a>
+        <a href="#evaluation-panel"><span class="proof-label">Evaluation</span><strong>What we tested <span aria-hidden="true">↗</span></strong></a>
       </nav>
     <details class="workflow" id="workflow">
       <summary>Who this helps, and why</summary>
       <dl class="guide-map">
         <div><dt>One decision</dt><dd>An airport duty manager needs one landing time, taxi route and gate for a delayed flight.</dd></div>
         <div><dt>Today</dt><dd>ATC, pilots and ground staff use phone calls and manual updates. When one plan changes, everyone must recheck.</dd></div>
-        <div><dt>Cost and risk</dt><dd>Extra waiting uses fuel and can add crew overtime. We show simulated trade-offs; real time and money savings are unmeasured.</dd></div>
-        <div><dt>Prototype boundary</dt><dd>One arrival with simulated resources. Real airport authorities would retain their own approval powers.</dd></div>
+        <div><dt>Cost and risk</dt><dd>Extra waiting uses fuel and can add crew overtime. We compare modelled trade-offs. Real time and money savings are unmeasured.</dd></div>
+        <div><dt>Planning scope</dt><dd>One arrival, with versioned airport inputs and resource allocations recorded in the workspace.</dd></div>
       </dl>
     </details>
     </section>
@@ -250,14 +249,14 @@
     <section class="card evaluation-panel" id="evaluation-panel" aria-labelledby="eval-h">
       <div class="section-heading">
         <h2 id="eval-h">What we tested</h2>
-        <span class="muted small">Honest evaluation · 20%</span>
+        <span class="muted small">Measured results</span>
       </div>
       <div id="evaluation-results"><p class="muted small">Loading results…</p></div>
       <p class="evidence-links"><a href="/api/evaluations/latest">Download results (JSON)</a>
-        <a href="/static/judges.html#evaluation">Full evaluation guide</a></p>
+        <a href="#evaluation-cases">Methods and limits</a></p>
     </section>
 
-    <!-- Technical details for judges and engineers -->
+    <!-- Plans, source evidence and execution details -->
     <details class="card tech" id="tech">
       <summary><h2>Technical details</h2><span class="muted small">Plans, checks and audit log</span></summary>
 
@@ -292,13 +291,13 @@
 
       <h3>Evaluation</h3>
       <p id="evaluation">Not yet evaluated</p>
-      <p><a class="link" href="/static/judges.html#evaluation">Read the results and limitations</a> ·
+      <p><a class="link" href="#evaluation-panel">Read the results and limitations</a> ·
         <a class="link" href="/api/evaluations/latest">View evaluation report (JSON)</a></p>
     </details>
 
     <footer class="foot muted small">
       <a class="footer-brand" href="/">PLAB.ai</a>
-      <span>Airbus Challenge 02 · Working prototype<br>Simulation only. Not for operational use.</span>
+      <span>Arrival planning · Human approval</span>
       <a href="https://github.com/kaseyho/PLAB.ai">View source <span aria-hidden="true">↗</span></a>
     </footer>
   </main>

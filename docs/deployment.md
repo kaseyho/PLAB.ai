@@ -1,12 +1,12 @@
-# Public judge deployment
+# Public deployment
 
 ## Vercel Hobby with Neon Free
 
-Public judge URL: **https://plab-ai-alpha.vercel.app/**.
+Public app URL: **https://plab-ai-alpha.vercel.app/**.
 
 The frontend, FastAPI API and bounded agent execution deploy together as one
 Vercel project. Persistent data lives in the connected Neon Free Postgres
-database. Judges use the public Vercel address and need no API key. Both services
+database. Visitors use the public Vercel address and need no API key. Both services
 have free usage limits; the database was provisioned on `free_v3`, with no paid
 upgrade. Vercel is serverless and can have cold starts, but does not require
 waking a Render web service.
@@ -57,7 +57,7 @@ and pending human review persist independently of the execution request.
 Vercel supplies `VERCEL=1`, which enables request-bound execution. The app uses
 `VERCEL_PROJECT_PRODUCTION_URL` for the trusted production origin and `VERCEL_URL`
 for preview deployments. Set `PLAB_PUBLIC_ORIGIN` only to override this with the
-exact HTTPS address judges visit; never deploy a localhost override.
+exact HTTPS address users visit; never deploy a localhost override.
 
 ### Deploy and verify
 
@@ -96,7 +96,7 @@ scenarios are included in Git. Provider keys and local `.env` files are not.
 Set the runtime variables from `render.yaml`. Put the team's provider key in
 `SOCLAAS_API_KEY` using Render's environment editor. Generate a separate random
 `PLAB_SESSION_TOKEN` with at least 32 characters. The app uses this only on the
-server to sign short-lived, HttpOnly judge cookies. `RENDER_EXTERNAL_URL` supplies
+server to sign short-lived, HttpOnly session cookies. `RENDER_EXTERNAL_URL` supplies
 the trusted browser origin automatically; do not copy a localhost origin into Render.
 
 Run one service instance and one Uvicorn worker. The coordinator's background tasks
@@ -105,10 +105,10 @@ uses `PLAB_DB_PATH=/tmp/plab.sqlite3`. To retain traces across restarts later,
 upgrade to a paid instance with a persistent disk, mount it at `/var/data`, and
 set `PLAB_DB_PATH=/var/data/plab.sqlite3`. That upgrade requires hosting-budget approval.
 
-With `PLAB_PUBLIC_DEMO=true`, the browser opens a judge session automatically.
+With `PLAB_PUBLIC_DEMO=true`, the browser opens a user session automatically.
 Scenario and resource IDs belong to that session; read, cancel, review and export
 routes reject other sessions' IDs. Approvals still check the exact plan, expiry,
-source files, versions and deterministic rules before any simulated booking.
+source files, versions and deterministic rules before recording resource allocations.
 
 The service permits two active negotiations, ten starts per visitor per UTC day,
 and 100 starts across the app per UTC day. Idempotent retries do not consume another
