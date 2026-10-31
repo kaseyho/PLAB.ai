@@ -54,9 +54,14 @@ uv run python -m app.demo --offline
 uv run python -m app.demo --offline --third-turn
 ```
 
-The UI always identifies fixture agents. Eight read-only samples are available,
+The UI always identifies fixture agents. Eight scripted read-only samples are available,
 including third-turn agreement, missing data, no feasible plan, fallback,
 rejection, stale approval and applied simulation.
+Five additional read-only recordings show the actual roles-v6 live failures.
+The negotiation section explains the recorded cause, each role's response, and
+any non-accepting agent's stated reason. Timeouts and cancelled peer requests
+are distinguished from rejection. Recorded live cases are labelled historical;
+opening them makes no model calls.
 
 ## Implemented behavior
 

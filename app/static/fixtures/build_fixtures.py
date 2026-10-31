@@ -3,6 +3,8 @@
 Run: uv run python -m app.static.fixtures.build_fixtures
 The samples are view projections, not full trace exports or evaluation results.
 They use real deterministic rules and fixture agents, with zero live model calls.
+The separate live-H01 through live-H05 files are retained roles-v6 live-run
+projections, not generated fixtures. Their source recording hashes are embedded.
 """
 
 import asyncio
@@ -148,8 +150,12 @@ async def build(name: str, original: ScenarioSnapshot, db_path: Path) -> dict[st
                     "reason",
                     "role",
                     "round",
+                    "turn",
                     "candidate_id",
+                    "plan_hash",
                     "outcome",
+                    "request_id",
+                    "status",
                 )
             },
         }

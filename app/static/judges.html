@@ -142,6 +142,33 @@
       <p>Live failures: two timeouts, one final-vote dissent, one unknown evidence reference and one
         offer-policy violation. Fault cases covered blocked gates, impossible fuel, missing fuel,
         stale approval, timeout and malformed replies.</p>
+      <h3 id="failure-reasons">Why the five live cases did not reach agreement</h3>
+      <p>A missing or invalid reply is different from an agent rejecting an operational plan.
+        These explanations come from the recorded role messages and request events.</p>
+      <dl class="guide-map">
+        <div><dt>H01 · ATC timeout</dt><dd>ATC did not reply before the request deadline. Ground submitted
+          an offer; Pilot's pending request was cancelled when the turn stopped. No common proposal reached
+          a vote. <a href="/?sample=live-H01#step-2">Inspect the recorded timeout.</a></dd></div>
+        <div><dt>H02 · ATC timeout</dt><dd>Pilot and Ground submitted offers, but ATC again timed out.
+          Two offers cannot substitute for three valid role messages. There was no recorded operational
+          rejection. <a href="/?sample=live-H02#step-2">Inspect each agent's response.</a></dd></div>
+        <div><dt>H03 · Pilot needs information</dt><dd>ATC and Ground accepted the negotiated plan.
+          Pilot asked for CREW-G1 availability confirmation instead of accepting. All 15 deterministic
+          checks on that proposal passed; the Pilot's stated concern is not proof of a crew shortage.
+          An information request cannot count as consent, so the coordinator stopped at Turn 2.
+          <a href="/?sample=live-H03#step-2">Read the Pilot's exact stated reason and the 2-of-3 result.</a></dd></div>
+        <div><dt>H04 · Ground evidence rejected</dt><dd>Ground cited evidence IDs outside its supplied
+          references. Its reply failed validation before voting. Pilot had offered options; ATC's pending
+          request was cancelled. This was an unverifiable response, not a demonstrated gate conflict.
+          <a href="/?sample=live-H04#step-2">Inspect the validation failure.</a></dd></div>
+        <div><dt>H05 · ATC offer rejected</dt><dd>ATC put an option outside its permitted initial preference
+          set into its acceptable choices. The offer failed policy validation; Pilot and Ground requests
+          were cancelled. A plan passing the hard checks does not make it an allowed initial preference.
+          <a href="/?sample=live-H05#step-2">Inspect why the offer was rejected.</a></dd></div>
+      </dl>
+      <p><b>Why stop before Turn 3?</b> Three turns is a ceiling. Timeouts, invalid messages and requests
+        for missing information stop the current run early. A valid rejection can trigger Turn 3 only
+        when a different common option and enough time remain. No cancelled or missing reply becomes an acceptance.</p>
       <p><b>Current-version limit:</b> a later roles-v7 development run reached 0/4 consensus, with three
         prompt-adapter errors and one policy violation. The adapter was then fixed; a focused live smoke
         still timed out and used fallback. No full live re-evaluation followed. The 1/6 result is historical

@@ -33,6 +33,13 @@
               <option value="rejected">Rejected</option>
               <option value="applied">Approved</option>
             </optgroup>
+            <optgroup label="Recorded live failures · roles-v6">
+              <option value="live-H01">H01 · ATC timeout</option>
+              <option value="live-H02">H02 · ATC timeout</option>
+              <option value="live-H03">H03 · Pilot needs information</option>
+              <option value="live-H04">H04 · Ground evidence rejected</option>
+              <option value="live-H05">H05 · ATC offer rejected</option>
+            </optgroup>
           </select>
         </label>
       </div>
@@ -85,6 +92,7 @@
         <span class="muted small">Up to 3 turns · 45-second limit</span>
       </div>
       <p class="lead" id="negotiation-status"></p>
+      <div id="consensus-explanation" hidden></div>
       <div class="desks" id="agent-cards"></div>
     </section>
 

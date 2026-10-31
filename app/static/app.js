@@ -191,11 +191,33 @@ const RULE_NAMES = {
   "GROUND-TURN-01": "Enough time to turn the aircraft around",
 };
 const FALLBACK_REASONS = {
-  PROVIDER_NOT_CONFIGURED: "the AI service is not connected",
-  PROVIDER_TIMEOUT: "a desk did not reply in time",
-  NO_COMMON_OFFER: "no option was acceptable to all three desks",
-  FINAL_DISSENT: "a desk rejected the final proposal",
-  PROTOCOL_ERROR: "a desk sent a reply that broke the rules",
+  PROVIDER_NOT_CONFIGURED: "No AI service was configured, so no agent was asked for a decision.",
+  AGENT_TIMEOUT: "A required reply did not arrive before the request deadline. A timeout is not a rejection or an acceptance.",
+  PROVIDER_ERROR: "An agent request failed in the model service or its adapter. No valid decision was available from that request.",
+  PROVIDER_INCOMPLETE_OR_REFUSED: "The model service returned an incomplete response or refused the request, so it could not count as a decision.",
+  INVALID_AGENT_SCHEMA: "A reply did not match the required structured message format and was rejected.",
+  INVALID_SCHEMA: "The reply did not match the required structured message format and was rejected.",
+  UNKNOWN_AGENT_EVIDENCE: "The reply cited an evidence ID outside the references supplied to that agent. Its claim could not be verified, so the reply was rejected.",
+  UNKNOWN_OBJECTION_REFERENCE: "An objection referenced an unknown candidate, rule or evidence ID and could not be verified.",
+  INITIAL_POLICY_VIOLATION: "An offer included an option outside that role's allowed initial preference set. Passing the safety checks does not automatically put an option inside that set.",
+  CONCESSION_POLICY_VIOLATION: "An agent offered a compromise outside its permitted concession budget. The offer was rejected rather than silently widening that budget.",
+  OFFER_RANKING_MISMATCH: "The ranked choices did not match the agent's offered options in the required order.",
+  DUPLICATE_OFFER_ID: "An offer repeated an option ID, making the structured offer invalid.",
+  PREFERRED_CANDIDATE_MISMATCH: "The stated first choice was not in the agent's acceptable set.",
+  EMPTY_OFFER_HAS_PREFERENCE: "The agent named a first choice while offering no acceptable option.",
+  VOTE_PLAN_HASH_MISMATCH: "A vote referred to a different version of the plan. It cannot count as agreement on the current proposal.",
+  NO_MUTUAL_OFFER: "The agents' acceptable options and offered concessions had no option in common.",
+  MISSING_ROLE_OFFER: "A required role had no valid offer, so there was no complete set of options to reconcile.",
+  FINAL_VOTE_DISSENT: "A required vote was missing or asked for more information. An information request stops this run; it cannot count as agreement.",
+  NO_UNTRIED_MUTUAL_OFFER: "After a rejection, no different option remained in all three agents' offered sets. There was no common revised plan to put to a third vote.",
+  THREE_TURN_NO_CONSENSUS: "The third and final turn ended without three explicit accepts of the same plan. No fourth turn is allowed.",
+  INSUFFICIENT_TURN_BUDGET: "Too little execution time remained to collect all three fresh replies for a revised plan.",
+  NEGOTIATION_DEADLINE: "The negotiation time budget ran out before another required request could start.",
+  REQUIRED_CHECK_FAIL: "A deterministic recheck failed. Agent agreement cannot override a failed rule.",
+  REQUIRED_CHECK_UNKNOWN: "A required rule could not be verified. Unknown does not count as a pass.",
+  RUN_DEADLINE: "The overall run deadline was reached before a checked result could be completed.",
+  STATE_CHANGED: "The scenario or airport resources changed during the run, so the old proposal could no longer be used.",
+  SNAPSHOT_EXPIRED: "The input snapshot expired during the run and must be refreshed.",
 };
 const FACT_NAMES = {
   "fuel.projected_fuel_at_earliest_kg": "fuel on board at the earliest landing time",
@@ -257,8 +279,11 @@ function step() {
 
 function renderMode() {
   const fixture = run.provider?.mode === "FIXTURE";
+  const recorded = !LIVE && run.provider?.mode === "LIVE";
   $("mode-note").hidden = LIVE && !fixture;
-  $("mode-note").textContent = !LIVE
+  $("mode-note").textContent = recorded
+    ? `Recorded live run · ${run.provider.model}, ${run.provider.prompt_version}. Read-only historical evidence; opening this page makes no model calls.`
+    : !LIVE
     ? "Saved example · scripted agent messages with real rule checks. Choose “Interactive demo” to start your own run."
     : "Offline demo · scripted agent messages. Rule checks and human approval are active.";
   $("fixture-select").value = fixtureName || "";
@@ -312,8 +337,8 @@ function renderNegotiation() {
   else if (run.processing_state !== "TERMINAL") status.textContent = n ? `Turn ${n} of 3 · waiting for the agents’ replies…` : "Checking the available plans…";
   else if (outcome === "FEASIBLE_CONSENSUS") status.textContent = `All three agents agreed on the same plan in ${n} ${n === 1 ? "turn" : "turns"}.`;
   else if (outcome === "FEASIBLE_FALLBACK") {
-    const why = FALLBACK_REASONS[run.fallback_reason] || run.fallback_reason?.toLowerCase().replaceAll("_", " ");
-    status.textContent = `No agreement${why ? `: ${why}` : ""}. A checked fallback is ready below.`;
+    status.textContent = n ? `Negotiation stopped during turn ${n}. A checked fallback is ready for review.`
+      : "No agent turns ran. A checked fallback is ready for review.";
   } else if (outcome === "CANCELLED") status.textContent = "The negotiation was stopped.";
   else status.textContent = run.agent_invocation_count ? "The run ended. See the outcome below." : "No agent calls were needed. See the outcome below.";
 
@@ -325,21 +350,12 @@ function renderNegotiation() {
     const offer = (run.offers || {})[role];
     const previous = run.previous_votes?.[role];
     const vote = (run.votes || {})[role];
-    const requested = run.events.some((event) => event.event_type === "AGENT_REQUEST_STARTED" && event.payload?.role === role);
-    const accepted = vote?.decision === "ACCEPT" && vote.plan_hash === run.plan_hash;
-    const waiting = run.run_id && run.processing_state !== "TERMINAL";
-    let label = run.run_id ? "Not run" : "Ready";
-    let tone = "";
-    if (vote) {
-      label = accepted ? "Agreed" : vote.decision === "REJECT" ? "Declined" : "Needs review";
-      tone = accepted ? "accepted" : "attention";
-    } else if (offer) label = "Offer received";
-    else if (waiting) label = "Waiting for reply";
-    else if (requested) {
-      label = "No valid reply";
-      tone = "attention";
+    const progress = agentProgress(role);
+    card.append(el("p", progress.label, `desk-status ${progress.tone}`));
+    if (progress.detail) card.append(el("p", progress.detail, "agent-explanation"));
+    if (progress.rationale) {
+      card.append(el("p", "Agent's stated reason", "turn-label"), el("blockquote", progress.rationale, "agent-reason"));
     }
-    card.append(el("p", label, `desk-status ${tone}`));
     const messages = el("details", null, "agent-messages");
     messages.id = `messages-${role}`;
     messages.append(el("summary", "View agent messages"));
@@ -352,20 +368,142 @@ function renderNegotiation() {
       if (offer.rationale) turn.append(el("p", offer.rationale, "why"));
       messages.append(turn);
     }
-    if (previous) messages.append(voteBlock(2, previous, run.previous_candidate_id, false));
-    if (vote) messages.append(voteBlock(run.round_count, vote, run.candidate?.candidate_id, vote.plan_hash !== run.plan_hash));
+    if (previous) messages.append(voteBlock(2, previous, votedPlan(previous)?.candidate_id || run.previous_candidate_id));
+    if (vote) messages.append(voteBlock(run.round_count, vote, votedPlan(vote)?.candidate_id));
     if (offer || previous || vote) card.append(messages);
     box.append(card);
   }
+  renderConsensusExplanation();
 }
 
-function voteBlock(turnNumber, vote, candidateId, mismatch) {
+function votedPlan(vote) {
+  const proposal = run.events.findLast((event) => event.event_type === "PROPOSAL_SELECTED"
+    && event.payload.plan_hash === vote.plan_hash);
+  if (proposal) return planById(proposal.payload.candidate_id) || {candidate_id: proposal.payload.candidate_id};
+  if (run.plan_hash === vote.plan_hash) return run.candidate;
+  // Older scripted projections omit proposal hashes but retain this explicit binding.
+  if (run.previous_candidate_id && Object.values(run.previous_votes || {}).some((prior) => prior.plan_hash === vote.plan_hash)) {
+    return planById(run.previous_candidate_id) || {candidate_id: run.previous_candidate_id};
+  }
+  return null;
+}
+
+function agentProgress(role) {
+  const vote = run.votes?.[role];
+  const offer = run.offers?.[role];
+  const start = run.events.findLast((event) => event.event_type === "AGENT_REQUEST_STARTED" && event.payload.role === role);
+  const response = start?.payload.request_id && run.events.findLast((event) =>
+    event.event_type === "AGENT_RESPONSE_RECEIVED" && event.payload.request_id === start.payload.request_id);
+  const error = run.events.findLast((event) => event.event_type === "AGENT_PROTOCOL_ERROR"
+    && event.payload.role === role && (!start || event.sequence > start.sequence));
+  const terminal = run.processing_state === "TERMINAL";
+  const result = {label: run.run_id ? "Not run" : "Ready", tone: "", detail: "", rationale: "", code: null};
+  if (vote) {
+    const accepted = vote.decision === "ACCEPT";
+    result.label = accepted ? "Accepted proposal" : vote.decision === "REJECT" ? "Rejected proposal" : "Needs information";
+    result.tone = accepted ? "accepted" : "attention";
+    result.code = vote.decision;
+    if (!accepted) result.rationale = vote.rationale;
+  } else if (error) {
+    result.code = error.payload.reason_code;
+    result.label = "Reply rejected";
+    result.tone = "attention";
+    result.detail = FALLBACK_REASONS[error.payload.reason_code] || `The recorded reply failed validation (${error.payload.reason_code}).`;
+  } else if (response?.payload.status === "TIMEOUT") {
+    result.code = "AGENT_TIMEOUT";
+    result.label = "Timed out";
+    result.tone = "attention";
+    result.detail = `Turn ${start.payload.round}: no reply before the request deadline. No preference or vote can be inferred.`;
+  } else if (response?.payload.status === "ERROR") {
+    result.code = "PROVIDER_ERROR";
+    result.label = "Request failed";
+    result.tone = "attention";
+    result.detail = "The model service or adapter failed. No valid decision was received.";
+  } else if (response?.payload.status === "CANCELLED") {
+    result.label = "Request stopped";
+    result.detail = "This pending request was cancelled when the coordinator stopped the turn. It is not a rejection.";
+  } else if (offer && (!start || start.payload.round === 1)) {
+    result.label = "Offer received";
+    if (terminal) result.detail = "An offer is a preference, not a final acceptance of a shared plan.";
+    if (run.fallback_reason === "NO_MUTUAL_OFFER" || run.fallback_reason === "NO_UNTRIED_MUTUAL_OFFER") {
+      result.rationale = offer.rationale;
+      result.detail = `${offer.acceptable_candidate_ids.length} initial choices and ${offer.concession_candidate_ids.length} offered concessions.`;
+    }
+  } else if (start) {
+    result.label = terminal ? "No valid reply" : "Waiting for reply";
+    result.detail = terminal ? "No validated decision was recorded before the run stopped." : "";
+  }
+  return result;
+}
+
+function renderConsensusExplanation() {
+  const box = $("consensus-explanation");
+  box.replaceChildren();
+  box.hidden = true;
+  if (!run.run_id || run.processing_state !== "TERMINAL" || run.negotiation_outcome === "CANCELLED") return;
+  const consensus = run.negotiation_outcome === "FEASIBLE_CONSENSUS";
+  const priorDissent = Object.entries(run.previous_votes || {}).filter(([, vote]) => vote.decision !== "ACCEPT");
+  if (consensus && !priorDissent.length) return;
+  box.hidden = false;
+  box.className = `consensus-explanation ${consensus ? "resolved" : ""}`;
+  box.append(el("h3", consensus ? "Why a third turn was needed" : run.round_count ? "Why agreement was not reached" : "Why negotiation did not start"));
+  if (consensus) {
+    for (const [role, vote] of priorDissent) {
+      box.append(el("p", `${ROLE_NAMES[role]} ${vote.decision === "REJECT" ? "rejected" : "asked for information on"} the turn 2 proposal (${describe(run.previous_candidate_id)}).`),
+        el("blockquote", vote.rationale, "agent-reason"));
+    }
+    box.append(el("p", "The coordinator proposed a different plan. All three agents then explicitly accepted its new hash in turn 3."));
+    return;
+  }
+  const reason = run.fallback_reason || run.reason_code;
+  let explanation = FALLBACK_REASONS[reason];
+  const failureRoles = ROLES.filter((role) => {
+    const code = agentProgress(role).code;
+    return code === reason || (reason === "INVALID_AGENT_SCHEMA" && code === "INVALID_SCHEMA");
+  });
+  if (failureRoles.length && explanation) explanation = `${failureRoles.map((role) => ROLE_NAMES[role]).join(" and ")}: ${explanation}`;
+  const informationRoles = ROLES.filter((role) => run.votes?.[role]?.decision === "NEEDS_INFORMATION");
+  if (reason === "FINAL_VOTE_DISSENT" && informationRoles.length) {
+    explanation = `${informationRoles.map((role) => ROLE_NAMES[role]).join(" and ")} asked for more information instead of accepting. An information request stops this run; it cannot count as agreement.`;
+  }
+  if (run.negotiation_outcome === "INSUFFICIENT_DATA") {
+    explanation = "Required input or evidence was missing, so no plan could be verified. This is a data blocker, not a three-agent disagreement. See the missing information in the review section.";
+  } else if (run.negotiation_outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") {
+    explanation = "No candidate in the search window passed the required checks. There was no feasible plan for the agents to agree on. The review section lists the blocking rules.";
+  }
+  box.append(el("p", explanation || "The run stopped without a complete, validated agreement. The recorded cause is shown below; no more specific cause was captured."));
+  const proposalEvent = run.events.findLast((event) => event.event_type === "PROPOSAL_SELECTED");
+  const proposal = proposalEvent && planById(proposalEvent.payload.candidate_id);
+  if (proposal) {
+    const proposalHash = proposalEvent.payload.plan_hash
+      || (proposal.candidate_id === run.candidate?.candidate_id ? run.plan_hash : null);
+    const accepted = Object.values(run.votes || {}).filter((vote) => vote.decision === "ACCEPT" && vote.plan_hash === proposalHash).length;
+    box.append(el("p", `Negotiated proposal: ${describe(proposal.candidate_id)}. ${accepted} of 3 agents explicitly accepted this plan.`));
+    const recheck = run.events.findLast((event) => event.event_type === "PLAN_REVALIDATED" && event.payload.candidate_id === proposal.candidate_id);
+    const checks = recheck?.payload.checks
+      || run.catalog?.candidates.find((entry) => entry.plan.candidate_id === proposal.candidate_id)?.checks || [];
+    const invalidated = ["STATE_CHANGED", "SNAPSHOT_EXPIRED", "REQUIRED_CHECK_FAIL", "REQUIRED_CHECK_UNKNOWN"].includes(reason);
+    if (!invalidated && checks.length && checks.every((check) => check.status === "PASS")) {
+      box.append(el("p", `All ${checks.length} deterministic checks passed for that proposal. Agent concerns below are their stated reasons, not new verified facts.`, "small"));
+    }
+  } else if (run.round_count) {
+    box.append(el("p", "The run stopped before a common proposal reached a voting turn."));
+  }
+  if (run.negotiation_outcome === "FEASIBLE_FALLBACK") {
+    box.append(el("p", "Fixed rules selected the fallback shown below. It has not received unanimous agent consent and still requires your review and approval."));
+  }
+  if (reason) box.append(el("p", `Recorded cause: ${reason}`, "muted small"));
+}
+
+function voteBlock(turnNumber, vote, candidateId) {
   const turn = el("div", null, "turn");
   const words = { ACCEPT: "Agreed", REJECT: "Rejected", NEEDS_INFORMATION: "Asked for more information" };
-  const yes = vote.decision === "ACCEPT" && !mismatch;
-  turn.append(el("div", `Turn ${turnNumber} · vote on ${describe(candidateId)}`, "turn-label"),
-    el("p", `${words[vote.decision] || vote.decision}${mismatch ? " (but on a different version of the plan)" : ""}`, `vote ${yes ? "yes" : "no"}`));
+  const yes = vote.decision === "ACCEPT";
+  turn.append(el("div", `Turn ${turnNumber} · vote on ${candidateId ? describe(candidateId) : "the recorded proposal"}`, "turn-label"),
+    el("p", words[vote.decision] || vote.decision, `vote ${yes ? "yes" : "no"}`));
   if (vote.rationale) turn.append(el("p", vote.rationale, "why"));
+  if (vote.reason_codes?.length) turn.append(el("p", `Reason codes: ${vote.reason_codes.join(", ")}`, "small muted"));
+  if (vote.evidence_ids?.length) turn.append(el("p", `Evidence: ${vote.evidence_ids.join(", ")}`, "small muted"));
   return turn;
 }
 
@@ -618,7 +756,7 @@ function renderScenario() {
 
 function eventSummary(event) {
   const payload = event.payload || {};
-  const keys = ["state", "decision", "reason", "candidate_id", "outcome", "role", "round", "resource_revision", "reason_code"];
+  const keys = ["state", "decision", "reason", "candidate_id", "outcome", "role", "round", "turn", "status", "resource_revision", "reason_code"];
   return keys.filter((key) => payload[key] != null).map((key) => `${key}=${payload[key]}`).join(", ");
 }
 
@@ -636,7 +774,9 @@ function renderEvidence() {
   link.textContent = LIVE ? "Download full trace (JSON)" : "Download this example (JSON)";
   link.setAttribute("download", `${run.run_id}.json`);
   $("evaluation").textContent = !LIVE
-    ? "This scripted example demonstrates behavior. It is not a model evaluation; see the measured results below."
+    ? run.provider?.mode === "LIVE"
+      ? "This is one recorded historical live run. See the complete evaluation and version limits below."
+      : "This scripted example demonstrates behavior. It is not a model evaluation; see the measured results below."
     : !evaluationReport || evaluationReport.status === "NOT_YET_EVALUATED"
       ? "No evaluation report is loaded."
       : `${evaluationReport.summary || "Measured report available below."} Report prompt: ${evaluationReport.provider?.prompt_version || "not recorded"}. See the results page for version limits.`;
