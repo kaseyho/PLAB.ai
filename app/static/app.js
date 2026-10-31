@@ -584,8 +584,8 @@ function renderRunMotion() {
     const node = $(`signal-${role}`);
     const state = active && progress.pending ? "waiting" : progress.tone === "accepted" ? "accepted"
       : progress.tone === "attention" ? "attention" : progress.label === "Offer received" ? "offered" : "idle";
-    const label = state === "waiting" ? "Thinking" : state === "accepted" ? "Accepted proposal"
-      : progress.code === "NEEDS_INFORMATION" ? "Needs info"
+    const label = state === "waiting" ? "Thinking" : state === "accepted" ? "Accepted"
+      : progress.code === "REJECT" ? "Rejected" : progress.code === "NEEDS_INFORMATION" ? "Needs info"
       : progress.responseStatus === "RECEIVED" && progress.label === "Waiting for reply" ? "Checking reply" : progress.label;
     if (mayAnimate && node.dataset.state === "waiting" && ["accepted", "offered", "attention"].includes(state)) {
       node.querySelector(".signal-icon").animate([

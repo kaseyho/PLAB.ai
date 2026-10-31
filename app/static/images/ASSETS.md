@@ -6,8 +6,10 @@ not an operational map or a view of the current scenario.
 
 The visual direction takes inspiration from Congrue's restrained architecture,
 large type and technical product imagery. No Congrue assets or copy are reused.
-Manrope and IBM Plex Mono are self-hosted under their included SIL Open Font
-Licenses in `../fonts/`. The brand and role marks are native SVGs.
+Public Sans (body text), Manrope (headings) and IBM Plex Mono (metadata) are
+self-hosted under their included SIL Open Font Licenses in `../fonts/`.
+Public Sans is sourced from [Google Fonts](https://github.com/google/fonts/tree/main/ofl/publicsans).
+The brand and role marks are native SVGs.
 
 ## Generation prompt
 
