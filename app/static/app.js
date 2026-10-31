@@ -49,6 +49,7 @@ const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let motionPaused = false;
 let motionRunId = null;
 let motionWasActive = false;
+let requestBoundRuns = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -293,12 +294,13 @@ function step() {
 function renderMode() {
   const fixture = run.provider?.mode === "FIXTURE";
   const recorded = !LIVE && run.provider?.mode === "LIVE";
-  $("mode-note").hidden = LIVE && !fixture;
+  $("mode-note").hidden = LIVE && !fixture && !requestBoundRuns;
   $("mode-note").textContent = recorded
     ? `Recorded live run · ${run.provider.model}, ${run.provider.prompt_version}. Read-only; no new model calls.`
     : !LIVE
     ? "Scripted example · real rule checks. Choose “Interactive demo” to try it yourself."
-    : "Offline demo · scripted agents, real checks and human approval.";
+    : fixture ? "Offline demo · scripted agents, real checks and human approval."
+    : "Live agents · keep this tab open while they negotiate.";
   $("fixture-select").value = fixtureName || "";
   $("start-row").hidden = !LIVE;
   $("session-hint").hidden = !LIVE;
@@ -1202,6 +1204,28 @@ async function startRun(refresh = false) {
   $("reason-input").value = "";
   history.replaceState(null, "", `?run=${encodeURIComponent(runParam)}`);
   render();
+  if (requestBoundRuns) executeRun(runParam);
+}
+
+async function executeRun(id) {
+  try {
+    const response = await fetch(`/api/runs/${encodeURIComponent(id)}/execute`, {
+      method: "POST", credentials: "same-origin", signal: AbortSignal.timeout(65000),
+      headers: {"Idempotency-Key": crypto.randomUUID(),
+        ...(!publicDemo ? {"Authorization": "Bearer " + $("session-token").value.trim()} : {})},
+    });
+    if (!response.ok) throw new Error(`Run execution failed (${response.status}). Reload to check its saved state.`);
+    if (response.body) {
+      const reader = response.body.getReader();
+      while (!(await reader.read()).done) { /* Keep the bounded execution request open. */ }
+    }
+    if (runParam === id) await load();
+  } catch (error) {
+    if (runParam === id) {
+      await load().catch(showError);
+      if (run?.processing_state !== "TERMINAL") showError(error);
+    }
+  }
 }
 
 function showError(error) {
@@ -1281,6 +1305,7 @@ async function init() {
     if (!healthResponse.ok || !scenariosResponse.ok) throw new Error("Backend is unavailable");
     const health = await healthResponse.json();
     sessionConfigured = health.session_configured;
+    requestBoundRuns = health.execution_mode === "REQUEST_BOUND";
     scenarioList = await scenariosResponse.json();
     for (const snapshot of scenarioList) {
       const f = snapshot.source.original_fields;

@@ -4,8 +4,8 @@ A working airport coordination simulator: independent ATC, Pilot and Ground agen
 negotiate a checked arrival plan, and a duty manager approves its application.
 The organizer's workbook supplies synthetic operational limits.
 
-**[Open the public demo](https://plab-ai.onrender.com/)** ·
-**[Judge guide: requirements, rubric and evidence](https://plab-ai.onrender.com/static/judges.html)**
+**[Open the public demo](https://plab-ai-alpha.vercel.app/)** ·
+**[Judge guide: requirements, rubric and evidence](https://plab-ai-alpha.vercel.app/static/judges.html)**
 
 The judge guide maps every challenge requirement and all six weighted criteria to
 observable features, saved examples and measured results. It separates live-model
@@ -29,12 +29,15 @@ Evaluation metrics describe the frozen report, not edited inputs or a new prompt
 
 ## Public judge deployment
 
-The Render configuration in `render.yaml` runs the Python service on the free demo
-plan. Provider credentials are configured only in Render's environment.
+The frontend, Python API and agent execution run on Vercel Hobby, with a connected
+Neon Free Postgres database for persistent state. Provider credentials remain
+server-only environment variables. Keep the browser tab open during negotiation;
+the bounded execution request streams until the agents finish.
 Judges receive an anonymous browser session automatically: no API key or access
 code is required, and each visitor has separate scenario/resource copies.
 Human approval remains mandatory. Live-model failures still use the checked fallback.
-The free host sleeps after inactivity and resets SQLite sessions on restart.
+Completed runs and human decisions survive function restarts. The previous
+Render deployment remains available as a fallback.
 
 Public mode permits ten runs per visitor per UTC day, 100 runs across the service
 per UTC day, and two simultaneous negotiations. Saved examples remain available.

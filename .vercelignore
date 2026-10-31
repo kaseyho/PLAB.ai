@@ -1,0 +1,17 @@
+.git/
+.vercel/
+.venv/
+.env
+.env.*
+.DS_Store
+**/.DS_Store
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+artifacts/
+tests/
+docs/
+cover-image.png
+data/flights.csv

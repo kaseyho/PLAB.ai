@@ -13,13 +13,15 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import cast
 
+import psycopg
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import JsonValue, ValidationError
 from starlette.middleware.base import RequestResponseEndpoint
@@ -35,6 +37,8 @@ from app.contracts import (
     ScenarioSnapshot,
     ServiceError,
     StartRunRequest,
+    State,
+    utcnow,
 )
 from app.coordinator import Coordinator, Limits
 from app.judge_access import COOKIE_NAME, SESSION_SECONDS, JudgeAccess
@@ -59,10 +63,21 @@ class Settings:
     api_mode: ApiMode = "responses"
     public_demo: bool = False
     daily_run_limit: int = 100
+    database_url: str = field(default="", repr=False)
+    request_bound_runs: bool = False
 
     @classmethod
     def from_env(cls) -> Settings:
         load_dotenv(override=False)
+        vercel_host = os.getenv(
+            "VERCEL_PROJECT_PRODUCTION_URL"
+            if os.getenv("VERCEL_ENV") == "production"
+            else "VERCEL_URL",
+            "",
+        )
+        default_origin = os.getenv("RENDER_EXTERNAL_URL") or (
+            f"https://{vercel_host}" if vercel_host else "http://127.0.0.1:8000"
+        )
         provider = "SOCLAAS" if os.getenv("SOCLAAS_API_KEY") else "OPENAI"
         default_base = (
             "https://soclaas-api.comp.nus.edu.sg/v1"
@@ -78,9 +93,7 @@ class Settings:
             db_path=Path(os.getenv("PLAB_DB_PATH", "artifacts/organizer.sqlite3")),
             data_dir=Path(os.getenv("PLAB_DATA_DIR", "data")),
             evaluation_path=Path(os.getenv("PLAB_EVALUATION_PATH", "artifacts/evals/latest.json")),
-            public_origin=os.getenv(
-                "PLAB_PUBLIC_ORIGIN", os.getenv("RENDER_EXTERNAL_URL", "http://127.0.0.1:8000")
-            ).rstrip("/"),
+            public_origin=os.getenv("PLAB_PUBLIC_ORIGIN", default_origin).rstrip("/"),
             reviewer_id=os.getenv("PLAB_REVIEWER_ID", "local-duty-manager"),
             session_token=os.getenv("PLAB_SESSION_TOKEN", ""),
             api_key=os.getenv(f"{provider}_API_KEY", ""),
@@ -89,6 +102,8 @@ class Settings:
             api_mode=cast(ApiMode, api_mode),
             public_demo=os.getenv("PLAB_PUBLIC_DEMO", "false").lower() == "true",
             daily_run_limit=int(os.getenv("PLAB_DAILY_RUN_LIMIT", "100")),
+            database_url=os.getenv("DATABASE_URL", ""),
+            request_bound_runs=os.getenv("VERCEL") == "1",
         )
 
 
@@ -122,7 +137,9 @@ def create_app(
     limits: Limits | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
-    database = store or Store(config.db_path)
+    if config.request_bound_runs and not config.database_url and store is None:
+        raise ValueError("Vercel requires DATABASE_URL for persistent run state")
+    database = store or Store(config.db_path, database_url=config.database_url)
     judges = (
         JudgeAccess(database, config.session_token, config.daily_run_limit)
         if config.public_demo
@@ -150,7 +167,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        database.recover_interrupted()
+        database.recover_interrupted(expired_only=config.request_bound_runs)
         from app.planning import load_snapshot
 
         for path in sorted(config.scenario_dir.glob("*.json")):
@@ -206,7 +223,8 @@ def create_app(
         )
 
     @application.exception_handler(sqlite3.Error)
-    async def storage_error(request: Request, error: sqlite3.Error) -> JSONResponse:
+    @application.exception_handler(psycopg.Error)
+    async def storage_error(request: Request, error: Exception) -> JSONResponse:
         return JSONResponse(status_code=503, content={"error": {"code": "STORAGE_UNAVAILABLE"}})
 
     async def authorize(request: Request) -> None:
@@ -277,6 +295,7 @@ def create_app(
             "model": agent_provider.info.model,
             "session_configured": len(config.session_token) >= 16,
             "public_demo": config.public_demo,
+            "execution_mode": "REQUEST_BOUND" if config.request_bound_runs else "BACKGROUND",
         }
 
     @application.get("/api/session")
@@ -371,16 +390,55 @@ def create_app(
         if existing := database.existing_run(body, key):
             return run_response(existing)
         require_sources(database.get_scenario(body.scenario_id, body.scenario_revision))
-        if judges:
-            judges.check_run_budget(guest_owner(request))
+        guard = partial(judges.check_run_budget, guest_owner(request)) if judges else None
         run, created = database.create_run(
-            body, key, agent_provider.info, planning.mode, budgets.deadline_s
+            body, key, agent_provider.info, planning.mode, budgets.deadline_s, guard=guard
         )
-        if created:
+        if created and not config.request_bound_runs:
             task = asyncio.create_task(coordinator.run(run.run_id, accepted_at))
             tasks[run.run_id] = task
             task.add_done_callback(lambda done: task_finished(run.run_id, done))
         return run_response(run)
+
+    @application.post("/api/runs/{run_id}/execute", dependencies=mutations)
+    async def execute(run_id: str, request: Request) -> Response:
+        """Keep serverless execution inside a streamed request, never a detached task."""
+        record = owned_run(request, run_id)
+        if not config.request_bound_runs or coordinator is None:
+            raise ServiceError("EXECUTION_MODE_UNAVAILABLE", 409)
+        if not database.claim_execution(run_id):
+            return Response(status_code=204)
+        accepted_at = time.monotonic() - max(0, (utcnow() - record.created_at).total_seconds())
+
+        async def stream() -> AsyncIterator[bytes]:
+            task = asyncio.create_task(coordinator.run(run_id, accepted_at))
+            tasks[run_id] = task
+            try:
+                yield b": accepted\n\n"
+                while not task.done():
+                    await asyncio.wait({task}, timeout=1)
+                    if (
+                        not task.done()
+                        and database.get_run(run_id).processing_state == State.TERMINAL
+                    ):
+                        task.cancel()
+                    yield b": running\n\n"
+                await asyncio.gather(task, return_exceptions=True)
+                yield b"event: finished\ndata: {}\n\n"
+            finally:
+                if not task.done():
+                    task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                tasks.pop(run_id, None)
+
+        return StreamingResponse(
+            stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     @application.get("/api/runs/{run_id}")
     async def run(run_id: str, request: Request) -> dict[str, JsonValue]:

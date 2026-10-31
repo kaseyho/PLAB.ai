@@ -1,10 +1,9 @@
-"""SQLite persistence and atomic review integration for one service worker."""
+"""Persisted run state and atomic review on SQLite or shared Postgres."""
 
 from __future__ import annotations
 
 import json
-import sqlite3
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
@@ -39,6 +38,7 @@ from app.contracts import (
     utcnow,
     verify_event_chain,
 )
+from app.database import INTEGRITY_ERRORS, Connection, transaction
 
 TRANSITIONS = {
     State.CREATED: {State.VALIDATING},
@@ -59,9 +59,11 @@ def updated(run: RunRecord, **changes: object) -> RunRecord:
 
 
 class Store:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, database_url: str = "") -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.database_url = database_url
+        if not database_url:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.transaction() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS scenario_revisions (
@@ -97,6 +99,9 @@ class Store:
                     request_id TEXT PRIMARY KEY, run_id TEXT, round INTEGER, role TEXT,
                     data TEXT NOT NULL, UNIQUE (run_id, round, role)
                 );
+                CREATE TABLE IF NOT EXISTS execution_claims (
+                    run_id TEXT PRIMARY KEY
+                );
                 CREATE TABLE IF NOT EXISTS review_decisions (
                     key TEXT PRIMARY KEY, body_hash TEXT NOT NULL, run_id TEXT NOT NULL,
                     data TEXT NOT NULL
@@ -104,34 +109,26 @@ class Store:
             """)
 
     @contextmanager
-    def transaction(self) -> Iterator[sqlite3.Connection]:
-        db = sqlite3.connect(self.path, timeout=1.0, isolation_level=None)
-        db.row_factory = sqlite3.Row
-        try:
-            db.execute("BEGIN IMMEDIATE")
+    def transaction(self) -> Iterator[Connection]:
+        with transaction(self.path, self.database_url) as db:
             yield db
-            db.commit()
-        except BaseException:
-            db.rollback()
-            raise
-        finally:
-            db.close()
 
-    def _run(self, db: sqlite3.Connection, run_id: str) -> RunRecord:
+    def _run(self, db: Connection, run_id: str) -> RunRecord:
         row = db.execute("SELECT data FROM runs WHERE run_id=?", (run_id,)).fetchone()
         if row is None:
             raise ServiceError("RUN_NOT_FOUND", 404)
         return RunRecord.model_validate_json(row["data"])
 
-    def _save(self, db: sqlite3.Connection, run: RunRecord) -> None:
+    def _save(self, db: Connection, run: RunRecord) -> None:
         db.execute(
-            "INSERT OR REPLACE INTO runs VALUES (?, ?, ?)",
+            "INSERT INTO runs VALUES (?, ?, ?) ON CONFLICT (run_id) "
+            "DO UPDATE SET state=excluded.state, data=excluded.data",
             (run.run_id, run.processing_state, canonical_json(run)),
         )
 
     def _event(
         self,
-        db: sqlite3.Connection,
+        db: Connection,
         run_id: str,
         event_type: str,
         payload: dict[str, JsonValue] | None = None,
@@ -162,7 +159,7 @@ class Store:
 
     def _scenario(
         self,
-        db: sqlite3.Connection,
+        db: Connection,
         scenario_id: str,
         revision: int | None = None,
     ) -> ScenarioSnapshot:
@@ -181,7 +178,7 @@ class Store:
             raise ServiceError("SCENARIO_NOT_FOUND", 404)
         return ScenarioSnapshot.model_validate_json(row["data"])
 
-    def _resource(self, db: sqlite3.Connection, resource_id: str) -> ResourceState:
+    def _resource(self, db: Connection, resource_id: str) -> ResourceState:
         row = db.execute(
             "SELECT data FROM resource_states WHERE resource_id=?", (resource_id,)
         ).fetchone()
@@ -189,7 +186,7 @@ class Store:
             raise ServiceError("RESOURCE_NOT_FOUND", 404)
         return ResourceState.model_validate_json(row["data"])
 
-    def _require_current(self, db: sqlite3.Connection, snapshot: ScenarioSnapshot) -> None:
+    def _require_current(self, db: Connection, snapshot: ScenarioSnapshot) -> None:
         current = self._scenario(db, snapshot.scenario_id)
         resource = self._resource(db, snapshot.resource_id)
         if (
@@ -217,11 +214,11 @@ class Store:
             ) != digest(snapshot):
                 raise ServiceError("IMMUTABLE_SCENARIO_REVISION")
             db.execute(
-                "INSERT OR IGNORE INTO scenario_revisions VALUES (?, ?, ?)",
+                "INSERT INTO scenario_revisions VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
                 (snapshot.scenario_id, snapshot.revision, canonical_json(snapshot)),
             )
             db.execute(
-                "INSERT OR IGNORE INTO resource_states VALUES (?, ?)",
+                "INSERT INTO resource_states VALUES (?, ?) ON CONFLICT DO NOTHING",
                 (resource.resource_id, canonical_json(resource)),
             )
 
@@ -232,7 +229,7 @@ class Store:
                 "WHERE scenario_id LIKE ? ORDER BY scenario_id",
                 (prefix + "%",),
             )
-            return [self._scenario(db, row[0]) for row in ids.fetchall()]
+            return [self._scenario(db, row["scenario_id"]) for row in ids.fetchall()]
 
     def invalidate_resource(self, resource_id: str) -> None:
         """Retain history but close active/pending decisions on changed source files."""
@@ -267,7 +264,7 @@ class Store:
             self._invalidate(db, resource.resource_id)
         return snapshot
 
-    def _invalidate(self, db: sqlite3.Connection, resource_id: str, except_run: str = "") -> None:
+    def _invalidate(self, db: Connection, resource_id: str, except_run: str = "") -> None:
         rows = db.execute("SELECT data FROM runs").fetchall()
         for row in rows:
             run = RunRecord.model_validate_json(row["data"])
@@ -292,6 +289,7 @@ class Store:
         provider: ProviderInfo,
         planning_mode: str,
         deadline_s: float,
+        guard: Callable[[Connection], None] | None = None,
     ) -> tuple[RunRecord, bool]:
         with self.transaction() as db:
             old = db.execute("SELECT * FROM run_keys WHERE key=?", (key,)).fetchone()
@@ -299,6 +297,8 @@ class Store:
                 if old["body_hash"] != digest(request):
                     raise ServiceError("IDEMPOTENCY_CONFLICT")
                 return self._run(db, old["run_id"]), False
+            if guard:
+                guard(db)
             snapshot = self._scenario(db, request.scenario_id, request.scenario_revision)
             self._require_current(db, snapshot)
             if request.parent_run_id:
@@ -344,6 +344,16 @@ class Store:
     def get_run(self, run_id: str) -> RunRecord:
         with self.transaction() as db:
             run = self._run(db, run_id)
+            if (
+                self.database_url
+                and run.processing_state != State.TERMINAL
+                and utcnow() >= run.deadline_at
+            ):
+                run = self._terminal(run, Outcome.INTERRUPTED, "EXECUTION_DEADLINE_PASSED")
+                self._save(db, run)
+                self._event(
+                    db, run_id, "RUN_INTERRUPTED", {"reason_code": "EXECUTION_DEADLINE_PASSED"}
+                )
             if (
                 run.approval_state == Approval.PENDING
                 and run.expires_at
@@ -489,7 +499,7 @@ class Store:
                     "INSERT INTO provider_requests VALUES (?, ?, ?, ?, ?)",
                     (request_id, run_id, round_number, role, canonical_json(request)),
                 )
-            except sqlite3.IntegrityError as error:
+            except INTEGRITY_ERRORS as error:
                 raise ServiceError("DUPLICATE_GENERATION_REQUEST") from error
             run = updated(
                 run,
@@ -711,18 +721,42 @@ class Store:
             self._event(db, run_id, "RUN_CANCELLED")
             return run
 
-    def recover_interrupted(self) -> None:
+    def claim_execution(self, run_id: str) -> bool:
+        """One streamed request may execute this run, across all function instances."""
+        with self.transaction() as db:
+            run = self._run(db, run_id)
+            if run.processing_state != State.CREATED:
+                return False
+            return (
+                db.execute(
+                    "INSERT INTO execution_claims VALUES (?) "
+                    "ON CONFLICT DO NOTHING RETURNING run_id",
+                    (run_id,),
+                ).fetchone()
+                is not None
+            )
+
+    def recover_interrupted(self, *, expired_only: bool = False) -> None:
         with self.transaction() as db:
             rows = db.execute(
                 "SELECT data FROM runs WHERE state != ?", (State.TERMINAL,)
             ).fetchall()
+            interrupted = set()
             for row in rows:
                 run = RunRecord.model_validate_json(row["data"])
-                self._save(db, self._terminal(run, Outcome.INTERRUPTED, "PROCESS_RESTART"))
-                self._event(db, run.run_id, "RUN_INTERRUPTED", {"reason_code": "PROCESS_RESTART"})
-            for row in db.execute("SELECT request_id, data FROM provider_requests").fetchall():
+                if expired_only and utcnow() < run.deadline_at:
+                    continue
+                interrupted.add(run.run_id)
+                reason = "EXECUTION_DEADLINE_PASSED" if expired_only else "PROCESS_RESTART"
+                self._save(db, self._terminal(run, Outcome.INTERRUPTED, reason))
+                self._event(db, run.run_id, "RUN_INTERRUPTED", {"reason_code": reason})
+            for row in db.execute(
+                "SELECT request_id, run_id, data FROM provider_requests"
+            ).fetchall():
                 data = json.loads(row["data"])
-                if data["status"] == "STARTED":
+                if data["status"] == "STARTED" and (
+                    not expired_only or row["run_id"] in interrupted
+                ):
                     data.update(status="INTERRUPTED", finished_at=utcnow().isoformat())
                     db.execute(
                         "UPDATE provider_requests SET data=? WHERE request_id=?",
@@ -838,14 +872,14 @@ class Store:
                 "SELECT data FROM events WHERE run_id=? AND sequence>? ORDER BY sequence",
                 (run_id, after_seq),
             ).fetchall()
-            return [AuditEvent.model_validate_json(row[0]) for row in rows]
+            return [AuditEvent.model_validate_json(row["data"]) for row in rows]
 
     def export(self, run_id: str) -> dict[str, JsonValue]:
         self.get_run(run_id)  # Commit any wall-clock expiry before taking a consistent snapshot.
         with self.transaction() as db:
             run = self._run(db, run_id)
             events = [
-                AuditEvent.model_validate_json(row[0])
+                AuditEvent.model_validate_json(row["data"])
                 for row in db.execute(
                     "SELECT data FROM events WHERE run_id=? ORDER BY sequence", (run_id,)
                 ).fetchall()
@@ -864,6 +898,6 @@ class Store:
             "plan_hash": run.plan_hash,
             "audit_chain_valid": verify_event_chain(events),
             "events": [cast(JsonValue, e.model_dump(mode="json")) for e in events],
-            "requests": [json.loads(row[0]) for row in requests],
-            "messages": [json.loads(row[0]) for row in messages],
+            "requests": [json.loads(row["data"]) for row in requests],
+            "messages": [json.loads(row["data"]) for row in messages],
         }

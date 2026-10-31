@@ -6,6 +6,7 @@ import time
 from uuid import uuid4
 
 from app.contracts import ResourceState, ScenarioSnapshot, ServiceError, utcnow
+from app.database import Connection
 from app.store import Store
 
 COOKIE_NAME = "plab_judge"
@@ -68,12 +69,13 @@ class JudgeAccess:
         identity = "judge-" + uuid4().hex
         with self.store.transaction() as db:
             recent = db.execute(
-                "SELECT COUNT(*) FROM judge_sessions WHERE created_at>?", (now - SESSION_SECONDS,)
-            ).fetchone()[0]
+                "SELECT COUNT(*) AS count FROM judge_sessions WHERE created_at>?",
+                (now - SESSION_SECONDS,),
+            ).fetchone()["count"]
             same_ip = db.execute(
-                "SELECT COUNT(*) FROM judge_sessions WHERE created_at>? AND ip_hash=?",
+                "SELECT COUNT(*) AS count FROM judge_sessions WHERE created_at>? AND ip_hash=?",
                 (now - SESSION_SECONDS, ip_hash),
-            ).fetchone()[0]
+            ).fetchone()["count"]
             if recent >= 200 or same_ip >= 40:
                 raise ServiceError("JUDGE_SESSION_LIMIT", 429)
             db.execute("INSERT INTO judge_sessions VALUES (?, ?, ?)", (identity, now, ip_hash))
@@ -98,19 +100,33 @@ class JudgeAccess:
         if not resource.startswith(identity + ":"):
             raise ServiceError("NOT_FOUND", 404)
 
-    def check_run_budget(self, identity: str) -> None:
-        """Called immediately before create_run, with no await, on the single API worker."""
+    def check_run_budget(self, identity: str, db: Connection | None = None) -> None:
+        """The create-run transaction passes its connection to make admission atomic."""
+        if db is None:
+            with self.store.transaction() as connection:
+                self.check_run_budget(identity, connection)
+            return
         today = utcnow().date().isoformat()
-        with self.store.transaction() as db:
-            daily = db.execute(
-                "SELECT COUNT(*) FROM runs WHERE json_extract(data, '$.created_at')>=?", (today,)
-            ).fetchone()[0]
-            personal = db.execute(
-                "SELECT COUNT(*) FROM runs WHERE json_extract(data, '$.created_at')>=? "
-                "AND json_extract(data, '$.snapshot.scenario_id') LIKE ?",
-                (today, identity + ":%"),
-            ).fetchone()[0]
-            active = db.execute("SELECT COUNT(*) FROM runs WHERE state!='TERMINAL'").fetchone()[0]
+        created = (
+            "data::jsonb->>'created_at'"
+            if self.store.database_url
+            else "json_extract(data, '$.created_at')"
+        )
+        scenario = (
+            "data::jsonb#>>'{snapshot,scenario_id}'"
+            if self.store.database_url
+            else "json_extract(data, '$.snapshot.scenario_id')"
+        )
+        daily = db.execute(
+            f"SELECT COUNT(*) AS count FROM runs WHERE {created}>=?", (today,)
+        ).fetchone()["count"]
+        personal = db.execute(
+            f"SELECT COUNT(*) AS count FROM runs WHERE {created}>=? AND {scenario} LIKE ?",
+            (today, identity + ":%"),
+        ).fetchone()["count"]
+        active = db.execute(
+            "SELECT COUNT(*) AS count FROM runs WHERE state!='TERMINAL'"
+        ).fetchone()["count"]
         if daily >= self.daily_run_limit or personal >= 10:
             raise ServiceError("JUDGE_RUN_LIMIT", 429)
         if active >= 2:
