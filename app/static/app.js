@@ -286,17 +286,17 @@ function renderMode() {
   const recorded = !LIVE && run.provider?.mode === "LIVE";
   $("mode-note").hidden = LIVE && !fixture;
   $("mode-note").textContent = recorded
-    ? `Recorded live run · ${run.provider.model}, ${run.provider.prompt_version}. Read-only historical evidence; opening this page makes no model calls.`
+    ? `Recorded live run · ${run.provider.model}, ${run.provider.prompt_version}. Read-only; no new model calls.`
     : !LIVE
-    ? "Saved example · scripted agent messages with real rule checks. Choose “Interactive demo” to start your own run."
-    : "Offline demo · scripted agent messages. Rule checks and human approval are active.";
+    ? "Scripted example · real rule checks. Choose “Interactive demo” to try it yourself."
+    : "Offline demo · scripted agents, real checks and human approval.";
   $("fixture-select").value = fixtureName || "";
   $("start-row").hidden = !LIVE;
   $("session-hint").hidden = !LIVE;
   $("session-row").hidden = publicDemo;
   $("scenario-select").disabled = busy;
   if (LIVE) $("session-hint").textContent = publicDemo
-    ? "No API key needed. Your simulation is separate from other visitors."
+    ? "No API key needed. Your own simulation."
     : sessionConfigured
     ? "Kept in this browser tab only. Needed to start, stop or decide."
     : "No access code is set up on the server. Add PLAB_SESSION_TOKEN to .env and restart.";
@@ -367,9 +367,9 @@ function renderRunProof() {
   const list = $("run-proof");
   list.replaceChildren();
   const total = run.catalog_total_count ?? run.catalog?.candidates?.length;
-  fact(list, "Rule-checked options", total == null ? "Calculated when the run starts" : `${run.catalog_feasible_count} feasible / ${total} checked`);
-  fact(list, "Agent execution", run.run_id ? `${run.round_count} / 3 turns · ${run.agent_invocation_count} / 9 requests` : "Three separate roles · up to nine requests");
-  fact(list, "Real model calls", run.run_id ? run.model_call_count : "Reported from started requests");
+  fact(list, "Checked options", total == null ? "Not started" : `${run.catalog_feasible_count} feasible / ${total} checked`);
+  fact(list, "Agent turns", run.run_id ? `${run.round_count} / 3 turns · ${run.agent_invocation_count} / 9 requests` : "3 roles · up to 3 turns");
+  fact(list, "Real model calls", run.run_id ? run.model_call_count : "Not started");
   fact(list, "Execution time", run.elapsed_ms == null ? "45 s run limit · 12 s per request" : `${minutes(run.elapsed_ms / 1000)} s · 45 s limit`);
 }
 
@@ -378,12 +378,12 @@ function renderNegotiation() {
   const status = $("negotiation-status");
   const n = run.round_count;
   const outcome = run.negotiation_outcome;
-  if (!run.run_id) status.textContent = "Start a negotiation to compare the three agents’ proposals.";
+  if (!run.run_id) status.textContent = "Choose a flight and start. The three agents will compare plans.";
   else if (run.processing_state !== "TERMINAL") status.textContent = n ? `Turn ${n} of 3 · waiting for the agents’ replies…` : "Checking the available plans…";
   else if (outcome === "FEASIBLE_CONSENSUS") status.textContent = `All three agents agreed on the same plan in ${n} ${n === 1 ? "turn" : "turns"}.`;
   else if (outcome === "FEASIBLE_FALLBACK") {
-    status.textContent = n ? `Negotiation stopped during turn ${n}. A checked fallback is ready for review.`
-      : "No agent turns ran. A checked fallback is ready for review.";
+    status.textContent = n ? `Negotiation stopped during turn ${n}. A checked backup plan is ready for review.`
+      : "No agent turns ran. A checked backup plan is ready for review.";
   } else if (outcome === "CANCELLED") status.textContent = "The negotiation was stopped.";
   else status.textContent = run.agent_invocation_count ? "The run ended. See the outcome below." : "No agent calls were needed. See the outcome below.";
 
@@ -523,12 +523,12 @@ function renderConsensusExplanation() {
   if (failureRoles.length && explanation) explanation = `${failureRoles.map((role) => ROLE_NAMES[role]).join(" and ")}: ${explanation}`;
   const informationRoles = ROLES.filter((role) => run.votes?.[role]?.decision === "NEEDS_INFORMATION");
   if (reason === "FINAL_VOTE_DISSENT" && informationRoles.length) {
-    explanation = `${informationRoles.map((role) => ROLE_NAMES[role]).join(" and ")} asked for more information instead of accepting. An information request stops this run; it cannot count as agreement.`;
+    explanation = `${informationRoles.map((role) => ROLE_NAMES[role]).join(" and ")} needed more information and did not accept. All three agents must accept.`;
   }
   if (run.negotiation_outcome === "INSUFFICIENT_DATA") {
-    explanation = "Required input or evidence was missing, so no plan could be verified. This is a data blocker, not a three-agent disagreement. See the missing information in the review section.";
+    explanation = "Required data was missing. No plan could be checked, so the agents did not negotiate.";
   } else if (run.negotiation_outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") {
-    explanation = "No candidate in the search window passed the required checks. There was no feasible plan for the agents to agree on. The review section lists the blocking rules.";
+    explanation = "No available plan passed every rule. There was nothing feasible for the agents to agree on.";
   }
   box.append(el("p", explanation || "The run stopped without a complete, validated agreement. The recorded cause is shown below; no more specific cause was captured."));
   const proposalEvent = run.events.findLast((event) => event.event_type === "PROPOSAL_SELECTED");
@@ -537,19 +537,19 @@ function renderConsensusExplanation() {
     const proposalHash = proposalEvent.payload.plan_hash
       || (proposal.candidate_id === run.candidate?.candidate_id ? run.plan_hash : null);
     const accepted = Object.values(run.votes || {}).filter((vote) => vote.decision === "ACCEPT" && vote.plan_hash === proposalHash).length;
-    box.append(el("p", `Negotiated proposal: ${describe(proposal.candidate_id)}. ${accepted} of 3 agents explicitly accepted this plan.`));
+    box.append(el("p", `${accepted} of 3 agents accepted: ${describe(proposal.candidate_id)}.`));
     const recheck = run.events.findLast((event) => event.event_type === "PLAN_REVALIDATED" && event.payload.candidate_id === proposal.candidate_id);
     const checks = recheck?.payload.checks
       || run.catalog?.candidates.find((entry) => entry.plan.candidate_id === proposal.candidate_id)?.checks || [];
     const invalidated = ["STATE_CHANGED", "SNAPSHOT_EXPIRED", "REQUIRED_CHECK_FAIL", "REQUIRED_CHECK_UNKNOWN"].includes(reason);
     if (!invalidated && checks.length && checks.every((check) => check.status === "PASS")) {
-      box.append(el("p", `All ${checks.length} deterministic checks passed for that proposal. Agent concerns below are their stated reasons, not new verified facts.`, "small"));
+      box.append(el("p", `${checks.length} rule checks passed. The agents' stated concerns are not verified facts.`, "small"));
     }
   } else if (run.round_count) {
     box.append(el("p", "The run stopped before a common proposal reached a voting turn."));
   }
   if (run.negotiation_outcome === "FEASIBLE_FALLBACK") {
-    box.append(el("p", "Fixed rules selected the fallback shown below. It has not received unanimous agent consent and still requires your review and approval."));
+    box.append(el("p", "Rules chose the backup plan below. It still needs your approval."));
   }
   if (reason) box.append(el("p", `Recorded cause: ${reason}`, "muted small"));
 }
@@ -577,7 +577,7 @@ function reviewState() {
   if (approval === "EXPIRED") return ["warn", "Review window closed", "This plan’s two-minute review window has ended. Run again for an updated plan."];
   if (run.processing_state && run.processing_state !== "TERMINAL") return ["info", "Negotiating…", `Turn ${Math.max(run.round_count, 1)} of 3. The plan will appear here when the agents finish.`];
   if (outcome === "FEASIBLE_CONSENSUS") return ["info", "Ready for your review", "All three agents accepted this plan. Your approval is still required."];
-  if (outcome === "FEASIBLE_FALLBACK") return ["warn", "Fallback plan · review required", "Fixed rules selected the earliest plan that passes the checks. The agents did not reach agreement."];
+  if (outcome === "FEASIBLE_FALLBACK") return ["warn", "Backup plan · review required", "The agents did not agree. Fixed rules chose the earliest plan that passes every check."];
   if (outcome === "NO_FEASIBLE_OPTION_IN_SEARCH_SPACE") return ["bad", "No plan passes the checks", "None of the options in the search window is feasible. Choose another flight, or inspect the reasons below."];
   if (outcome === "INSUFFICIENT_DATA") return ["warn", "Required information is missing", "No plan can be approved. See what’s missing below, or choose another flight."];
   if (outcome === "SYSTEM_ERROR") return ["bad", "Something went wrong", "The checks could not be completed, so nothing can be approved."];
@@ -933,39 +933,39 @@ function renderEvaluation() {
   const calls = cases.reduce((sum, item) => sum + item.model_calls, 0);
   const measured = el("dl", null, "guide-metrics");
   for (const [label, value, note] of [
-    ["Live nominal consensus", live.length ? `${consensus} / ${live.length}` : "Not evaluated", `${live.length - consensus} did not reach agreement`],
-    ["Contract cases passed", `${passed} / ${cases.length}`, `${fixtureCount} fixture cases included; not AI accuracy`],
+    ["Live runs with agreement", live.length ? `${consensus} / ${live.length}` : "Not evaluated", `${live.length - consensus} did not reach agreement`],
+    ["Tests passed", `${passed} / ${cases.length}`, `Includes ${fixtureCount} scripted tests; not AI accuracy`],
     ["Median live run", median == null ? "Not measured" : `${minutes(median)} s`, `${calls} real requests across this report`],
   ]) {
     const cell = el("div");
     cell.append(el("dt", label), el("dd", value), el("p", note));
     measured.append(cell);
   }
-  box.append(el("p", `${new Date(report.created_at).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})} · frozen ${report.split} · ${report.provider?.model} · ${report.provider?.prompt_version}. ${live.length} nominal live cases and ${fixtureCount} labelled fixture cases.`, "small muted"), measured);
+  box.append(el("p", `${new Date(report.created_at).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})} · ${report.provider?.prompt_version} · ${live.length} live runs + ${fixtureCount} scripted tests`, "small muted"), measured);
   const comparable = live.filter((item) => Object.keys(item.comparison?.vs_B0 || {}).length);
   const unchanged = comparable.filter((item) => Object.values(item.comparison.vs_B0).every((value) => Number(value) === 0));
   box.append(el("p", comparable.length
-    ? `${unchanged.length} of ${comparable.length} comparable live cases matched B0 on every recorded impact. ${unchanged.length === comparable.length ? "No live impact improvement over B0 was demonstrated." : "Inspect the per-case deltas below for each trade-off."}`
-    : "No comparable live impact results were retained; no benefit over B0 can be claimed.", "evaluation-finding"));
+    ? `${unchanged.length} of ${comparable.length} live runs matched the earliest feasible plan (B0) on every measured impact. ${unchanged.length === comparable.length ? "No improvement was shown." : "See each comparison below."}`
+    : "No live comparison was recorded. No improvement can be claimed.", "evaluation-finding"));
   const version = run.provider?.prompt_version;
-  box.append(el("p", `Historical evidence for ${report.provider?.prompt_version}. ${version && version !== report.provider?.prompt_version ? `This run uses ${version}. ` : ""}It does not evaluate new fuel edits or establish a result for a changed prompt. Gate, runway, fuel and crew inputs are synthetic; the small shared-template suite is not a generalization benchmark.`, "small muted"));
+  box.append(el("p", "Small historical test with simulated airport, fuel and crew data. It does not evaluate later versions or new inputs.", "small muted"));
 
   const failure = live.find((item) => item.fallback_reason === "FINAL_VOTE_DISSENT" && RECORDED_TRACES[item.trace])
     || live.find((item) => item.fallback_reason && RECORDED_TRACES[item.trace]);
   if (failure) {
     const example = el("aside", null, "evaluation-failure");
-    example.append(el("h3", `Visible live failure · ${failure.case_id}`),
-      el("p", "A checked, reviewable plan satisfied the system contract; the agents still failed to reach agreement and used fallback."),
-      el("p", RECORDED_TRACES[failure.trace].reason),
-      el("p", FAILURE_NEXT_STEPS[failure.fallback_reason] || "Inspect the recorded cause and correct it before a new evaluation.", "small muted"));
-    const link = el("a", "Inspect each agent's status and recorded reason", "text-link");
+    example.append(el("h3", `Where agreement failed · ${failure.case_id}`),
+      el("p", RECORDED_TRACES[failure.trace].reason));
+    const link = el("a", "See why each agent agreed or disagreed", "text-link");
     link.href = `/?sample=${RECORDED_TRACES[failure.trace].sample}#step-2`;
     example.append(link);
     box.append(example);
   }
   const details = el("details", null, "evaluation-cases");
   details.id = "evaluation-cases";
-  details.append(el("summary", `Inspect all ${cases.length} cases, baselines and failure reasons`));
+  details.append(el("summary", `All ${cases.length} tests, methods and limits`));
+  details.append(el("p", `Frozen ${report.split} · ${report.provider?.model} · ${report.provider?.prompt_version}. ${version && version !== report.provider?.prompt_version ? `This run uses ${version}. ` : ""}These results do not evaluate new fuel edits or a changed prompt. The small suite reuses scenario templates and does not establish performance across real airports.`, "small muted"));
+  if (failure) details.append(el("p", `Next step for ${failure.case_id}: ${FAILURE_NEXT_STEPS[failure.fallback_reason] || "Inspect the recorded cause and correct it before a new evaluation."}`, "small muted"));
   details.append(el("p", "B0 = earliest feasible; B1 = minimum highest role cost, then total cost. Both search the same full catalog under identical source/rule versions. Deltas are selected plan minus B0; positive holding/fuel/overtime means more, negative means less. A missing comparison stays unavailable.", "small muted"));
   const wrap = el("div", null, "table-wrap");
   wrap.tabIndex = 0;
