@@ -76,14 +76,20 @@ uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --work
 Visit `/docs` for the API schema and `/health` for integration status. Mutations
 require `Authorization: Bearer <PLAB_SESSION_TOKEN>`; starting a run and recording
 a review also require `Idempotency-Key`. Poll run status and incremental events.
-The API serves Developer A's `app/static/index.html` at `/` when present.
+The API serves the duty desk at `/`. Select a scenario, enter the configured
+operator token, and start a run. The token remains in that tab's memory. The
+dashboard shows actual provider/planner modes, events, deterministic impacts,
+checks and review expiry. Explicit `?fixture=consensus` (or `fallback`,
+`no-feasible`, `insufficient-data`, `stale`, `applied`) opens a labelled sample
+with actions disabled.
 
 The default service uses the integrated checker and D01 scenario. A missing CSV
 appears in `/health` as `SOURCE_FILE_NOT_FOUND`; it never fabricates a historical
-row. Developer A's review/simulator hook remains to be integrated, so applying a
-plan reports `REVIEW_NOT_CONNECTED` until that hook exists. Negotiation does not
-apply a plan. See [the integration handoff](docs/backend_handoff.md) for exact
-signatures, payloads, and acceptance evidence.
+row. Human approval rechecks the current runway/gate reservations inside the
+SQLite transaction before applying the simulated plan. Refreshing a scenario
+retains committed reservations and invalidates old recommendations. Negotiation
+does not apply a plan. See [the integration handoff](docs/backend_handoff.md) for
+exact signatures, payloads, and acceptance evidence.
 
 ## Verify
 

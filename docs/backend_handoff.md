@@ -3,8 +3,9 @@
 This branch implements the backend, contracts, three role agents, coordination,
 persistence, trace export, and the storage boundary for human review. It now
 integrates Developer C's deterministic checker and fallback from
-[PR #1](https://github.com/kaseyho/PLAB.ai/pull/1). Dashboard/simulator integration
-and the frozen evaluation suite remain with their owners in the
+[PR #1](https://github.com/kaseyho/PLAB.ai/pull/1) and Developer A's duty desk and
+simulated approval gate from [PR #2](https://github.com/kaseyho/PLAB.ai/pull/2).
+The frozen evaluation suite remains with its owner in the
 [work plan](developer_work_plan.md).
 
 ## Specification decisions
@@ -26,6 +27,8 @@ no agent framework, message broker, recursive tool loop, or separate microservic
 | `app/coordinator.py` | Two concurrent role rounds, deterministic reconciliation, deadlines and fallback |
 | `app/store.py` | SQLite transactions, resource revisions, request accounting, hash-chained events |
 | `app/main.py` | API, trusted local session, composition and teammate integration |
+| `app/approvals.py` | Recheck current reservations and compute the simulated resource update |
+| `app/static/` | Duty desk using the shared API, plus explicit labelled sample views |
 | `app/planning.py` | Boundary from C's scenario/checker models to shared run contracts, scoring and shortlist |
 | `app/scenarios.py`, `app/constraints.py`, `app/fallback.py` | C's operational definitions, hard rules and full-catalog procedural selection |
 | `examples/backend_fixture.py` | Explicit protocol fixtures; never automatically selected by the main service |
@@ -103,14 +106,15 @@ Write the measured report to `artifacts/evals/latest.json`. The report endpoint
 only reads that file; it never silently launches a billable evaluation. Baselines,
 scenario freezing, denominators, and report provenance remain C's responsibilities.
 
-## Developer A: connect review and the dashboard
+## Developer A: integrated review and dashboard
 
-The API mounts `app/static/` and serves its `index.html`. Use the supplied
-`examples/sample_snapshot.json` and `examples/sample_run.json` for initial UI
-work, or run `uv run python -m examples.backend_demo --serve`. Sample plans and
-statuses are fixtures and must be labelled as such in the UI.
+The API mounts `app/static/` and serves its `index.html`. The dashboard starts with
+the actual available scenarios. Its local token field supplies authorization and
+its mutations use idempotency headers. Polling uses the shared event sequence;
+costs and impacts come from the checked catalog. Model calls and fixture agent
+invocations are distinct. Sample views require an explicit `?fixture=<name>`.
 
-Implement the following function in `app/approvals.py`:
+The implemented hook in `app/approvals.py` uses the shared contracts:
 
 ```python
 from app.contracts import ResourceState, ReviewEffect, ReviewRequest, RunRecord
@@ -118,9 +122,8 @@ from app.contracts import ResourceState, ReviewEffect, ReviewRequest, RunRecord
 def review_plan(
     run: RunRecord, resource: ResourceState, request: ReviewRequest
 ) -> ReviewEffect:
-    # Recheck the shared snapshot/plan using app.planning.check_plan.
-    # Compute resource reservations/application according to A's simulator rules.
-    # Return all check results and the new resource data, or raise ServiceError.
+    # Merge current committed reservations and recheck with app.planning.check_plan.
+    # Return checked runway/gate reservations; the Store commits them atomically.
     ...
 ```
 
@@ -131,7 +134,10 @@ It returns `ReviewEffect(checks=..., resource_data=...)`; it must not commit or
 increment resource revisions itself. The store verifies complete passing checks,
 rechecks expiry, commits the resource update and audit record together, and
 increments the revision exactly once. Exceptions roll back the transaction.
-The fixture hook is an example of the signature, not the simulator implementation.
+The fixture hook remains isolated in `examples/backend_fixture.py`; the default
+service uses the real simulator hook. Applied reservations are stored separately
+from editable facts and included in refreshed snapshots, preventing an edit from
+accidentally deleting a committed runway movement or gate booking.
 
 All mutations require the configured operator token. The reviewer identity comes
 from server configuration, never from a client or model. Requests from a different
@@ -184,9 +190,10 @@ Creating a revised snapshot requires `revision=previous+1` and
 `resource_revision=current+1`; it invalidates active/pending runs on that resource.
 Fetch `/api/resources/{resource_id}` for the current resource revision after an
 application. Derive revised facts from that current resource state and use a linked
-new run (`parent_run_id`). For integrated overlays, update the derived
-`snapshot.versions` fact to match the revised envelope; stale version evidence is
-rejected before planning. Ordinary revision requests cannot edit policy versions,
+new run (`parent_run_id`). For integrated overlays, the API includes committed
+reservations and updates derived `snapshot.versions` evidence during revision.
+Direct planner callers must still provide consistent version evidence.
+Ordinary revision requests cannot edit policy versions,
 concession budgets, required rules/facts, or policy facts. Existing plans and source
 revisions stay intact.
 
@@ -288,6 +295,20 @@ mypy. The tests include both teammates' fixtures, the upstream safety regression
 actual source loading, complete catalog/shortlist/fallback behavior, plan/evidence
 tampering, current version evidence, and the PRD overtime boundaries.
 
-These smokes are development checks, not frozen evaluation results. A's
-simulator/dashboard integration and C's remaining scenarios, B1 comparison,
-evaluation runner and measured report are still required.
+These smokes are development checks, not frozen evaluation results. C's remaining
+scenarios, B1 comparison, evaluation runner and measured report are still required.
+
+PR #2 integration adds coverage through the real SQLite store instead of the
+contributor's temporary in-memory protocol. All 167 offline tests pass, including
+authorization, binding/expiry, explicit fallback acknowledgement, competing
+approvals, a failed resource write, revalidation against changed reservations,
+and refresh preserving committed bookings. Ruff, strict mypy and JavaScript
+syntax checks pass. Browser verification covered start, approval, refresh/rerun,
+cancellation and all six sample states, with no console errors. Browser agents
+were explicit fixtures and made zero live model calls.
+
+Regenerate sample views using
+`uv run python -m app.static.fixtures.build_fixtures`. They are generated through
+the real coordinator/checker/review store, contain the actual source row, and
+retain truthful zero-live-call counters. They include only a catalog/event view
+projection; the API trace export remains the complete audit record.
